@@ -11,11 +11,10 @@ type TokenAuth struct {
 }
 
 type Jenkins struct {
-	Server    string
-	Port      string
-	Version   string
-	BasicAuth *BasicAuth
-	TokenAuth *TokenAuth
+	Server  string
+	Port    string
+	Version string
+	Client  *Client
 }
 
 // Jenkins
