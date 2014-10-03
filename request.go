@@ -34,7 +34,7 @@ func (r *Requester) PostXML(endpoint string, xml string) {
 }
 
 func (r *Requester) Get(endpoint string) {
-	r.Do("GET", endpoint)
+	r.Do("GET", endpoint, nil)
 }
 
 func (r *Requester) SetHeader(key string, value string) {
