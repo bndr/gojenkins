@@ -104,7 +104,7 @@ func (j *Job) GetBuildUrl() {
 
 }
 
-func (j *job) IsQueued() {
+func (j *Job) IsQueued() {
 
 }
 

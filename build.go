@@ -48,7 +48,7 @@ func (b *Build) GetMatrixRuns() {
 
 }
 
-func (b *build) GetResultUrl() {
+func (b *Build) GetResultUrl() {
 
 }
 

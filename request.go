@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"io"
@@ -10,53 +11,55 @@ import (
 
 // Request Methods
 
-type Request struct {
+type Requester struct {
 	Base      string
 	BasicAuth *BasicAuth
 	Headers   http.Header
 	Client    *http.Client
+	SslVerify bool
 }
 
-func (r *Request) Create() {
-
+type Response struct {
 }
 
-func (r *Request) Post() {
-
+func (r *Requester) Post(endpoint string, payload io.Reader) {
+	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	r.Do("POST", endpoint, payload)
 }
 
-func (r *Request) PostXML() {
-
+func (r *Requester) PostXML(endpoint string, xml string) {
+	payload := bytes.NewBuffer([]byte(xml))
+	r.SetHeader("Content-Type", "text/xml")
+	r.Do("XML", endpoint, payload)
 }
 
-func (r *Request) Get() {
-
+func (r *Requester) Get(endpoint string) {
+	r.Do("GET", endpoint)
 }
 
-func (r *Request) SetHeaders() {
-
+func (r *Requester) SetHeader(key string, value string) {
+	r.Headers.Add(key, value)
 }
 
-func (r *Request) SetClient() {
-
+func (r *Requester) SetClient(client *http.Client) {
+	r.Client = client
 }
 
-func (r *Request) Do(method string) {
+func (r *Requester) Do(method string, endpoint string, payload io.Reader) *Response {
 	var url string
-	var payload io.Reader
 
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		panic(err)
 	}
 
-	if c.BasicAuth != nil {
-		req.SetBasicAuth(c.BasicAuth.Username, c.BasicAuth.Password)
+	if r.BasicAuth != nil {
+		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
 	}
 
-	if c.Headers != nil {
-		for k, _ := range c.Headers {
-			req.Header.Set(k, c.Headers.Get(k))
+	if r.Headers != nil {
+		for k, _ := range r.Headers {
+			req.Header.Set(k, r.Headers.Get(k))
 		}
 	}
 
@@ -65,7 +68,7 @@ func (r *Request) Do(method string) {
 
 	// Skip verify by default?
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: !r.SslVerify},
 	}
 
 	client := &http.Client{
@@ -91,5 +94,5 @@ func (r *Request) Do(method string) {
 	if err != nil {
 		panic(err)
 	}
-
+	return &Response{}
 }

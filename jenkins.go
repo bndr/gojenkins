@@ -11,10 +11,10 @@ type TokenAuth struct {
 }
 
 type Jenkins struct {
-	Server  string
-	Port    string
-	Version string
-	Client  *Client
+	Server    string
+	Port      string
+	Version   string
+	Requester *Requester
 }
 
 // Jenkins
@@ -30,30 +30,39 @@ func (j *Jenkins) validate() {
 func (j *Jenkins) Info() {
 
 }
+
 func (j *Jenkins) CreateNode() {
 
 }
+
 func (j *Jenkins) CreateBuild() {
 
 }
+
 func (j *Jenkins) CreateJob() {
 
 }
+
 func (j *Jenkins) GetNode() {
 
 }
+
 func (j *Jenkins) GetBuild() {
 
 }
+
 func (j *Jenkins) GetJob() {
 
 }
+
 func (j *Jenkins) GetAllNodes() {
 
 }
+
 func (j *Jenkins) GetAllBuilds() {
 
 }
+
 func (j *Jenkins) GetAllJobs() {
 
 }
