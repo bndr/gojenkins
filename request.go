@@ -22,31 +22,39 @@ type Requester struct {
 type Response struct {
 }
 
-func (r *Requester) Post(endpoint string, payload io.Reader) {
+func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}) {
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
-	r.Do("POST", endpoint, payload)
+	r.Do("POST", endpoint, payload, &responseStruct)
 }
 
-func (r *Requester) PostXML(endpoint string, xml string) {
+func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}) {
 	payload := bytes.NewBuffer([]byte(xml))
 	r.SetHeader("Content-Type", "text/xml")
-	r.Do("XML", endpoint, payload)
+	r.Do("XML", endpoint, payload, &responseStruct)
 }
 
-func (r *Requester) Get(endpoint string) {
-	r.Do("GET", endpoint, nil)
+func (r *Requester) Get(endpoint string, responseStruct interface{}) {
+	r.SetHeader("Content-Type", "application/json")
+	r.Do("GET", endpoint, nil, responseStruct)
 }
 
-func (r *Requester) SetHeader(key string, value string) {
+func (r *Requester) SetHeader(key string, value string) *Requester {
 	r.Headers.Add(key, value)
+	return r
 }
 
-func (r *Requester) SetClient(client *http.Client) {
+func (r *Requester) SetClient(client *http.Client) *Requester {
 	r.Client = client
+	return r
 }
 
-func (r *Requester) Do(method string, endpoint string, payload io.Reader) *Response {
-	var url string
+func (r *Requester) SetQuery(querystring map[string]string) *Requester {
+	// TODO
+	return r
+}
+
+func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}) *http.Response {
+	url := r.Base + endpoint
 
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
@@ -75,7 +83,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader) *Respo
 		Transport: tr,
 		Jar:       cookies,
 	}
-
+	req.Close = true
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -85,14 +93,10 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader) *Respo
 	if resp.StatusCode >= 400 {
 		panic(err)
 	}
-
 	defer resp.Body.Close()
-
-	var response interface{}
-
-	err = json.NewDecoder(resp.Body).Decode(response)
+	err = json.NewDecoder(resp.Body).Decode(responseStruct)
 	if err != nil {
 		panic(err)
 	}
-	return &Response{}
+	return resp
 }

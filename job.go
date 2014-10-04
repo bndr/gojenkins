@@ -6,7 +6,16 @@ type Job struct {
 }
 
 type jobResponse struct {
-	Actions   []interface{} `json:"actions"`
+	Actions []struct {
+		ParameterDefinitions []struct {
+			DefaultParameterValue struct {
+				Value bool `json:"value"`
+			} `json:"defaultParameterValue"`
+			Description string `json:"description"`
+			Name        string `json:"name"`
+			Type        string `json:"type"`
+		} `json:"parameterDefinitions"`
+	} `json:"actions"`
 	Buildable bool          `json:"buildable"`
 	Builds    []struct {
 		Number float64 `json:"number"`
@@ -51,7 +60,17 @@ type jobResponse struct {
 	LastUnsuccessfulBuild interface{}   `json:"lastUnsuccessfulBuild"`
 	Name                  string        `json:"name"`
 	NextBuildNumber       float64       `json:"nextBuildNumber"`
-	Property              []interface{} `json:"property"`
+	Property              []struct {
+		ParameterDefinitions []struct {
+			DefaultParameterValue struct {
+				Name  string `json:"name"`
+				Value bool   `json:"value"`
+			} `json:"defaultParameterValue"`
+			Description string `json:"description"`
+			Name        string `json:"name"`
+			Type        string `json:"type"`
+		} `json:"parameterDefinitions"`
+	} `json:"property"`
 	QueueItem             interface{}   `json:"queueItem"`
 	Scm                   struct{}      `json:"scm"`
 	UpstreamProjects      []interface{} `json:"upstreamProjects"`

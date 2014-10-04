@@ -12,6 +12,10 @@ type BuildResponse struct {
 			UserId           interface{} `json:"userId"`
 			UserName         string      `json:"userName"`
 		} `json:"causes"`
+		Parameters []struct {
+					Name  string `json:"name"`
+					Value bool   `json:"value"`
+				} `json:"parameters"`
 	} `json:"actions"`
 	Artifacts []interface{} `json:"artifacts"`
 	Building  bool          `json:"building"`
