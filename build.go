@@ -1,22 +1,18 @@
 package main
 
 type Build struct {
-	Raw       *BuildResponse
+	Raw       *buildResponse
 	Requester *Requester
+	Job       *Job
 }
 
-type BuildResponse struct {
-	Actions []struct {
-		Causes []struct {
-			ShortDescription string      `json:"shortDescription"`
-			UserId           interface{} `json:"userId"`
-			UserName         string      `json:"userName"`
-		} `json:"causes"`
-		Parameters []struct {
-					Name  string `json:"name"`
-					Value bool   `json:"value"`
-				} `json:"parameters"`
-	} `json:"actions"`
+type Parameter struct {
+	Name  string
+	Value string
+}
+
+type buildResponse struct {
+	Actions   []interface{}
 	Artifacts []interface{} `json:"artifacts"`
 	Building  bool          `json:"building"`
 	BuiltOn   string        `json:"builtOn"`
@@ -38,8 +34,48 @@ type BuildResponse struct {
 	URL               string        `json:"url"`
 }
 
+func (b *Build) pull() {
+
+}
+
 // Builds
-func (b *Build) GetDetails() {
+func (b *Build) GetRaw() {
+
+}
+
+func (b *Build) GetActions() {
+
+}
+
+func (b *Build) GetBuiltOn() {
+
+}
+
+func (b *Build) GetDescription() {
+
+}
+
+func (b *Build) GetDuration() {
+
+}
+
+func (b *Build) GetExecutor() {
+
+}
+
+func (b *Build) GetResult() {
+
+}
+
+func (b *Build) GetUrl() {
+
+}
+
+func (b *Build) GetArtifacts() {
+
+}
+
+func (b *Build) GetCulprits() {
 
 }
 
@@ -51,8 +87,14 @@ func (b *Build) GetConsoleOutput() {
 
 }
 
-func (b *Build) GetCauses() {
-
+func (b *Build) GetCauses() []Cause {
+	b.pull()
+	if len(b.Raw.Actions) > 0 {
+		if causes, ok := b.Raw.Actions[0].([]Cause); ok {
+			return causes
+		}
+	}
+	return nil
 }
 
 func (b *Build) GetDownstreamBuilds() {

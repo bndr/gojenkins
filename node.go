@@ -2,8 +2,16 @@ package main
 
 // Nodes
 
+type Computers struct {
+	BusyExecutors  int            `json:"busyExecutors"`
+	Computers      []nodeResponse `json:"computer"`
+	DisplayName    string         `json:"displayName"`
+	TotalExecutors int            `json:"totalExecutors"`
+}
+
 type Node struct {
-	Raw *nodeResponse
+	Raw       *nodeResponse
+	Requester *Requester
 }
 
 type nodeResponse struct {

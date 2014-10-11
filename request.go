@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"strings"
 )
 
 // Request Methods
@@ -54,8 +56,11 @@ func (r *Requester) SetQuery(querystring map[string]string) *Requester {
 }
 
 func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}) *http.Response {
-	url := r.Base + endpoint
-
+	if !strings.HasSuffix(endpoint, "/") {
+		endpoint += "/"
+	}
+	url := r.Base + endpoint + "api/json"
+	fmt.Printf("%#v\n", url)
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		panic(err)

@@ -1,5 +1,9 @@
 package main
 
+type Executor struct {
+	Raw       *ExecutorResponse
+	Requester *Requester
+}
 type ExecutorResponse struct {
 	AssignedLabels []struct{}  `json:"assignedLabels"`
 	Description    interface{} `json:"description"`
