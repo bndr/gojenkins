@@ -2,12 +2,10 @@ package main
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	"strings"
 )
 
@@ -24,20 +22,26 @@ type Requester struct {
 type Response struct {
 }
 
-func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}) {
+func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
-	r.Do("POST", endpoint, payload, &responseStruct)
+
+	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
-func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}) {
+func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, options ...interface{}) *http.Response {
 	payload := bytes.NewBuffer([]byte(xml))
 	r.SetHeader("Content-Type", "text/xml")
-	r.Do("XML", endpoint, payload, &responseStruct)
+	return r.Do("XML", endpoint, payload, &responseStruct, options)
 }
 
-func (r *Requester) Get(endpoint string, responseStruct interface{}) {
+func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.SetHeader("Content-Type", "application/json")
-	r.Do("GET", endpoint, nil, responseStruct)
+	return r.Do("GET", endpoint, nil, responseStruct, querystring)
+}
+
+func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
+	r.SetHeader("Content-Type", "application/json")
+	return r.Do("XML", endpoint, nil, responseStruct, querystring)
 }
 
 func (r *Requester) SetHeader(key string, value string) *Requester {
@@ -50,17 +54,28 @@ func (r *Requester) SetClient(client *http.Client) *Requester {
 	return r
 }
 
-func (r *Requester) SetQuery(querystring map[string]string) *Requester {
-	// TODO
-	return r
+func (r *Requester) parseQueryString(queries map[string]string) string {
+	output := ""
+	delimiter := "?"
+	for k, v := range queries {
+		output += delimiter + k + "=" + v
+		delimiter = "&"
+	}
+	return output
 }
 
-func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}) *http.Response {
+func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) *http.Response {
 	if !strings.HasSuffix(endpoint, "/") {
 		endpoint += "/"
 	}
 	url := r.Base + endpoint + "api/json"
-	fmt.Printf("%#v\n", url)
+	for _, o := range options {
+		switch v := o.(type) {
+		case map[string]string:
+			url += r.parseQueryString(v)
+		}
+	}
+
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		panic(err)
@@ -76,32 +91,22 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 		}
 	}
 
-	// Rewrite
-	cookies, _ := cookiejar.New(nil)
-
-	// Skip verify by default?
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: !r.SslVerify},
-	}
-
-	client := &http.Client{
-		Transport: tr,
-		Jar:       cookies,
-	}
-	req.Close = true
-	resp, err := client.Do(req)
+	resp, err := r.Client.Do(req)
 
 	if err != nil {
 		panic(err)
 	}
 
-	if resp.StatusCode >= 400 {
-		panic(err)
-	}
 	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(responseStruct)
-	if err != nil {
-		panic(err)
+
+	if method == "XML" {
+		content, err := ioutil.ReadAll(resp.Body)
+		*responseStruct.(*string) = string(content)
+		if err != nil {
+			panic(err)
+		}
+		return resp
 	}
+	json.NewDecoder(resp.Body).Decode(responseStruct)
 	return resp
 }

@@ -1,8 +1,14 @@
 package main
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 type Job struct {
 	Raw       *jobResponse
 	Requester *Requester
+	Base      string
 }
 
 type Cause struct {
@@ -146,23 +152,44 @@ func (j *Job) Disable() {
 
 }
 
-func (j *Job) Delete() {
-
+func (j *Job) Delete() bool {
+	resp := j.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
+	if resp.StatusCode == 200 {
+		return true
+	}
+	return false
 }
 
-func (j *Job) Rename() {
-
+func (j *Job) Rename(name string) {
+	payload, _ := json.Marshal(map[string]string{"newName": name})
+	j.Requester.Post(j.Base+"/doRename", bytes.NewBuffer(payload), nil, nil)
 }
 
 func (j *Job) Exists() {
 
 }
-func (j *Job) Create() {
-
+func (j *Job) Create(config string) *Job {
+	resp := j.Requester.Post("/createItem", bytes.NewBuffer([]byte(config)), j.Raw, nil)
+	if resp.Status == "200" {
+		return j
+	} else {
+		return nil
+	}
 }
 
-func (j *Job) GetConfig() {
+func (j *Job) Copy(from string, newName string) *Job {
+	qr := map[string]string{"name": newName, "from": from, "mode": "copy"}
+	resp := j.Requester.Post("/createItem", nil, nil, qr)
+	if resp.StatusCode == 200 {
+		return j
+	}
+	return nil
+}
 
+func (j *Job) GetConfig() string {
+	var data string
+	j.Requester.GetXML(j.Base+"/config.xml", &data, nil)
+	return data
 }
 
 func (j *Job) SetConfig() {

@@ -137,6 +137,14 @@ func (b *Build) GetTimestamp() {
 
 }
 
+func (b *Build) GetRevision() {
+
+}
+
+func (b *Build) GetRevistionBranch() {
+
+}
+
 func (b *Build) IsGood() {
 
 }
