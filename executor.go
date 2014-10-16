@@ -1,10 +1,10 @@
 package main
 
-type Executor struct {
-	Raw       *ExecutorResponse
+type executor struct {
+	Raw       *executorResponse
 	Requester *Requester
 }
-type ExecutorResponse struct {
+type executorResponse struct {
 	AssignedLabels []struct{}  `json:"assignedLabels"`
 	Description    interface{} `json:"description"`
 	Jobs           []struct {

@@ -22,6 +22,7 @@ type TokenAuth struct {
 type Jenkins struct {
 	Server    string
 	Version   string
+	Raw       *executorResponse
 	Requester *Requester
 }
 
@@ -45,21 +46,50 @@ func (j *Jenkins) Init() *Jenkins {
 	}
 
 	// Check Connection
-	resp := new(ExecutorResponse)
-	raw := j.Requester.Do("GET", "/", nil, resp, nil)
-	j.Version = raw.Header.Get("X-Jenkins")
-	if resp == nil {
+	j.Raw = new(executorResponse)
+	j.Requester.Do("GET", "/", nil, j.Raw, nil)
+	j.Version = j.Requester.LastResponse.Header.Get("X-Jenkins")
+	if j.Raw == nil {
 		panic("Connection Failed, Please verify that the host and credentials are correct.")
 	}
 	return j
 }
 
-func (j *Jenkins) Info() {
-
+func (j *Jenkins) Info() *executorResponse {
+	j.Requester.Do("GET", "/", nil, j.Raw, nil)
+	return j.Raw
 }
 
-func (j *Jenkins) CreateNode() {
+func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) *Node {
+	node := j.GetNode(name)
+	if node != nil {
+		return node
+	}
+	node = &Node{Raw: new(nodeResponse), Requester: j.Requester, Base: "/computer/" + name}
+	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
+	MODE := "NORMAL"
+	qr := map[string]string{
+		"name": name,
+		"type": NODE_TYPE,
+		"json": makeJson(map[string]interface{}{
+			"name":               name,
+			"nodeDescription":    description,
+			"remoteFS":           remoteFS,
+			"numExecutors":       numExecutors,
+			"mode":               MODE,
+			"type":               NODE_TYPE,
+			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
+			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
+			"launcher":           map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"},
+		}),
+	}
 
+	resp := node.Requester.GetXML("/computer/doCreateItem", nil, qr)
+	if resp.StatusCode < 400 {
+		node.Poll()
+		return node
+	}
+	return nil
 }
 
 func (j *Jenkins) CreateJob(config string) *Job {
@@ -79,40 +109,52 @@ func (j *Jenkins) CopyJob(copyFrom string, newName string) *Job {
 	return job.Copy(copyFrom, newName)
 }
 
-func (j *Jenkins) DeleteJob() {
-
+func (j *Jenkins) DeleteJob(name string) bool {
+	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
+	return job.Delete()
 }
 
-func (j *Jenkins) BuildJob() {
-
+func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
+	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
+	var params map[string]string
+	if len(options) > 0 {
+		params, _ = options[0].(map[string]string)
+	}
+	return job.Invoke(nil, params)
 }
 
-func (j *Jenkins) GetNode(id string) Node {
-	node := Node{Raw: new(nodeResponse), Requester: j.Requester}
-	j.Requester.Get("/computer/"+id, node.Raw, nil)
-	return node
+func (j *Jenkins) GetNode(name string) *Node {
+	node := Node{Raw: new(nodeResponse), Requester: j.Requester, Base: "/computers/" + name}
+	if node.Poll() == 200 {
+		return &node
+	}
+	return nil
 }
 
 func (j *Jenkins) GetBuild(job string, number string) *Build {
-	build := Build{Raw: new(buildResponse), Requester: j.Requester}
-	j.Requester.Get("/job/"+job+"/"+number, build.Raw, nil)
-	return &build
+	build := Build{Raw: new(buildResponse), Requester: j.Requester, Base: "/job/" + job + "/" + number}
+	if build.Poll() == 200 {
+		return &build
+	}
+	return nil
 }
 
 func (j *Jenkins) GetJob(id string) *Job {
 	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + id}
-	j.Requester.Get("/job/"+id, job.Raw, nil)
-	return &job
+	if job.Poll() == 200 {
+		return &job
+	}
+	return nil
 }
 
-func (j *Jenkins) GetAllNodes() *[]Node {
+func (j *Jenkins) GetAllNodes() []*Node {
 	computers := new(Computers)
 	j.Requester.Get("/computer", computers, nil)
-	nodes := make([]Node, len(computers.Computers))
+	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		nodes[i] = Node{Raw: &node, Requester: j.Requester}
+		nodes[i] = &Node{Raw: &node, Requester: j.Requester}
 	}
-	return &nodes
+	return nodes
 }
 
 func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
@@ -124,7 +166,7 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 	}
 	for i, build := range jobObj.Raw.Builds {
 		if preload == false {
-			builds[i] = &Build{Raw: &buildResponse{Number: build.Number, URL: build.URL}, Requester: j.Requester, Job: jobObj}
+			builds[i] = &Build{Raw: &buildResponse{Number: build.Number, URL: build.URL}, Requester: j.Requester, Base: "/job/" + jobObj.GetName() + "/" + string(build.Number)}
 		} else {
 			builds[i] = j.GetBuild(job, strconv.Itoa(build.Number))
 		}
@@ -133,7 +175,7 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 }
 
 func (j *Jenkins) GetAllJobs(preload bool) []*Job {
-	exec := Executor{Raw: new(ExecutorResponse), Requester: j.Requester}
+	exec := executor{Raw: new(executorResponse), Requester: j.Requester}
 	j.Requester.Get("/", exec.Raw, nil)
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
@@ -163,6 +205,6 @@ func main() {
 	//fmt.Printf("%#v\n", j.GetJob("testJobName").Raw.Description)
 	job := j.GetAllJobs(true)[0]
 	fmt.Printf("%#v\n", job)
-	fmt.Printf("%#v\n", j.GetJob("newjobsbb").Delete())
-
+	//fmt.Printf("%#v\n", j.GetJob("newjobsbb").Delete())
+	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
 }

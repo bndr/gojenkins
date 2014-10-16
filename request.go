@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,11 +13,12 @@ import (
 // Request Methods
 
 type Requester struct {
-	Base      string
-	BasicAuth *BasicAuth
-	Headers   http.Header
-	Client    *http.Client
-	SslVerify bool
+	Base         string
+	BasicAuth    *BasicAuth
+	Headers      http.Header
+	Client       *http.Client
+	SslVerify    bool
+	LastResponse *http.Response
 }
 
 type Response struct {
@@ -61,6 +63,7 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 		output += delimiter + k + "=" + v
 		delimiter = "&"
 	}
+	fmt.Println(output)
 	return output
 }
 
@@ -75,7 +78,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 			url += r.parseQueryString(v)
 		}
 	}
-
+	fmt.Printf("%s\n\n", url)
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		panic(err)
@@ -91,22 +94,24 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 		}
 	}
 
-	resp, err := r.Client.Do(req)
+	r.LastResponse, err = r.Client.Do(req)
 
 	if err != nil {
 		panic(err)
 	}
 
-	defer resp.Body.Close()
+	defer r.LastResponse.Body.Close()
 
 	if method == "XML" {
-		content, err := ioutil.ReadAll(resp.Body)
-		*responseStruct.(*string) = string(content)
+		content, err := ioutil.ReadAll(r.LastResponse.Body)
+		if str, ok := responseStruct.(*string); ok {
+			*str = string(content)
+		}
 		if err != nil {
 			panic(err)
 		}
-		return resp
+		return r.LastResponse
 	}
-	json.NewDecoder(resp.Body).Decode(responseStruct)
-	return resp
+	json.NewDecoder(r.LastResponse.Body).Decode(responseStruct)
+	return r.LastResponse
 }

@@ -12,6 +12,7 @@ type Computers struct {
 type Node struct {
 	Raw       *nodeResponse
 	Requester *Requester
+	Base      string
 }
 
 type nodeResponse struct {
@@ -43,46 +44,69 @@ type nodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
-func (n *Node) Exists() {
-
+func (n *Node) Info() *nodeResponse {
+	return n.Raw
 }
 
-func (n *Node) Delete() {
-
+func (n *Node) GetName() string {
+	return n.Raw.DisplayName
 }
 
-func (n *Node) Disable() {
-
+func (n *Node) Delete() bool {
+	resp := n.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
+	return resp.StatusCode == 200
 }
 
-func (n *Node) Enable() {
-
+func (n *Node) IsOnline() bool {
+	n.Poll()
+	return !n.Raw.Offline
 }
 
-func (n *Node) Create() {
-
+func (n *Node) IsTemporarilyOffline() bool {
+	n.Poll()
+	return n.Raw.TemporarilyOffline
 }
 
-func (n *Node) IsOnline() {
-
+func (n *Node) IsIdle() bool {
+	n.Poll()
+	return n.Raw.Idle
 }
 
-func (n *Node) IsTemporarilyOffline() {
-
-}
-
-func (n *Node) IsIdle() {
-
+func (n *Node) IsJnlpAgent() bool {
+	n.Poll()
+	return n.Raw.JnlpAgent
 }
 
 func (n *Node) SetOnline() {
+	n.Poll()
+	if n.Raw.Offline && !n.Raw.TemporarilyOffline {
+		panic("Node is Permanently offline, can't bring it up")
+	}
 
+	if n.Raw.Offline && n.Raw.TemporarilyOffline {
+		n.ToggleTemporarilyOffline()
+	}
 }
 
 func (n *Node) SetOffline() {
-
+	if !n.Raw.Offline {
+		n.ToggleTemporarilyOffline()
+	}
 }
 
-func (n *Node) SetTemporarilyOffline() {
+func (n *Node) ToggleTemporarilyOffline(options ...interface{}) {
+	state_before := n.IsTemporarilyOffline()
+	qr := map[string]string{"offlineMessage": "requested from gojenkins"}
+	if len(options) > 0 {
+		qr["offlineMessage"] = options[0].(string)
+	}
+	n.Requester.Get(n.Base+"/toggleOffline", nil, qr)
+	if state_before == n.IsTemporarilyOffline() {
+		panic("Node state not changed")
+	}
+}
 
+func (n *Node) Poll() int {
+	n.Requester.Get(n.Base, n.Raw, nil)
+	return n.Requester.LastResponse.StatusCode
 }

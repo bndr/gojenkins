@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
 )
 
 type Job struct {
@@ -25,28 +26,22 @@ type ActionsObject struct {
 }
 
 type jobBuild struct {
-	Number int64
+	Number int
 	Url    string
 }
 
 type jobResponse struct {
-	Actions   interface{}
-	Buildable bool `json:"buildable"`
-	Builds    []struct {
-		Number int    `json:"number"`
-		URL    string `json:"url"`
-	} `json:"builds"`
+	Actions            interface{}
+	Buildable          bool `json:"buildable"`
+	Builds             []jobBuild
 	Color              string        `json:"color"`
 	ConcurrentBuild    bool          `json:"concurrentBuild"`
 	Description        string        `json:"description"`
 	DisplayName        string        `json:"displayName"`
 	DisplayNameOrNull  interface{}   `json:"displayNameOrNull"`
 	DownstreamProjects []interface{} `json:"downstreamProjects"`
-	FirstBuild         struct {
-		Number float64 `json:"number"`
-		URL    string  `json:"url"`
-	} `json:"firstBuild"`
-	HealthReport []struct {
+	FirstBuild         jobBuild
+	HealthReport       []struct {
 		Description   string  `json:"description"`
 		IconClassName string  `json:"iconClassName"`
 		IconUrl       string  `json:"iconUrl"`
@@ -84,44 +79,74 @@ func (j *Job) GetName() string {
 	return j.Raw.Name
 }
 
-func (j *Job) GetDescription() {
-
+func (j *Job) GetDescription() string {
+	return j.Raw.Description
 }
 
-func (j *Job) GetDetails() {
-
+func (j *Job) GetDetails() *jobResponse {
+	return j.Raw
 }
 
-func (j *Job) GetBuild() {
-
+func (j *Job) GetBuild(id string) *Build {
+	build := Build{Raw: new(buildResponse), Requester: j.Requester, Base: "/job/" + j.GetName() + "/" + number}
+	if build.Poll() == 200 {
+		return &build
+	}
+	return nil
 }
 
-func (j *Job) GetLastGoodBuild() {
-
+func (j *Job) getBuildByType(buildType string) *Build {
+	allowed := map[string]jobBuild{
+		"lastStableBuild":     j.Raw.LastStableBuild,
+		"lastSuccessfulBuild": j.Raw.LastSuccessfulBuild,
+		"lastBuild":           j.Raw.LastBuild,
+		"lastCompletedBuild":  j.Raw.LastCompletedBuild,
+		"firstBuild":          j.Raw.FirstBuild,
+		"lastFailedBuild":     j.Raw.LastFailedBuild,
+	}
+	number := ""
+	if val, ok := allowed[buildType]; ok {
+		number = strconv.Itoa(val.Number)
+	} else {
+		panic("No Such Build")
+	}
+	build := Build{Raw: new(buildResponse), Requester: j.Requester, Base: "/job/" + j.GetName() + "/" + number}
+	if build.Poll() == 200 {
+		return &build
+	}
+	return nil
 }
 
-func (j *Job) GetFirstBuild() {
-
+func (j *Job) GetLastSuccessfulBuild() *Build {
+	return j.getBuildByType("lastSuccessfulBuild")
 }
 
-func (j *Job) GetLastBuild() {
-
+func (j *Job) GetFirstBuild() *Build {
+	return j.getBuildByType("firstBuild")
 }
 
-func (j *Job) GetLastStableBuild() {
-
+func (j *Job) GetLastBuild() *Build {
+	return j.getBuildByType("lastBuild")
 }
 
-func (j *Job) GetLastFailedBuild() {
-
+func (j *Job) GetLastStableBuild() *Build {
+	return j.getBuildByType("lastStableBuild")
 }
 
-func (j *Job) GetLastCompletedBuild() {
+func (j *Job) GetLastFailedBuild() *Build {
+	return j.getBuildByType("lastFailedBuild")
+}
 
+func (j *Job) GetLastCompletedBuild() *Build {
+	return j.getBuildByType("lastCompletedBuild")
 }
 
 func (j *Job) GetAllBuilds() {
+	j.Poll()
+	builds := make([]*Build, len(j.Raw.Builds))
+	for q, v := range j.Raw.Builds {
 
+	}
 }
 
 func (j *Job) GetBuildMetaData() {
@@ -144,20 +169,19 @@ func (J *Job) GetDownstreamJobs() {
 
 }
 
-func (j *Job) Enable() {
-
+func (j *Job) Enable() bool {
+	resp := j.Requester.Post(j.Base+"/enable", nil, nil, nil)
+	return resp.StatusCode == 200
 }
 
-func (j *Job) Disable() {
-
+func (j *Job) Disable() bool {
+	resp := j.Requester.Post(j.Base+"/disable", nil, nil, nil)
+	return resp.StatusCode == 200
 }
 
 func (j *Job) Delete() bool {
 	resp := j.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
-	if resp.StatusCode == 200 {
-		return true
-	}
-	return false
+	return resp.StatusCode == 200
 }
 
 func (j *Job) Rename(name string) {
@@ -168,6 +192,7 @@ func (j *Job) Rename(name string) {
 func (j *Job) Exists() {
 
 }
+
 func (j *Job) Create(config string) *Job {
 	resp := j.Requester.Post("/createItem", bytes.NewBuffer([]byte(config)), j.Raw, nil)
 	if resp.Status == "200" {
@@ -196,26 +221,29 @@ func (j *Job) SetConfig() {
 
 }
 
-func (j *Job) GetBuildUrl() {
-
-}
-
-func (j *Job) IsQueued() {
-
+func (j *Job) IsQueued() bool {
+	j.Poll()
+	return j.Raw.InQueue
 }
 
 func (j *Job) IsRunning() {
-
+	j.Poll()
 }
 
-func (j *Job) IsEnabled() {
-
+func (j *Job) IsEnabled() bool {
+	j.Poll()
+	return j.Raw.Color != "disabled"
 }
 
 func (j *Job) HasQueuedBuild() {
 
 }
 
-func (j *Job) Invoke() {
+func (j *Job) Invoke(files []string, options ...interface{}) bool {
+	return true
+}
 
+func (j *Job) Poll() int {
+	j.Requester.Get(j.Base, j.Raw, nil)
+	return j.Requester.LastResponse.StatusCode
 }

@@ -3,7 +3,7 @@ package main
 type Build struct {
 	Raw       *buildResponse
 	Requester *Requester
-	Job       *Job
+	Base      string
 }
 
 type Parameter struct {
@@ -151,4 +151,9 @@ func (b *Build) IsGood() {
 
 func (b *Build) IsRunning() {
 
+}
+
+func (b *Build) Poll() int {
+	b.Requester.Get(b.Base, b.Raw, nil)
+	return b.Requester.LastResponse.StatusCode
 }
