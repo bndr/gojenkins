@@ -11,6 +11,7 @@ type Computers struct {
 
 type Node struct {
 	Raw       *nodeResponse
+	Jenkins   *Jenkins
 	Requester *Requester
 	Base      string
 }

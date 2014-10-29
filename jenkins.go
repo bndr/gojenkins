@@ -65,7 +65,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	if node != nil {
 		return node
 	}
-	node = &Node{Raw: new(nodeResponse), Requester: j.Requester, Base: "/computer/" + name}
+	node = &Node{Jenkins: j, Raw: new(nodeResponse), Requester: j.Requester, Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{
@@ -93,29 +93,29 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 }
 
 func (j *Jenkins) CreateJob(config string) *Job {
-	job := Job{Raw: new(jobResponse), Requester: j.Requester}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester}
 	job.Create(config)
 	return &job
 }
 
 func (j *Jenkins) RenameJob(job string, name string) *Job {
-	jobObj := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + job}
+	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + job}
 	jobObj.Rename(name)
 	return &jobObj
 }
 
 func (j *Jenkins) CopyJob(copyFrom string, newName string) *Job {
-	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + newName}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + newName}
 	return job.Copy(copyFrom, newName)
 }
 
 func (j *Jenkins) DeleteJob(name string) bool {
-	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
 	return job.Delete()
 }
 
 func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
-	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
@@ -124,7 +124,7 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
 }
 
 func (j *Jenkins) GetNode(name string) *Node {
-	node := Node{Raw: new(nodeResponse), Requester: j.Requester, Base: "/computers/" + name}
+	node := Node{Jenkins: j, Raw: new(nodeResponse), Requester: j.Requester, Base: "/computers/" + name}
 	if node.Poll() == 200 {
 		return &node
 	}
@@ -132,7 +132,7 @@ func (j *Jenkins) GetNode(name string) *Node {
 }
 
 func (j *Jenkins) GetBuild(job string, number string) *Build {
-	build := Build{Raw: new(buildResponse), Requester: j.Requester, Base: "/job/" + job + "/" + number}
+	build := Build{Jenkins: j, Raw: new(buildResponse), Depth: 1, Requester: j.Requester, Base: "/job/" + job + "/" + number}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -140,7 +140,7 @@ func (j *Jenkins) GetBuild(job string, number string) *Build {
 }
 
 func (j *Jenkins) GetJob(id string) *Job {
-	job := Job{Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + id}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + id}
 	if job.Poll() == 200 {
 		return &job
 	}
@@ -166,7 +166,12 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 	}
 	for i, build := range jobObj.Raw.Builds {
 		if preload == false {
-			builds[i] = &Build{Raw: &buildResponse{Number: build.Number, URL: build.URL}, Requester: j.Requester, Base: "/job/" + jobObj.GetName() + "/" + string(build.Number)}
+			builds[i] = &Build{
+				Jenkins:   j,
+				Depth:     1,
+				Raw:       &buildResponse{Number: build.Number, URL: build.URL},
+				Requester: j.Requester,
+				Base:      "/job/" + jobObj.GetName() + "/" + string(build.Number)}
 		} else {
 			builds[i] = j.GetBuild(job, strconv.Itoa(build.Number))
 		}
@@ -180,7 +185,13 @@ func (j *Jenkins) GetAllJobs(preload bool) []*Job {
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
 		if preload == false {
-			jobs[i] = &Job{Raw: &jobResponse{Name: job.Name, Color: job.Color, URL: job.URL}, Requester: j.Requester}
+			jobs[i] = &Job{
+				Jenkins: j,
+				Raw: &jobResponse{Name: job.Name,
+					Color: job.Color,
+					URL:   job.URL},
+				Requester: j.Requester,
+				Base:      "/job/" + job.Name}
 		} else {
 			jobs[i] = j.GetJob(job.Name)
 		}
@@ -188,14 +199,16 @@ func (j *Jenkins) GetAllJobs(preload bool) []*Job {
 	return jobs
 }
 
-func CreateJenkins(base string, username string, password string) *Jenkins {
+func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
 	j.Requester = &Requester{Base: base, SslVerify: false, Headers: http.Header{}}
-	j.Requester.BasicAuth = &BasicAuth{Username: username, Password: password}
+	if len(auth) == 2 {
+		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
+	}
 	return j
 }
 
@@ -203,8 +216,10 @@ func main() {
 	j := CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
 
 	//fmt.Printf("%#v\n", j.GetJob("testJobName").Raw.Description)
-	job := j.GetAllJobs(true)[0]
-	fmt.Printf("%#v\n", job)
+	job := j.GetJob("testjib")
+	ts := job.GetLastBuild()
+	fmt.Println(ts.GetRevision())
+	fmt.Println(ts.GetCauses())
 	//fmt.Printf("%#v\n", j.GetJob("newjobsbb").Delete())
-	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
+	//	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
 }

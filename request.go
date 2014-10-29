@@ -63,7 +63,6 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 		output += delimiter + k + "=" + v
 		delimiter = "&"
 	}
-	fmt.Println(output)
 	return output
 }
 

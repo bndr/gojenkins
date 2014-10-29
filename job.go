@@ -8,14 +8,9 @@ import (
 
 type Job struct {
 	Raw       *jobResponse
+	Jenkins   *Jenkins
 	Requester *Requester
 	Base      string
-}
-
-type Cause struct {
-	ShortDescription string
-	UserId           string
-	Username         string
 }
 
 type ActionsObject struct {
@@ -27,19 +22,35 @@ type ActionsObject struct {
 
 type jobBuild struct {
 	Number int
-	Url    string
+	URL    string
+}
+
+type updownProject struct {
+	Name  string `json:"name"`
+	Url   string `json:"url"`
+	Color string `json:"color"`
+}
+
+type parameterDefinition struct {
+	DefaultParameterValue struct {
+		Name  string `json:"name"`
+		Value bool   `json:"value"`
+	} `json:"defaultParameterValue"`
+	Description string `json:"description"`
+	Name        string `json:"name"`
+	Type        string `json:"type"`
 }
 
 type jobResponse struct {
 	Actions            interface{}
 	Buildable          bool `json:"buildable"`
 	Builds             []jobBuild
-	Color              string        `json:"color"`
-	ConcurrentBuild    bool          `json:"concurrentBuild"`
-	Description        string        `json:"description"`
-	DisplayName        string        `json:"displayName"`
-	DisplayNameOrNull  interface{}   `json:"displayNameOrNull"`
-	DownstreamProjects []interface{} `json:"downstreamProjects"`
+	Color              string          `json:"color"`
+	ConcurrentBuild    bool            `json:"concurrentBuild"`
+	Description        string          `json:"description"`
+	DisplayName        string          `json:"displayName"`
+	DisplayNameOrNull  interface{}     `json:"displayNameOrNull"`
+	DownstreamProjects []updownProject `json:"downstreamProjects"`
 	FirstBuild         jobBuild
 	HealthReport       []struct {
 		Description   string  `json:"description"`
@@ -59,20 +70,12 @@ type jobResponse struct {
 	Name                  string   `json:"name"`
 	NextBuildNumber       float64  `json:"nextBuildNumber"`
 	Property              []struct {
-		ParameterDefinitions []struct {
-			DefaultParameterValue struct {
-				Name  string `json:"name"`
-				Value bool   `json:"value"`
-			} `json:"defaultParameterValue"`
-			Description string `json:"description"`
-			Name        string `json:"name"`
-			Type        string `json:"type"`
-		} `json:"parameterDefinitions"`
+		ParameterDefinitions []parameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
-	QueueItem        interface{}   `json:"queueItem"`
-	Scm              struct{}      `json:"scm"`
-	UpstreamProjects []interface{} `json:"upstreamProjects"`
-	URL              string        `json:"url"`
+	QueueItem        interface{}     `json:"queueItem"`
+	Scm              struct{}        `json:"scm"`
+	UpstreamProjects []updownProject `json:"upstreamProjects"`
+	URL              string          `json:"url"`
 }
 
 func (j *Job) GetName() string {
@@ -88,7 +91,7 @@ func (j *Job) GetDetails() *jobResponse {
 }
 
 func (j *Job) GetBuild(id string) *Build {
-	build := Build{Raw: new(buildResponse), Requester: j.Requester, Base: "/job/" + j.GetName() + "/" + number}
+	build := Build{Raw: new(buildResponse), Depth: 1, Requester: j.Requester, Base: "/job/" + j.GetName() + "/" + id}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -110,7 +113,11 @@ func (j *Job) getBuildByType(buildType string) *Build {
 	} else {
 		panic("No Such Build")
 	}
-	build := Build{Raw: new(buildResponse), Requester: j.Requester, Base: "/job/" + j.GetName() + "/" + number}
+	build := Build{
+		Depth:     1,
+		Raw:       new(buildResponse),
+		Requester: j.Requester,
+		Base:      "/job/" + j.GetName() + "/" + number}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -144,29 +151,52 @@ func (j *Job) GetLastCompletedBuild() *Build {
 func (j *Job) GetAllBuilds() {
 	j.Poll()
 	builds := make([]*Build, len(j.Raw.Builds))
-	for q, v := range j.Raw.Builds {
-
+	for i, b := range j.Raw.Builds {
+		builds[i] = &Build{
+			Depth:     1,
+			Raw:       &buildResponse{Number: b.Number, URL: b.URL},
+			Requester: j.Requester,
+			Base:      "/job/" + j.GetName() + "/" + string(b.Number)}
 	}
 }
 
-func (j *Job) GetBuildMetaData() {
-
+func (j *Job) GetUpstreamJobsMetadata() []updownProject {
+	return j.Raw.UpstreamProjects
 }
 
-func (j *Job) GetUpstreamJobNames() {
-
+func (j *Job) GetDownstreamJobsMetadata() []updownProject {
+	return j.Raw.DownstreamProjects
 }
 
-func (j *Job) GetDownstreamJobNames() {
-
+func (j *Job) GetUpstreamJobs() []*Job {
+	jobs := make([]*Job, len(j.Raw.UpstreamProjects))
+	for i, job := range j.Raw.UpstreamProjects {
+		jobs[i] = &Job{
+			Raw: &jobResponse{
+				Name:  job.Name,
+				Color: job.Color,
+				URL:   job.Url},
+			Requester: j.Requester,
+			Base:      "/job/" + job.Name,
+		}
+		jobs[i].Poll()
+	}
+	return jobs
 }
 
-func (j *Job) GetUpstreamJobs() {
-
-}
-
-func (J *Job) GetDownstreamJobs() {
-
+func (j *Job) GetDownstreamJobs() []*Job {
+	jobs := make([]*Job, len(j.Raw.DownstreamProjects))
+	for i, job := range j.Raw.DownstreamProjects {
+		jobs[i] = &Job{
+			Raw: &jobResponse{
+				Name:  job.Name,
+				Color: job.Color,
+				URL:   job.Url},
+			Requester: j.Requester,
+		}
+		jobs[i].Poll()
+	}
+	return jobs
 }
 
 func (j *Job) Enable() bool {
@@ -217,8 +247,12 @@ func (j *Job) GetConfig() string {
 	return data
 }
 
-func (j *Job) SetConfig() {
-
+func (j *Job) GetParameters() []parameterDefinition {
+	j.Poll()
+	if len(j.Raw.Property) < 1 {
+		return nil
+	}
+	return j.Raw.Property[0].ParameterDefinitions
 }
 
 func (j *Job) IsQueued() bool {
