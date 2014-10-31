@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,30 +18,36 @@ type Requester struct {
 	Client       *http.Client
 	SslVerify    bool
 	LastResponse *http.Response
-}
-
-type Response struct {
+	Suffix       string
 }
 
 func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
-
+	r.Suffix = "api/json"
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
 func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, options ...interface{}) *http.Response {
 	payload := bytes.NewBuffer([]byte(xml))
 	r.SetHeader("Content-Type", "text/xml")
+	r.Suffix = "api/json"
 	return r.Do("XML", endpoint, payload, &responseStruct, options)
 }
 
-func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
+func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.SetHeader("Content-Type", "application/json")
+	r.Suffix = "api/json"
 	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
 
 func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.SetHeader("Content-Type", "application/json")
+	r.Suffix = "api/json"
+	return r.Do("XML", endpoint, nil, responseStruct, querystring)
+}
+
+func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
+	r.Suffix = ""
 	return r.Do("XML", endpoint, nil, responseStruct, querystring)
 }
 
@@ -70,14 +75,14 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 	if !strings.HasSuffix(endpoint, "/") {
 		endpoint += "/"
 	}
-	url := r.Base + endpoint + "api/json"
+	url := r.Base + endpoint + r.Suffix
 	for _, o := range options {
 		switch v := o.(type) {
 		case map[string]string:
 			url += r.parseQueryString(v)
 		}
 	}
-	fmt.Printf("%s\n\n", url)
+	Info.Printf("Requesting URL: %v", url)
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		panic(err)

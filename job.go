@@ -7,10 +7,9 @@ import (
 )
 
 type Job struct {
-	Raw       *jobResponse
-	Jenkins   *Jenkins
-	Requester *Requester
-	Base      string
+	Raw     *jobResponse
+	Jenkins *Jenkins
+	Base    string
 }
 
 type ActionsObject struct {
@@ -53,10 +52,10 @@ type jobResponse struct {
 	DownstreamProjects []updownProject `json:"downstreamProjects"`
 	FirstBuild         jobBuild
 	HealthReport       []struct {
-		Description   string  `json:"description"`
-		IconClassName string  `json:"iconClassName"`
-		IconUrl       string  `json:"iconUrl"`
-		Score         float64 `json:"score"`
+		Description   string `json:"description"`
+		IconClassName string `json:"iconClassName"`
+		IconUrl       string `json:"iconUrl"`
+		Score         int64  `json:"score"`
 	} `json:"healthReport"`
 	InQueue               bool     `json:"inQueue"`
 	KeepDependencies      bool     `json:"keepDependencies"`
@@ -68,7 +67,7 @@ type jobResponse struct {
 	LastUnstableBuild     jobBuild `json:"lastUnstableBuild"`
 	LastUnsuccessfulBuild jobBuild `json:"lastUnsuccessfulBuild"`
 	Name                  string   `json:"name"`
-	NextBuildNumber       float64  `json:"nextBuildNumber"`
+	NextBuildNumber       int64    `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []parameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
@@ -91,7 +90,7 @@ func (j *Job) GetDetails() *jobResponse {
 }
 
 func (j *Job) GetBuild(id string) *Build {
-	build := Build{Raw: new(buildResponse), Depth: 1, Requester: j.Requester, Base: "/job/" + j.GetName() + "/" + id}
+	build := Build{Jenkins: j.Jenkins, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + id}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -114,10 +113,11 @@ func (j *Job) getBuildByType(buildType string) *Build {
 		panic("No Such Build")
 	}
 	build := Build{
-		Depth:     1,
-		Raw:       new(buildResponse),
-		Requester: j.Requester,
-		Base:      "/job/" + j.GetName() + "/" + number}
+		Jenkins: j.Jenkins,
+		Depth:   1,
+		Job:     j,
+		Raw:     new(buildResponse),
+		Base:    "/job/" + j.GetName() + "/" + number}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -153,10 +153,10 @@ func (j *Job) GetAllBuilds() {
 	builds := make([]*Build, len(j.Raw.Builds))
 	for i, b := range j.Raw.Builds {
 		builds[i] = &Build{
-			Depth:     1,
-			Raw:       &buildResponse{Number: b.Number, URL: b.URL},
-			Requester: j.Requester,
-			Base:      "/job/" + j.GetName() + "/" + string(b.Number)}
+			Jenkins: j.Jenkins,
+			Depth:   1,
+			Raw:     &buildResponse{Number: b.Number, URL: b.URL},
+			Base:    "/job/" + j.GetName() + "/" + string(b.Number)}
 	}
 }
 
@@ -176,8 +176,8 @@ func (j *Job) GetUpstreamJobs() []*Job {
 				Name:  job.Name,
 				Color: job.Color,
 				URL:   job.Url},
-			Requester: j.Requester,
-			Base:      "/job/" + job.Name,
+			Jenkins: j.Jenkins,
+			Base:    "/job/" + job.Name,
 		}
 		jobs[i].Poll()
 	}
@@ -192,7 +192,7 @@ func (j *Job) GetDownstreamJobs() []*Job {
 				Name:  job.Name,
 				Color: job.Color,
 				URL:   job.Url},
-			Requester: j.Requester,
+			Jenkins: j.Jenkins,
 		}
 		jobs[i].Poll()
 	}
@@ -200,23 +200,23 @@ func (j *Job) GetDownstreamJobs() []*Job {
 }
 
 func (j *Job) Enable() bool {
-	resp := j.Requester.Post(j.Base+"/enable", nil, nil, nil)
+	resp := j.Jenkins.Requester.Post(j.Base+"/enable", nil, nil, nil)
 	return resp.StatusCode == 200
 }
 
 func (j *Job) Disable() bool {
-	resp := j.Requester.Post(j.Base+"/disable", nil, nil, nil)
+	resp := j.Jenkins.Requester.Post(j.Base+"/disable", nil, nil, nil)
 	return resp.StatusCode == 200
 }
 
 func (j *Job) Delete() bool {
-	resp := j.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
+	resp := j.Jenkins.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
 	return resp.StatusCode == 200
 }
 
 func (j *Job) Rename(name string) {
 	payload, _ := json.Marshal(map[string]string{"newName": name})
-	j.Requester.Post(j.Base+"/doRename", bytes.NewBuffer(payload), nil, nil)
+	j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBuffer(payload), nil, nil)
 }
 
 func (j *Job) Exists() {
@@ -224,7 +224,7 @@ func (j *Job) Exists() {
 }
 
 func (j *Job) Create(config string) *Job {
-	resp := j.Requester.Post("/createItem", bytes.NewBuffer([]byte(config)), j.Raw, nil)
+	resp := j.Jenkins.Requester.Post("/createItem", bytes.NewBuffer([]byte(config)), j.Raw, nil)
 	if resp.Status == "200" {
 		return j
 	} else {
@@ -234,7 +234,7 @@ func (j *Job) Create(config string) *Job {
 
 func (j *Job) Copy(from string, newName string) *Job {
 	qr := map[string]string{"name": newName, "from": from, "mode": "copy"}
-	resp := j.Requester.Post("/createItem", nil, nil, qr)
+	resp := j.Jenkins.Requester.Post("/createItem", nil, nil, qr)
 	if resp.StatusCode == 200 {
 		return j
 	}
@@ -243,7 +243,7 @@ func (j *Job) Copy(from string, newName string) *Job {
 
 func (j *Job) GetConfig() string {
 	var data string
-	j.Requester.GetXML(j.Base+"/config.xml", &data, nil)
+	j.Jenkins.Requester.GetXML(j.Base+"/config.xml", &data, nil)
 	return data
 }
 
@@ -278,6 +278,6 @@ func (j *Job) Invoke(files []string, options ...interface{}) bool {
 }
 
 func (j *Job) Poll() int {
-	j.Requester.Get(j.Base, j.Raw, nil)
-	return j.Requester.LastResponse.StatusCode
+	j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
+	return j.Jenkins.Requester.LastResponse.StatusCode
 }

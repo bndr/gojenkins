@@ -3,8 +3,10 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -26,10 +28,18 @@ type Jenkins struct {
 	Requester *Requester
 }
 
+// Loggers
+
+var (
+	Info    *log.Logger
+	Warning *log.Logger
+	Error   *log.Logger
+)
+
 // Jenkins
 
 func (j *Jenkins) Init() *Jenkins {
-
+	j.initLoggers()
 	// Skip SSL Verification?
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: !j.Requester.SslVerify},
@@ -55,6 +65,20 @@ func (j *Jenkins) Init() *Jenkins {
 	return j
 }
 
+func (j *Jenkins) initLoggers() {
+	Info = log.New(os.Stdout,
+		"INFO: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+
+	Warning = log.New(os.Stdout,
+		"WARNING: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+
+	Error = log.New(os.Stderr,
+		"ERROR: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+}
+
 func (j *Jenkins) Info() *executorResponse {
 	j.Requester.Do("GET", "/", nil, j.Raw, nil)
 	return j.Raw
@@ -65,7 +89,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	if node != nil {
 		return node
 	}
-	node = &Node{Jenkins: j, Raw: new(nodeResponse), Requester: j.Requester, Base: "/computer/" + name}
+	node = &Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{
@@ -84,7 +108,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		}),
 	}
 
-	resp := node.Requester.GetXML("/computer/doCreateItem", nil, qr)
+	resp := j.Requester.GetXML("/computer/doCreateItem", nil, qr)
 	if resp.StatusCode < 400 {
 		node.Poll()
 		return node
@@ -93,29 +117,29 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 }
 
 func (j *Jenkins) CreateJob(config string) *Job {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester}
+	job := Job{Jenkins: j, Raw: new(jobResponse)}
 	job.Create(config)
 	return &job
 }
 
 func (j *Jenkins) RenameJob(job string, name string) *Job {
-	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + job}
+	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + job}
 	jobObj.Rename(name)
 	return &jobObj
 }
 
 func (j *Jenkins) CopyJob(copyFrom string, newName string) *Job {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + newName}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + newName}
 	return job.Copy(copyFrom, newName)
 }
 
 func (j *Jenkins) DeleteJob(name string) bool {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
 func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + name}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
@@ -124,7 +148,7 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
 }
 
 func (j *Jenkins) GetNode(name string) *Node {
-	node := Node{Jenkins: j, Raw: new(nodeResponse), Requester: j.Requester, Base: "/computers/" + name}
+	node := Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computers/" + name}
 	if node.Poll() == 200 {
 		return &node
 	}
@@ -132,7 +156,7 @@ func (j *Jenkins) GetNode(name string) *Node {
 }
 
 func (j *Jenkins) GetBuild(job string, number string) *Build {
-	build := Build{Jenkins: j, Raw: new(buildResponse), Depth: 1, Requester: j.Requester, Base: "/job/" + job + "/" + number}
+	build := Build{Jenkins: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + job + "/" + number}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -140,7 +164,7 @@ func (j *Jenkins) GetBuild(job string, number string) *Build {
 }
 
 func (j *Jenkins) GetJob(id string) *Job {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Requester: j.Requester, Base: "/job/" + id}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + id}
 	if job.Poll() == 200 {
 		return &job
 	}
@@ -149,10 +173,10 @@ func (j *Jenkins) GetJob(id string) *Job {
 
 func (j *Jenkins) GetAllNodes() []*Node {
 	computers := new(Computers)
-	j.Requester.Get("/computer", computers, nil)
+	j.Requester.GetJSON("/computer", computers, nil)
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		nodes[i] = &Node{Raw: &node, Requester: j.Requester}
+		nodes[i] = &Node{Raw: &node, Jenkins: j}
 	}
 	return nodes
 }
@@ -167,11 +191,10 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 	for i, build := range jobObj.Raw.Builds {
 		if preload == false {
 			builds[i] = &Build{
-				Jenkins:   j,
-				Depth:     1,
-				Raw:       &buildResponse{Number: build.Number, URL: build.URL},
-				Requester: j.Requester,
-				Base:      "/job/" + jobObj.GetName() + "/" + string(build.Number)}
+				Jenkins: j,
+				Depth:   1,
+				Raw:     &buildResponse{Number: build.Number, URL: build.URL},
+				Base:    "/job/" + jobObj.GetName() + "/" + string(build.Number)}
 		} else {
 			builds[i] = j.GetBuild(job, strconv.Itoa(build.Number))
 		}
@@ -180,8 +203,8 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 }
 
 func (j *Jenkins) GetAllJobs(preload bool) []*Job {
-	exec := executor{Raw: new(executorResponse), Requester: j.Requester}
-	j.Requester.Get("/", exec.Raw, nil)
+	exec := executor{Raw: new(executorResponse), Jenkins: j}
+	j.Requester.GetJSON("/", exec.Raw, nil)
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
 		if preload == false {
@@ -190,13 +213,47 @@ func (j *Jenkins) GetAllJobs(preload bool) []*Job {
 				Raw: &jobResponse{Name: job.Name,
 					Color: job.Color,
 					URL:   job.URL},
-				Requester: j.Requester,
-				Base:      "/job/" + job.Name}
+				Base: "/job/" + job.Name}
 		} else {
 			jobs[i] = j.GetJob(job.Name)
 		}
 	}
 	return jobs
+}
+
+func (j *Jenkins) GetQueue() *Queue {
+	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: "/queue"}
+	q.Poll()
+	return q
+}
+
+func (j *Jenkins) GetQueueUrl() string {
+	return "/queue"
+}
+
+func (j *Jenkins) GetArtifactData(id string) *fingerPrintResponse {
+	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
+	return fp.GetInfo()
+}
+
+func (j *Jenkins) GetPlugins(depth int) *Plugins {
+	p := Plugins{Jenkins: j, Raw: new(pluginResponse), Base: "/pluginManager", Depth: depth}
+	p.Poll()
+	return &p
+}
+
+func (j *Jenkins) HasPlugin(name string) *Plugin {
+	p := j.GetPlugins(1)
+	return p.Contains(name)
+}
+
+func (j *Jenkins) ValidateFingerPrint(id string) bool {
+	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
+	if fp.Valid() {
+		Info.Printf("Jenkins says %s is valid", id)
+		return true
+	}
+	return false
 }
 
 func CreateJenkins(base string, auth ...interface{}) *Jenkins {
@@ -218,8 +275,8 @@ func main() {
 	//fmt.Printf("%#v\n", j.GetJob("testJobName").Raw.Description)
 	job := j.GetJob("testjib")
 	ts := job.GetLastBuild()
-	fmt.Println(ts.GetRevision())
-	fmt.Println(ts.GetCauses())
-	//fmt.Printf("%#v\n", j.GetJob("newjobsbb").Delete())
+	ts.GetArtifacts()[0].Save("/tmp/tabulateFile")
+	fmt.Printf("%#v", j.GetPlugins(1).Contains("ldap"))
+	//fmt.Printf("%#v\n", job.GetLastBuild().Info())
 	//	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
 }

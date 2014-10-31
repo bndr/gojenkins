@@ -5,3 +5,4 @@
 * CLI Tool
 * Remove all panics
 * Replace are Object creation with something proper.
+* Rewrite some (all?) iterators with channels

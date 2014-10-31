@@ -10,10 +10,9 @@ type Computers struct {
 }
 
 type Node struct {
-	Raw       *nodeResponse
-	Jenkins   *Jenkins
-	Requester *Requester
-	Base      string
+	Raw     *nodeResponse
+	Jenkins *Jenkins
+	Base    string
 }
 
 type nodeResponse struct {
@@ -32,12 +31,12 @@ type nodeResponse struct {
 		Hudson_NodeMonitors_ClockMonitor        interface{} `json:"hudson.node_monitors.ClockMonitor"`
 		Hudson_NodeMonitors_DiskSpaceMonitor    interface{} `json:"hudson.node_monitors.DiskSpaceMonitor"`
 		Hudson_NodeMonitors_ResponseTimeMonitor struct {
-			Average float64 `json:"average"`
+			Average int64 `json:"average"`
 		} `json:"hudson.node_monitors.ResponseTimeMonitor"`
 		Hudson_NodeMonitors_SwapSpaceMonitor      interface{} `json:"hudson.node_monitors.SwapSpaceMonitor"`
 		Hudson_NodeMonitors_TemporarySpaceMonitor interface{} `json:"hudson.node_monitors.TemporarySpaceMonitor"`
 	} `json:"monitorData"`
-	NumExecutors       float64       `json:"numExecutors"`
+	NumExecutors       int64         `json:"numExecutors"`
 	Offline            bool          `json:"offline"`
 	OfflineCause       struct{}      `json:"offlineCause"`
 	OfflineCauseReason string        `json:"offlineCauseReason"`
@@ -54,7 +53,7 @@ func (n *Node) GetName() string {
 }
 
 func (n *Node) Delete() bool {
-	resp := n.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
+	resp := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
 	return resp.StatusCode == 200
 }
 
@@ -101,13 +100,13 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) {
 	if len(options) > 0 {
 		qr["offlineMessage"] = options[0].(string)
 	}
-	n.Requester.Get(n.Base+"/toggleOffline", nil, qr)
+	n.Jenkins.Requester.GetJSON(n.Base+"/toggleOffline", nil, qr)
 	if state_before == n.IsTemporarilyOffline() {
 		panic("Node state not changed")
 	}
 }
 
 func (n *Node) Poll() int {
-	n.Requester.Get(n.Base, n.Raw, nil)
-	return n.Requester.LastResponse.StatusCode
+	n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
+	return n.Jenkins.Requester.LastResponse.StatusCode
 }

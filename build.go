@@ -6,12 +6,11 @@ import (
 )
 
 type Build struct {
-	Raw       *buildResponse
-	Job       *Job
-	Jenkins   *Jenkins
-	Requester *Requester
-	Base      string
-	Depth     int
+	Raw     *buildResponse
+	Job     *Job
+	Jenkins *Jenkins
+	Base    string
+	Depth   int
 }
 
 type Parameter struct {
@@ -56,19 +55,19 @@ type GeneralObj struct {
 }
 
 type TestResult struct {
-	Duration  float64 `json:"duration"`
-	Empty     bool    `json:"empty"`
-	FailCount float64 `json:"failCount"`
-	PassCount float64 `json:"passCount"`
-	SkipCount float64 `json:"skipCount"`
+	Duration  int64 `json:"duration"`
+	Empty     bool  `json:"empty"`
+	FailCount int64 `json:"failCount"`
+	PassCount int64 `json:"passCount"`
+	SkipCount int64 `json:"skipCount"`
 	Suites    []struct {
 		Cases []struct {
-			Age             float64     `json:"age"`
+			Age             int64       `json:"age"`
 			ClassName       string      `json:"className"`
-			Duration        float64     `json:"duration"`
+			Duration        int64       `json:"duration"`
 			ErrorDetails    interface{} `json:"errorDetails"`
 			ErrorStackTrace interface{} `json:"errorStackTrace"`
-			FailedSince     float64     `json:"failedSince"`
+			FailedSince     int64       `json:"failedSince"`
 			Name            string      `json:"name"`
 			Skipped         bool        `json:"skipped"`
 			SkippedMessage  interface{} `json:"skippedMessage"`
@@ -76,7 +75,7 @@ type TestResult struct {
 			Stderr          interface{} `json:"stderr"`
 			Stdout          interface{} `json:"stdout"`
 		} `json:"cases"`
-		Duration  float64     `json:"duration"`
+		Duration  int64       `json:"duration"`
 		ID        interface{} `json:"id"`
 		Name      string      `json:"name"`
 		Stderr    interface{} `json:"stderr"`
@@ -110,7 +109,7 @@ type buildResponse struct {
 				EditType string `json:"editType"`
 				File     string `json:"file"`
 			} `json:"paths"`
-			Timestamp float64 `json:"timestamp"`
+			Timestamp int64 `json:"timestamp"`
 		} `json:"items"`
 		Kind      string `json:"kind"`
 		Revisions []struct {
@@ -147,12 +146,18 @@ func (b *Build) GetUrl() string {
 	return b.Raw.URL
 }
 
+func (b *Build) GetBuildNumber() int {
+	return b.Raw.Number
+}
+
 func (b *Build) GetArtifacts() []Artifact {
 	artifacts := make([]Artifact, len(b.Raw.Artifacts))
 	for i, artifact := range b.Raw.Artifacts {
 		artifacts[i] = Artifact{
+			Jenkins:  b.Jenkins,
+			Build:    b,
 			FileName: artifact.FileName,
-			Url:      b.GetUrl() + "artifact/" + artifact.RelativePath,
+			Path:     b.Base + "/artifact/" + artifact.RelativePath,
 		}
 	}
 	return artifacts
@@ -164,12 +169,8 @@ func (b *Build) GetCulprits() []Culprit {
 
 func (b *Build) Stop() bool {
 	if b.IsRunning() {
-		b.Requester.Get(b.Base+"/stop", nil, nil)
-		if b.Requester.LastResponse.StatusCode == 200 {
-			return true
-		} else {
-			return false
-		}
+		b.Jenkins.Requester.GetJSON(b.Base+"/stop", nil, nil)
+		return b.Jenkins.Requester.LastResponse.StatusCode == 200
 	}
 	return true
 }
@@ -177,7 +178,7 @@ func (b *Build) Stop() bool {
 func (b *Build) GetConsoleOutput() string {
 	url := b.Base + "/consoleText"
 	var content string
-	b.Requester.GetXML(url, &content, nil)
+	b.Jenkins.Requester.GetXML(url, &content, nil)
 	return content
 }
 
@@ -252,8 +253,8 @@ func (b *Build) GetResultSet() *TestResult {
 	}
 	url := b.Base + "/testReport"
 	var report TestResult
-	b.Requester.Get(url, &report, nil)
-	if b.Requester.LastResponse.StatusCode == 200 {
+	b.Jenkins.Requester.GetJSON(url, &report, nil)
+	if b.Jenkins.Requester.LastResponse.StatusCode == 200 {
 		return &report
 	} else {
 		return nil
@@ -314,6 +315,6 @@ func (b *Build) Poll() int {
 	qr := map[string]string{
 		"depth": strconv.Itoa(b.Depth),
 	}
-	b.Requester.Get(b.Base, b.Raw, qr)
-	return b.Requester.LastResponse.StatusCode
+	b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
+	return b.Jenkins.Requester.LastResponse.StatusCode
 }

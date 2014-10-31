@@ -1,8 +1,8 @@
 package main
 
 type executor struct {
-	Raw       *executorResponse
-	Requester *Requester
+	Raw     *executorResponse
+	Jenkins *Jenkins
 }
 type executorResponse struct {
 	AssignedLabels []struct{}  `json:"assignedLabels"`
@@ -15,14 +15,14 @@ type executorResponse struct {
 	Mode            string   `json:"mode"`
 	NodeDescription string   `json:"nodeDescription"`
 	NodeName        string   `json:"nodeName"`
-	NumExecutors    float64  `json:"numExecutors"`
+	NumExecutors    int64    `json:"numExecutors"`
 	OverallLoad     struct{} `json:"overallLoad"`
 	PrimaryView     struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"primaryView"`
 	QuietingDown   bool     `json:"quietingDown"`
-	SlaveAgentPort float64  `json:"slaveAgentPort"`
+	SlaveAgentPort int64    `json:"slaveAgentPort"`
 	UnlabeledLoad  struct{} `json:"unlabeledLoad"`
 	UseCrumbs      bool     `json:"useCrumbs"`
 	UseSecurity    bool     `json:"useSecurity"`
