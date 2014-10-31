@@ -1,8 +1,22 @@
-package main
+// Copyright 2014 Vadim Kravcenko
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
+// Gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
+package gojenkins
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -11,14 +25,10 @@ import (
 	"strings"
 )
 
+// Basic Authentication
 type BasicAuth struct {
 	Username string
 	Password string
-}
-
-type TokenAuth struct {
-	Username string
-	Token    string
 }
 
 type Jenkins struct {
@@ -29,15 +39,15 @@ type Jenkins struct {
 }
 
 // Loggers
-
 var (
 	Info    *log.Logger
 	Warning *log.Logger
 	Error   *log.Logger
 )
 
-// Jenkins
-
+// Init Method. Should be called after creating a Jenkins Instance.
+// e.g jenkins := CreateJenkins("url").Init()
+// HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() *Jenkins {
 	j.initLoggers()
 	// Skip SSL Verification?
@@ -45,13 +55,13 @@ func (j *Jenkins) Init() *Jenkins {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: !j.Requester.SslVerify},
 	}
 
-	cookies, _ := cookiejar.New(nil)
-
-	client := &http.Client{
-		Transport: tr,
-		Jar:       cookies,
-	}
 	if j.Requester.Client == nil {
+		cookies, _ := cookiejar.New(nil)
+
+		client := &http.Client{
+			Transport: tr,
+			Jar:       cookies,
+		}
 		j.Requester.Client = client
 	}
 
@@ -79,6 +89,7 @@ func (j *Jenkins) initLoggers() {
 		log.Ldate|log.Ltime|log.Lshortfile)
 }
 
+// Get Basic Information About Jenkins
 func (j *Jenkins) Info() *executorResponse {
 	j.Requester.Do("GET", "/", nil, j.Raw, nil)
 	return j.Raw
@@ -222,7 +233,7 @@ func (j *Jenkins) GetAllJobs(preload bool) []*Job {
 }
 
 func (j *Jenkins) GetQueue() *Queue {
-	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: "/queue"}
+	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
 	q.Poll()
 	return q
 }
@@ -256,6 +267,9 @@ func (j *Jenkins) ValidateFingerPrint(id string) bool {
 	return false
 }
 
+// Creates a new Jenkins Instance
+// Optional parameters are: username, password
+// After creating an instance call init method.
 func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
@@ -267,16 +281,4 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
 	return j
-}
-
-func main() {
-	j := CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
-
-	//fmt.Printf("%#v\n", j.GetJob("testJobName").Raw.Description)
-	job := j.GetJob("testjib")
-	ts := job.GetLastBuild()
-	ts.GetArtifacts()[0].Save("/tmp/tabulateFile")
-	fmt.Printf("%#v", j.GetPlugins(1).Contains("ldap"))
-	//fmt.Printf("%#v\n", job.GetLastBuild().Info())
-	//	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
 }

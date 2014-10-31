@@ -1,11 +1,10 @@
-package main
+package gojenkins
 
 import "testing"
 import "github.com/stretchr/testify/assert"
 
-
 func TestGetAllJobs(t *testing.T) {
-	assert.Equal(t,true,true)
+	assert.Equal(t, true, false)
 }
 
 func TestGetSingleJob(t *testing.T) {
