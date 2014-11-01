@@ -127,9 +127,13 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	return nil
 }
 
-func (j *Jenkins) CreateJob(config string) *Job {
+func (j *Jenkins) CreateJob(config string, options ...interface{}) *Job {
+	qr := make(map[string]string)
+	if len(options) > 0 {
+		qr["name"] = options[0].(string)
+	}
 	job := Job{Jenkins: j, Raw: new(jobResponse)}
-	job.Create(config)
+	job.Create(config, qr)
 	return &job
 }
 
@@ -281,4 +285,16 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
 	return j
+}
+
+func main() {
+	j := CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+	j.GetJob("testjib").Rename("some_other_name")
+	//fmt.Printf("%#v\n", j.GetJob("testJobName").Raw.Description)
+	//job := j.GetJob("testjib")
+	//ts := job.GetLastBuild()
+	//ts.GetArtifacts()[0].Save("/tmp/tabulateFile")
+	Error.Printf("%#v", j.Info())
+	//fmt.Printf("%#v\n", job.GetLastBuild().Info())
+	//	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
 }

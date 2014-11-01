@@ -19,6 +19,37 @@ These are some of the features that are currently implemented:
 
 ## Usage
 
+```go
+jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+
+build := jenkins.GetJob("job_name").GetLastSuccessfulBuild()
+duration := build.GetDuration()
+
+job := jenkins.GetJob("jobname").Rename("SomeotherJobName")
+
+configString := `<?xml version='1.0' encoding='UTF-8'?> 
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders/>
+  <publishers/>
+  <buildWrappers/>
+</project>`
+
+j.CreateJob(configString, "someNewJobsName")
+
+
+```
+
 
 ## Examples
 

@@ -16,7 +16,7 @@ package gojenkins
 
 import (
 	"bytes"
-	"encoding/json"
+	"net/url"
 	"strconv"
 )
 
@@ -229,16 +229,21 @@ func (j *Job) Delete() bool {
 }
 
 func (j *Job) Rename(name string) {
-	payload, _ := json.Marshal(map[string]string{"newName": name})
-	j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBuffer(payload), nil, nil)
+	data := url.Values{}
+	data.Set("newName", name)
+	j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
 }
 
 func (j *Job) Exists() {
 
 }
 
-func (j *Job) Create(config string) *Job {
-	resp := j.Jenkins.Requester.Post("/createItem", bytes.NewBuffer([]byte(config)), j.Raw, nil)
+func (j *Job) Create(config string, qr ...interface{}) *Job {
+	var querystring map[string]string
+	if len(qr) > 0 {
+		querystring = qr[0].(map[string]string)
+	}
+	resp := j.Jenkins.Requester.PostXML("/createItem", config, j.Raw, querystring)
 	if resp.Status == "200" {
 		return j
 	} else {

@@ -41,11 +41,11 @@ func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct inte
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
-func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, options ...interface{}) *http.Response {
+func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) *http.Response {
 	payload := bytes.NewBuffer([]byte(xml))
-	r.SetHeader("Content-Type", "text/xml")
-	r.Suffix = "api/json"
-	return r.Do("XML", endpoint, payload, &responseStruct, options)
+	r.SetHeader("Content-Type", "application/xml")
+	r.Suffix = ""
+	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
 func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
@@ -66,7 +66,7 @@ func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring
 }
 
 func (r *Requester) SetHeader(key string, value string) *Requester {
-	r.Headers.Add(key, value)
+	r.Headers.Set(key, value)
 	return r
 }
 
@@ -96,7 +96,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 			url += r.parseQueryString(v)
 		}
 	}
-	Info.Printf("Requesting URL: %v", url)
+
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		panic(err)
