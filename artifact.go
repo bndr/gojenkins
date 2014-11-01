@@ -21,8 +21,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 )
 
+// Represents an Artifact
 type Artifact struct {
 	Jenkins  *Jenkins
 	Build    *Build
@@ -30,6 +32,7 @@ type Artifact struct {
 	Path     string
 }
 
+// Get raw byte data of Artifact
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
 	a.Jenkins.Requester.Get(a.Path, &data, nil)
@@ -41,6 +44,7 @@ func (a Artifact) GetData() ([]byte, error) {
 	return []byte(data), nil
 }
 
+// Save artifact to a specific path, using your own filename.
 func (a Artifact) Save(path string) {
 	Info.Printf("Saving artifact @ %s to %s", a.Path, path)
 	data, err := a.GetData()
@@ -62,10 +66,16 @@ func (a Artifact) Save(path string) {
 	}
 }
 
+// Save Artifact to directory using Artifact filename.
 func (a Artifact) SaveToDir(dir string) {
-
+	if _, err := os.Stat(dir); err != nil {
+		Error.Printf("Can't Save Artifact. Directory %s does not exist...", dir)
+		return
+	}
+	a.Save(path.Join(dir, a.FileName))
 }
 
+// Compare Remote and local MD5
 func (a Artifact) validateDownload(path string) bool {
 	localHash := a.getMD5local(path)
 	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(fingerPrintResponse)}
