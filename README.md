@@ -23,6 +23,9 @@ These are some of the features that are currently implemented:
 ## Usage
 
 ```go
+
+import "gojenkins"
+
 jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
 
 build := jenkins.GetJob("job_name").GetLastSuccessfulBuild()

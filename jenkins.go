@@ -159,7 +159,7 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
 	}
-	return job.Invoke(nil, params)
+	return job.InvokeSimple(params)
 }
 
 func (j *Jenkins) GetNode(name string) *Node {

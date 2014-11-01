@@ -19,7 +19,10 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -39,6 +42,10 @@ func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct inte
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.Suffix = "api/json"
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
+}
+
+func (r *Requester) PostFiles(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string, files []string) *http.Response {
+	return r.Do("POST", endpoint, payload, &responseStruct, querystring, files)
 }
 
 func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) *http.Response {
@@ -89,17 +96,52 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 	if !strings.HasSuffix(endpoint, "/") {
 		endpoint += "/"
 	}
+	fileUpload := false
+	var files []string
 	url := r.Base + endpoint + r.Suffix
 	for _, o := range options {
 		switch v := o.(type) {
 		case map[string]string:
 			url += r.parseQueryString(v)
+			break
+		case []string:
+			fileUpload = true
+			files = v
 		}
 	}
+	var req *http.Request
+	var err error
+	if fileUpload {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		for _, file := range files {
+			fileData, err := os.Open(file)
+			if err != nil {
+				Error.Println(err.Error())
+				return nil
+			}
 
-	req, err := http.NewRequest(method, url, payload)
-	if err != nil {
-		panic(err)
+			part, err := writer.CreateFormFile("file", filepath.Base(file))
+			if err != nil {
+				Error.Println(err.Error())
+			}
+			_, err = io.Copy(part, fileData)
+			defer fileData.Close()
+		}
+		var params map[string]string
+		json.NewDecoder(payload).Decode(&params)
+		for key, val := range params {
+			_ = writer.WriteField(key, val)
+		}
+		err = writer.Close()
+		req, err = http.NewRequest(method, url, body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+	} else {
+
+		req, err = http.NewRequest(method, url, payload)
+		if err != nil {
+			Error.Println(err.Error())
+		}
 	}
 
 	if r.BasicAuth != nil {
@@ -108,7 +150,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 
 	if r.Headers != nil {
 		for k, _ := range r.Headers {
-			req.Header.Set(k, r.Headers.Get(k))
+			req.Header.Add(k, r.Headers.Get(k))
 		}
 	}
 

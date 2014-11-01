@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/url"
 	"strconv"
 )
@@ -234,10 +235,6 @@ func (j *Job) Rename(name string) {
 	j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
 }
 
-func (j *Job) Exists() {
-
-}
-
 func (j *Job) Create(config string, qr ...interface{}) *Job {
 	var querystring map[string]string
 	if len(qr) > 0 {
@@ -279,8 +276,9 @@ func (j *Job) IsQueued() bool {
 	return j.Raw.InQueue
 }
 
-func (j *Job) IsRunning() {
+func (j *Job) IsRunning() bool {
 	j.Poll()
+	return j.GetLastBuild().IsRunning()
 }
 
 func (j *Job) IsEnabled() bool {
@@ -292,8 +290,55 @@ func (j *Job) HasQueuedBuild() {
 
 }
 
-func (j *Job) Invoke(files []string, options ...interface{}) bool {
+func (j *Job) InvokeSimple(params map[string]string) bool {
+	endpoint := "/build"
+	if len(j.GetParameters()) > 0 {
+		endpoint = "/buildWithParameters"
+	}
+	data := url.Values{}
+	for k, v := range params {
+		data.Set(k, v)
+	}
+	resp := j.Jenkins.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
+	if resp.StatusCode != 200 || resp.StatusCode != 201 {
+		Error.Println("Could not invoke job %s", j.GetName())
+		return false
+	}
 	return true
+}
+
+func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) bool {
+	if j.IsQueued() {
+		Error.Printf("%s is already running", j.GetName())
+		return false
+	}
+	if j.IsRunning() && skipIfRunning {
+		Warning.Printf("%s Will not request new build because %s is already running", j.GetName())
+	}
+
+	base := "/build"
+
+	// If parameters are specified - url is /builWithParameters
+	if params != nil {
+		base = "/buildWithParameters"
+	} else {
+		params = make(map[string]string)
+	}
+
+	// If files are specified - url is /build
+	if files != nil {
+		base = "/build"
+	}
+	reqParams := map[string]string{}
+	buildParams := map[string]string{}
+	if securityToken != "" {
+		reqParams["token"] = securityToken
+	}
+
+	buildParams["json"] = string(makeJson(params))
+	b, _ := json.Marshal(buildParams)
+	resp := j.Jenkins.Requester.PostFiles(j.Base+base, bytes.NewBuffer(b), nil, reqParams, files).StatusCode
+	return resp == 200 || resp == 201
 }
 
 func (j *Job) Poll() int {
