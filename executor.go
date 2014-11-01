@@ -14,7 +14,7 @@
 
 package gojenkins
 
-type executor struct {
+type Executor struct {
 	Raw     *executorResponse
 	Jenkins *Jenkins
 }

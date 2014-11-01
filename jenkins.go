@@ -95,6 +95,7 @@ func (j *Jenkins) Info() *executorResponse {
 	return j.Raw
 }
 
+// Create a new Node
 func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) *Node {
 	node := j.GetNode(name)
 	if node != nil {
@@ -127,6 +128,10 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	return nil
 }
 
+// Create a new job from config File
+// Method takes XML string as first parameter, and if the name is not specified in the config file
+// takes name as string as second parameter
+// e.g jenkins.CreateJob("<config></config>","newJobName")
 func (j *Jenkins) CreateJob(config string, options ...interface{}) *Job {
 	qr := make(map[string]string)
 	if len(options) > 0 {
@@ -137,22 +142,29 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) *Job {
 	return &job
 }
 
+// Rename a job.
+// First parameter job old name, Second parameter job new name.
 func (j *Jenkins) RenameJob(job string, name string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + job}
 	jobObj.Rename(name)
 	return &jobObj
 }
 
+// Create a copy of a job.
+// First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Jenkins) CopyJob(copyFrom string, newName string) *Job {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + newName}
 	return job.Copy(copyFrom, newName)
 }
 
+// Delete a job.
 func (j *Jenkins) DeleteJob(name string) bool {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
+// Invoke a job.
+// First parameter job name, second parameter is optional Build parameters.
 func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
 	var params map[string]string
@@ -196,6 +208,10 @@ func (j *Jenkins) GetAllNodes() []*Node {
 	return nodes
 }
 
+// Get all builds for a specific job.
+// If second parameter is bool, then the Build objects will be preloaded before return
+// e.g jenkins.GetAllBuilds("job",true)
+// By Default preloading is turned off.
 func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 	jobObj := j.GetJob(job)
 	builds := make([]*Build, len(jobObj.Raw.Builds))
@@ -217,8 +233,10 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 	return builds
 }
 
+// Get All Possible jobs
+// If preload is true, the Job object will be preloaded before returning.
 func (j *Jenkins) GetAllJobs(preload bool) []*Job {
-	exec := executor{Raw: new(executorResponse), Jenkins: j}
+	exec := Executor{Raw: new(executorResponse), Jenkins: j}
 	j.Requester.GetJSON("/", exec.Raw, nil)
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
@@ -236,6 +254,7 @@ func (j *Jenkins) GetAllJobs(preload bool) []*Job {
 	return jobs
 }
 
+// Returns a Queue
 func (j *Jenkins) GetQueue() *Queue {
 	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
 	q.Poll()
@@ -246,22 +265,28 @@ func (j *Jenkins) GetQueueUrl() string {
 	return "/queue"
 }
 
+// Get Artifact data by Hash
 func (j *Jenkins) GetArtifactData(id string) *fingerPrintResponse {
 	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
 	return fp.GetInfo()
 }
 
+// Returns the list of all plugins installed on the Jenkins server.
+// You can supply depth parameter, to limit how much data is returned.
 func (j *Jenkins) GetPlugins(depth int) *Plugins {
 	p := Plugins{Jenkins: j, Raw: new(pluginResponse), Base: "/pluginManager", Depth: depth}
 	p.Poll()
 	return &p
 }
 
+// Check if the plugin is installed on the server.
+// Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
 func (j *Jenkins) HasPlugin(name string) *Plugin {
 	p := j.GetPlugins(1)
 	return p.Contains(name)
 }
 
+// Verify Fingerprint
 func (j *Jenkins) ValidateFingerPrint(id string) bool {
 	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
 	if fp.Valid() {
@@ -285,16 +310,4 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
 	return j
-}
-
-func main() {
-	j := CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
-	j.GetJob("testjib").Rename("some_other_name")
-	//fmt.Printf("%#v\n", j.GetJob("testJobName").Raw.Description)
-	//job := j.GetJob("testjib")
-	//ts := job.GetLastBuild()
-	//ts.GetArtifacts()[0].Save("/tmp/tabulateFile")
-	Error.Printf("%#v", j.Info())
-	//fmt.Printf("%#v\n", job.GetLastBuild().Info())
-	//	fmt.Printf("%#v", j.CreateNode("wat23s1131sssasd1121", 2, "description", "/f/vs/sa/"))
 }
