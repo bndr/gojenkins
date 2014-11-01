@@ -145,6 +145,7 @@ type buildResponse struct {
 	URL               string      `json:"url"`
 	MavenArtifacts    interface{} `json:"mavenArtifacts"`
 	MavenVersionUsed  string      `json:"mavenVersionUsed"`
+	Fingerprint       []fingerPrintResponse
 }
 
 // Builds
@@ -215,12 +216,48 @@ func (b *Build) GetParameters() []Parameter {
 	return nil
 }
 
-func (b *Build) GetDownstreamBuilds() {
-	panic("Not Implemented")
+func (b *Build) GetDownstreamBuilds() []*Build {
+	downstreamJobs := b.GetDownstreamJobNames()
+	fingerprints := b.GetAllFingerprints()
+	result := make([]*Build, 0)
+	for _, fingerprint := range fingerprints {
+		for _, usage := range fingerprint.Raw.Usage {
+			if inSlice(usage.Name, downstreamJobs) {
+				job := b.Jenkins.GetJob(usage.Name)
+				for _, ranges := range usage.Ranges.Ranges {
+					for i := ranges.Start; i <= ranges.End; i++ {
+						result = append(result, job.GetBuild(strconv.FormatInt(i, 10)))
+					}
+				}
+			}
+		}
+	}
+	return result
 }
 
-func (b *Build) GetDownstreamJobs() {
-	panic("Not Implemented")
+func (b *Build) GetDownstreamJobNames() []string {
+	result := make([]string, 0)
+	downstreamJobs := b.Job.GetDownstreamJobsMetadata()
+	fingerprints := b.GetAllFingerprints()
+	for _, fingerprint := range fingerprints {
+		for _, usage := range fingerprint.Raw.Usage {
+			for _, job := range downstreamJobs {
+				if job.Name == usage.Name {
+					result = append(result, job.Name)
+				}
+			}
+		}
+	}
+	return result
+}
+
+func (b *Build) GetAllFingerprints() []*Fingerprint {
+	b.Poll(3)
+	result := make([]*Fingerprint, len(b.Raw.Fingerprint))
+	for i, f := range b.Raw.Fingerprint {
+		result[i] = &Fingerprint{Jenkins: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
+	}
+	return result
 }
 
 func (b *Build) GetUpstreamJob() *Job {
@@ -325,9 +362,22 @@ func (b *Build) IsRunning() bool {
 	return b.Raw.Building
 }
 
-func (b *Build) Poll() int {
+// Poll for current data. Optional parameter - depth.
+// More about depth here: https://wiki.jenkins-ci.org/display/JENKINS/Remote+access+API
+func (b *Build) Poll(options ...interface{}) int {
+	depth := strconv.Itoa(b.Depth)
+	for _, o := range options {
+		switch v := o.(type) {
+		case string:
+			depth = v
+		case int:
+			depth = strconv.Itoa(v)
+		case int64:
+			depth = strconv.FormatInt(v, 10)
+		}
+	}
 	qr := map[string]string{
-		"depth": strconv.Itoa(b.Depth),
+		"depth": depth,
 	}
 	b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
 	return b.Jenkins.Requester.LastResponse.StatusCode

@@ -105,7 +105,7 @@ func (j *Job) GetDetails() *jobResponse {
 }
 
 func (j *Job) GetBuild(id string) *Build {
-	build := Build{Jenkins: j.Jenkins, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + id}
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + id}
 	if build.Poll() == 200 {
 		return &build
 	}
