@@ -15,6 +15,7 @@
 package gojenkins
 
 import (
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -146,6 +147,10 @@ type buildResponse struct {
 	MavenArtifacts    interface{} `json:"mavenArtifacts"`
 	MavenVersionUsed  string      `json:"mavenVersionUsed"`
 	Fingerprint       []fingerPrintResponse
+	Runs              []struct {
+		Number int64
+		Url    string
+	} `json:"runs`
 }
 
 // Builds
@@ -291,8 +296,16 @@ func (b *Build) GetUpstreamBuild() *Build {
 	return nil
 }
 
-func (b *Build) GetMatrixRuns() {
-	panic("Not Implemented")
+func (b *Build) GetMatrixRuns() []*Build {
+	b.Poll(0)
+	runs := b.Raw.Runs
+	result := make([]*Build, len(b.Raw.Runs))
+	r, _ := regexp.Compile("/job/" + b.Job.GetName() + "/label=(.*?)/(\\d+)/")
+	for i, run := range runs {
+		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(buildResponse), Depth: 1, Base: r.FindString(run.Url)}
+		result[i].Poll()
+	}
+	return result
 }
 
 func (b *Build) GetResultSet() *TestResult {
