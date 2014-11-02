@@ -12,9 +12,10 @@ These are some of the features that are currently implemented:
 * Get information on test-results of completed/failed build
 * Ability to query Nodes, and manipulate them. Start, Stop, set Offline.
 * Ability to query Jobs, and manipulate them.
+* Get Plugins, Builds, Artifacts, Fingerprints
 * Validate Fingerprints of Artifacts
 * Get Current Queue, Cancel Tasks
-* etc.
+* etc. For all methods go to GoDoc Reference.
 
 ## Installation
 
@@ -56,6 +57,7 @@ j.CreateJob(configString, "someNewJobsName")
 
 ```
 
+API Reference: https://godoc.org/github.com/bndr/gojenkins
 
 ## Examples
 
@@ -66,6 +68,7 @@ import "github.com/bndr/gojenkins"
 jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
 
 or if you don't need authentication:
+
 jenkins := gojenkins.CreateJenkins("http://localhost:8080/").Init()
 ```
 
@@ -85,13 +88,17 @@ for _, node := range nodes {
 ### Get all Builds for specific Job, and check their status
 
 ```go
-builds := jenkins.GetAllBuilds("someJob",true) // If you don't preload the jobs (second parameter, true = preload, false = don't preload), you will only get Build Ids
+builds := jenkins.GetAllBuilds("someJob",true) // If you don't preload the builds (second parameter, true = preload, false = don't preload), you will only get Build Ids
 
 for _, build := range builds {
 	if "SUCCESS" == node.GetResult() {
 		fmt.Println("This build succeeded")
 	}
 }
+
+// Get Last Successful/Failed/Stable Build for a Job
+jenkins.GetJob("someJob").GetLastSuccessfulBuild()
+jenkins.GetJob("someJob").GetLastStableBuild()
 
 ```
 
@@ -102,7 +109,21 @@ for _, build := range builds {
 tasks := jenkins.GetQueue()
 
 for _, task := range tasks {
-	fmt.Println(task.Raw.Why)
+	fmt.Println(task.GetWhy())
+}
+
+```
+
+### Get All Artifacts for a Build and Save them to a folder
+
+```go
+
+job := jenkins.GetJob("job")
+build := job.GetBuild(1)
+artifacts := build.GetArtifacts()
+
+for _, a := range artifacts {
+	a.SaveToDir("/tmp")
 }
 
 ```
@@ -110,7 +131,6 @@ for _, task := range tasks {
 ## Testing
 
     go test
-
 
 ## Contribute
 
