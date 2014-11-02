@@ -175,7 +175,7 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
 }
 
 func (j *Jenkins) GetNode(name string) *Node {
-	node := Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computers/" + name}
+	node := Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
 	if node.Poll() == 200 {
 		return &node
 	}
@@ -203,7 +203,12 @@ func (j *Jenkins) GetAllNodes() []*Node {
 	j.Requester.GetJSON("/computer", computers, nil)
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		nodes[i] = &Node{Raw: &node, Jenkins: j, Base: "/computers/" + node.DisplayName}
+		name := node.DisplayName
+		// Special Case - Master Node
+		if name == "master" {
+			name = "(master)"
+		}
+		nodes[i] = &Node{Raw: &node, Jenkins: j, Base: "/computer/" + name}
 		nodes[i].Poll()
 	}
 	return nodes
