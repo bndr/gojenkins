@@ -104,8 +104,8 @@ func (j *Job) GetDetails() *jobResponse {
 	return j.Raw
 }
 
-func (j *Job) GetBuild(id string) *Build {
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + id}
+func (j *Job) GetBuild(id int64) *Build {
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
 	if build.Poll() == 200 {
 		return &build
 	}

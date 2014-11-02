@@ -102,6 +102,10 @@ func (t *Task) GetJob() *Job {
 	return t.Jenkins.GetJob(t.Raw.Task.Name)
 }
 
+func (t *Task) GetWhy() string {
+	return t.Raw.Why
+}
+
 func (t *Task) GetParameters() []Parameter {
 	for _, a := range t.Raw.Actions {
 		if a.Parameters != nil {

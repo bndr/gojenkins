@@ -234,7 +234,7 @@ func (b *Build) GetDownstreamBuilds() []*Build {
 				job := b.Jenkins.GetJob(usage.Name)
 				for _, ranges := range usage.Ranges.Ranges {
 					for i := ranges.Start; i <= ranges.End; i++ {
-						result = append(result, job.GetBuild(strconv.FormatInt(i, 10)))
+						result = append(result, job.GetBuild(i))
 					}
 				}
 			}
@@ -278,21 +278,21 @@ func (b *Build) GetUpstreamJob() *Job {
 	return nil
 }
 
-func (b *Build) GetUpstreamBuildNumber() string {
+func (b *Build) GetUpstreamBuildNumber() int64 {
 	causes := b.GetCauses()
 	if len(causes) > 0 {
 		if build, ok := causes[0]["upstreamBuild"]; ok {
-			return build.(string)
+			return build.(int64)
 		}
 	}
-	return ""
+	return 0
 }
 
 func (b *Build) GetUpstreamBuild() *Build {
 	job := b.GetUpstreamJob()
 	if job != nil {
 		buildNumber := b.GetUpstreamBuildNumber()
-		if len(buildNumber) > 0 {
+		if buildNumber != 0 {
 			return job.GetBuild(b.GetUpstreamBuildNumber())
 		}
 	}
