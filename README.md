@@ -102,7 +102,7 @@ jenkins.GetJob("someJob").GetLastStableBuild()
 
 ```
 
-### Get Current Tasks in Queue, and the reason why thy're in queue
+### Get Current Tasks in Queue, and the reason why they're in the queue
 
 ```go
 
