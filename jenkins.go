@@ -204,6 +204,7 @@ func (j *Jenkins) GetAllNodes() []*Node {
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
 		nodes[i] = &Node{Raw: &node, Jenkins: j, Base: "/computers/" + node.DisplayName}
+		nodes[i].Poll()
 	}
 	return nodes
 }

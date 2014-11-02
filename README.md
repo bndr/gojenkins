@@ -24,7 +24,7 @@ These are some of the features that are currently implemented:
 
 ```go
 
-import "gojenkins"
+import "github.com/bndr/gojenkins"
 
 jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
 
@@ -59,7 +59,58 @@ j.CreateJob(configString, "someNewJobsName")
 
 ## Examples
 
+For all of the examples below first create a jenkins object
+```go
+import "github.com/bndr/gojenkins"
+
+jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+
+or if you don't need authentication:
+jenkins := gojenkins.CreateJenkins("http://localhost:8080/").Init()
+```
+
+### Check Status of all nodes
+
+```go
+nodes := jenkins.GetAllNodes()
+
+for _, node := range nodes {
+	if node.IsOnline() {
+		fmt.Println("Node is Online")
+	}
+}
+
+```
+
+### Get all Builds for specific Job, and check their status
+
+```go
+builds := jenkins.GetAllBuilds("someJob",true) // If you don't preload the jobs (second parameter, true = preload, false = don't preload), you will only get Build Ids
+
+for _, build := range builds {
+	if "SUCCESS" == node.GetResult() {
+		fmt.Println("This build succeeded")
+	}
+}
+
+```
+
+### Get Current Tasks in Queue, and the reason why thy're in queue
+
+```go
+
+tasks := jenkins.GetQueue()
+
+for _, task := range tasks {
+	fmt.Println(task.Raw.Why)
+}
+
+```
+
 ## Testing
+
+    go test
+
 
 ## Contribute
 
