@@ -169,6 +169,9 @@ func (b *Build) GetUrl() string {
 func (b *Build) GetBuildNumber() int {
 	return b.Raw.Number
 }
+func (b *Build) GetResult() string {
+	return b.Raw.Result
+}
 
 func (b *Build) GetArtifacts() []Artifact {
 	artifacts := make([]Artifact, len(b.Raw.Artifacts))

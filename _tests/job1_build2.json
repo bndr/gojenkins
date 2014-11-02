@@ -1,0 +1,53 @@
+{
+  "actions" : [
+    {
+      "causes" : [
+        {
+          "shortDescription" : "Started by user anonymous",
+          "userId" : null,
+          "userName" : "anonymous"
+        }
+      ]
+    },
+    {
+      "failCount" : 0,
+      "skipCount" : 0,
+      "totalCount" : 0,
+      "urlName" : "aggregatedTestReport"
+    }
+  ],
+  "artifacts" : [
+    
+  ],
+  "building" : false,
+  "description" : null,
+  "duration" : 18,
+  "estimatedDuration" : 18,
+  "executor" : null,
+  "fullDisplayName" : "testJob #2",
+  "id" : "2014-11-02_17-07-32",
+  "keepLog" : false,
+  "number" : 2,
+  "result" : "SUCCESS",
+  "timestamp" : 1414948052166,
+  "url" : "http://localhost:8080/job/testJob/2/",
+  "builtOn" : "",
+  "changeSet" : {
+    "items" : [
+      
+    ],
+    "kind" : null
+  },
+  "culprits" : [
+    
+  ],  "runs" : [
+    {
+      "number" : 1,
+      "url" : "http://localhost:8080/job/matrix/label=master/1/"
+    },
+    {
+      "number" : 2,
+      "url" : "http://localhost:8080/job/matrix/label=master/2/"
+    },
+  ]
+}

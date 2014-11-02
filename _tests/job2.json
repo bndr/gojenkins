@@ -1,0 +1,91 @@
+{
+  "actions" : [
+    {
+      "causes" : [
+        {
+          "shortDescription" : "Started by user anonymous",
+          "userId" : null,
+          "userName" : "anonymous"
+        }
+      ]
+    },
+    {
+      "buildsByBranchName" : {
+        "refs/remotes/origin/master" : {
+          "buildNumber" : 1,
+          "buildResult" : null,
+          "marked" : {
+            "SHA1" : "e9c8039cf77402adfa4a6ae94bd7b3416f77c0a4",
+            "branch" : [
+              {
+                "SHA1" : "e9c8039cf77402adfa4a6ae94bd7b3416f77c0a4",
+                "name" : "refs/remotes/origin/master"
+              }
+            ]
+          },
+          "revision" : {
+            "SHA1" : "e9c8039cf77402adfa4a6ae94bd7b3416f77c0a4",
+            "branch" : [
+              {
+                "SHA1" : "e9c8039cf77402adfa4a6ae94bd7b3416f77c0a4",
+                "name" : "refs/remotes/origin/master"
+              }
+            ]
+          }
+        }
+      },
+      "lastBuiltRevision" : {
+        "SHA1" : "e9c8039cf77402adfa4a6ae94bd7b3416f77c0a4",
+        "branch" : [
+          {
+            "SHA1" : "e9c8039cf77402adfa4a6ae94bd7b3416f77c0a4",
+            "name" : "refs/remotes/origin/master"
+          }
+        ]
+      },
+      "remoteUrls" : [
+        "https://github.com/bndr/gopencils.git"
+      ],
+      "scmName" : ""
+    },
+    {
+      
+    },
+    {
+      
+    }
+  ],
+  "artifacts" : [
+    
+  ],
+  "building" : true,
+  "description" : null,
+  "duration" : 0,
+  "estimatedDuration" : -1,
+  "executor" : {
+    
+  },
+  "fullDisplayName" : "matrix #1",
+  "id" : "2014-11-01_23-45-39",
+  "keepLog" : false,
+  "number" : 1,
+  "result" : null,
+  "timestamp" : 1414885539704,
+  "url" : "http://localhost:8080/job/matrix/1/",
+  "builtOn" : "",
+  "changeSet" : {
+    "items" : [
+      
+    ],
+    "kind" : "git"
+  },
+  "culprits" : [
+    
+  ],
+  "runs" : [
+    {
+      "number" : 1,
+      "url" : "http://localhost:8080/job/matrix/label=master/1/"
+    }
+  ]
+}

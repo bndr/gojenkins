@@ -30,20 +30,24 @@ type pluginResponse struct {
 }
 
 type Plugin struct {
-	Active              bool        `json:"active"`
-	BackupVersion       interface{} `json:"backupVersion"`
-	Bundled             bool        `json:"bundled"`
-	Deleted             bool        `json:"deleted"`
-	Dependencies        []struct{}  `json:"dependencies"`
-	Downgradable        bool        `json:"downgradable"`
-	Enabled             bool        `json:"enabled"`
-	HasUpdate           bool        `json:"hasUpdate"`
-	LongName            string      `json:"longName"`
-	Pinned              bool        `json:"pinned"`
-	ShortName           string      `json:"shortName"`
-	SupportsDynamicLoad string      `json:"supportsDynamicLoad"`
-	URL                 string      `json:"url"`
-	Version             string      `json:"version"`
+	Active        bool        `json:"active"`
+	BackupVersion interface{} `json:"backupVersion"`
+	Bundled       bool        `json:"bundled"`
+	Deleted       bool        `json:"deleted"`
+	Dependencies  []struct {
+		Optional  string `json:"optional"`
+		ShortName string `json:"shortname"`
+		Version   string `json:"version"`
+	} `json:"dependencies"`
+	Downgradable        bool   `json:"downgradable"`
+	Enabled             bool   `json:"enabled"`
+	HasUpdate           bool   `json:"hasUpdate"`
+	LongName            string `json:"longName"`
+	Pinned              bool   `json:"pinned"`
+	ShortName           string `json:"shortName"`
+	SupportsDynamicLoad string `json:"supportsDynamicLoad"`
+	URL                 string `json:"url"`
+	Version             string `json:"version"`
 }
 
 func (p *Plugins) Contains(name string) *Plugin {

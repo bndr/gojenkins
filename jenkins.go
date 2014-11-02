@@ -203,7 +203,7 @@ func (j *Jenkins) GetAllNodes() []*Node {
 	j.Requester.GetJSON("/computer", computers, nil)
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		nodes[i] = &Node{Raw: &node, Jenkins: j}
+		nodes[i] = &Node{Raw: &node, Jenkins: j, Base: "/computers/" + node.DisplayName}
 	}
 	return nodes
 }
