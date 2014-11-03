@@ -66,9 +66,11 @@ For all of the examples below first create a jenkins object
 import "github.com/bndr/gojenkins"
 
 jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+```
 
 or if you don't need authentication:
 
+```go
 jenkins := gojenkins.CreateJenkins("http://localhost:8080/").Init()
 ```
 
