@@ -183,7 +183,7 @@ func (j *Jenkins) GetNode(name string) *Node {
 }
 
 func (j *Jenkins) GetBuild(job string, number string) *Build {
-	build := Build{Jenkins: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + job + "/" + number}
+	build := Build{Jenkins: j, Job: j.GetJob(job), Raw: new(buildResponse), Depth: 1, Base: "/job/" + job + "/" + number}
 	if build.Poll() == 200 {
 		return &build
 	}
@@ -229,11 +229,12 @@ func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
 		if preload == false {
 			builds[i] = &Build{
 				Jenkins: j,
+				Job:     jobObj,
 				Depth:   1,
 				Raw:     &buildResponse{Number: build.Number, URL: build.URL},
-				Base:    "/job/" + jobObj.GetName() + "/" + string(build.Number)}
+				Base:    "/job/" + jobObj.GetName() + "/" + strconv.FormatInt(build.Number, 10)}
 		} else {
-			builds[i] = j.GetBuild(job, strconv.Itoa(build.Number))
+			builds[i] = jobObj.GetBuild(build.Number)
 		}
 	}
 	return builds

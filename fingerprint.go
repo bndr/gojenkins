@@ -26,7 +26,7 @@ type fingerPrintResponse struct {
 	Hash     string `json:"hash"`
 	Original struct {
 		Name   string
-		Number int
+		Number int64
 	} `json:"original"`
 	Timestamp int64 `json:"timestamp"`
 	Usage     []struct {

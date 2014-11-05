@@ -44,7 +44,7 @@ type BuildRevision struct {
 }
 
 type Builds struct {
-	BuildNumber int           `json:"buildNumber"`
+	BuildNumber int64         `json:"buildNumber"`
 	BuildResult interface{}   `json:"buildResult"`
 	Marked      BuildRevision `json:"marked"`
 	Revision    BuildRevision `json:"revision"`
@@ -65,7 +65,7 @@ type GeneralObj struct {
 	MercurialNodeName       string                   `json:"mercurialNodeName"`
 	MercurialRevisionNumber string                   `json:"mercurialRevisionNumber"`
 	Subdir                  interface{}              `json:"subdir"`
-	TotalCount              int
+	TotalCount              int64
 	UrlName                 string
 }
 
@@ -134,15 +134,15 @@ type buildResponse struct {
 	} `json:"changeSet"`
 	Culprits          []Culprit   `json:"culprits"`
 	Description       interface{} `json:"description"`
-	Duration          int         `json:"duration"`
-	EstimatedDuration int         `json:"estimatedDuration"`
+	Duration          int64       `json:"duration"`
+	EstimatedDuration int64       `json:"estimatedDuration"`
 	Executor          interface{} `json:"executor"`
 	FullDisplayName   string      `json:"fullDisplayName"`
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`
-	Number            int         `json:"number"`
+	Number            int64       `json:"number"`
 	Result            string      `json:"result"`
-	Timestamp         int         `json:"timestamp"`
+	Timestamp         int64       `json:"timestamp"`
 	URL               string      `json:"url"`
 	MavenArtifacts    interface{} `json:"mavenArtifacts"`
 	MavenVersionUsed  string      `json:"mavenVersionUsed"`
@@ -166,7 +166,7 @@ func (b *Build) GetUrl() string {
 	return b.Raw.URL
 }
 
-func (b *Build) GetBuildNumber() int {
+func (b *Build) GetBuildNumber() int64 {
 	return b.Raw.Number
 }
 func (b *Build) GetResult() string {
@@ -333,7 +333,7 @@ func (b *Build) GetTimestamp() time.Time {
 	return time.Unix(0, msInt*int64(time.Millisecond))
 }
 
-func (b *Build) GetDuration() int {
+func (b *Build) GetDuration() int64 {
 	return b.Raw.Duration
 }
 

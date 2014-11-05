@@ -24,6 +24,7 @@ var paths = map[string]func(http.ResponseWriter, *http.Request){
 	"/queue/api/json":             func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("queue.json")) },
 	"/computer/api/json":          func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("nodes.json")) },
 	"/computer/(master)/api/json": func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("node1.json")) },
+	"/pluginManager/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("plugins.json")) },
 }
 
 func init() {
@@ -52,14 +53,17 @@ func TestGetAllBuilds(t *testing.T) {
 	builds := jenkins.GetAllBuilds("testJob", true)
 	assert.Equal(t, 2, len(builds))
 	assert.Equal(t, "FAILURE", builds[0].GetResult())
+	assert.Equal(t, "FAILURE", builds[0].GetResult())
 }
 
 func TestGetSingleJob(t *testing.T) {
-
+	job := jenkins.GetJob("testJob")
+	assert.Equal(t, false, job.IsRunning())
 }
 
-func TestGetBuilds(t *testing.T) {
-
+func TestGetPlugins(t *testing.T) {
+	plugins := jenkins.GetPlugins(3)
+	assert.Equal(t, plugins.Count(), 23)
 }
 
 func TestGetNodes(t *testing.T) {

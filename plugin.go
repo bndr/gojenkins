@@ -50,6 +50,10 @@ type Plugin struct {
 	Version             string `json:"version"`
 }
 
+func (p *Plugins) Count() int {
+	return len(p.Raw.Plugins)
+}
+
 func (p *Plugins) Contains(name string) *Plugin {
 	for _, p := range p.Raw.Plugins {
 		if p.LongName == name || p.ShortName == name {

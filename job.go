@@ -35,7 +35,7 @@ type ActionsObject struct {
 }
 
 type jobBuild struct {
-	Number int
+	Number int64
 	URL    string
 }
 
@@ -123,7 +123,7 @@ func (j *Job) getBuildByType(buildType string) *Build {
 	}
 	number := ""
 	if val, ok := allowed[buildType]; ok {
-		number = strconv.Itoa(val.Number)
+		number = strconv.FormatInt(val.Number, 10)
 	} else {
 		panic("No Such Build")
 	}
