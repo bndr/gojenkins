@@ -130,6 +130,32 @@ for _, a := range artifacts {
 
 ```
 
+### Get All Builds without a generator and with
+
+```go
+
+job := jenkins.GetJob("job")
+builds := jobs.GetAllBuilds()
+
+// Without Generator
+for _, buildObject := range builds {
+	fmt.Printf("%#v", buildObject)
+}
+
+```
+
+```go
+
+// With Generator
+
+job := jenkins.GetJob("job")
+
+for buildObject := range job.GetAllBuildsGenerator() {
+	fmt.Printf("%#v", buildObject)
+}
+
+```
+
 ## Testing
 
     go test

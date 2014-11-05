@@ -163,10 +163,32 @@ func (j *Job) GetAllBuilds() []*Build {
 		builds[i] = &Build{
 			Jenkins: j.Jenkins,
 			Depth:   1,
+			Job:     j,
 			Raw:     &buildResponse{Number: b.Number, URL: b.URL},
-			Base:    "/job/" + j.GetName() + "/" + string(b.Number)}
+			Base:    "/job/" + j.GetName() + "/" + strconv.FormatInt(b.Number, 10)}
+		builds[i].Poll()
 	}
 	return builds
+}
+
+func (j *Job) GetAllBuildsGenerator() <-chan *Build {
+	ch := make(chan *Build, len(j.Raw.Builds))
+	j.Poll()
+
+	go func() {
+		for _, b := range j.Raw.Builds {
+			b := &Build{
+				Jenkins: j.Jenkins,
+				Job:     j,
+				Depth:   1,
+				Raw:     &buildResponse{Number: b.Number, URL: b.URL},
+				Base:    "/job/" + j.GetName() + "/" + strconv.FormatInt(b.Number, 10)}
+			b.Poll()
+			ch <- b
+		}
+		close(ch)
+	}()
+	return ch
 }
 
 func (j *Job) GetUpstreamJobsMetadata() []job {

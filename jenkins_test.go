@@ -20,6 +20,11 @@ var paths = map[string]func(http.ResponseWriter, *http.Request){
 	"/api/json":                   func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("main.json")) },
 	"/job/testJob/api/json":       func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1.json")) },
 	"/job/testJob/1/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
+	"/job/testJob/2/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
+	"/job/testJob/3/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
+	"/job/testJob/4/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
+	"/job/testJob/5/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
+	"/job/testJob/6/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
 	"/jobtestJob2/api/json":       func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job2.json")) },
 	"/queue/api/json":             func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("queue.json")) },
 	"/computer/api/json":          func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("nodes.json")) },
@@ -52,7 +57,7 @@ func TestGetAllNodes(t *testing.T) {
 
 func TestGetAllBuilds(t *testing.T) {
 	builds := jenkins.GetAllBuilds("testJob", true)
-	assert.Equal(t, 2, len(builds))
+	assert.Equal(t, 6, len(builds))
 	assert.Equal(t, "FAILURE", builds[0].GetResult())
 	assert.Equal(t, "FAILURE", builds[0].GetResult())
 }
@@ -86,6 +91,16 @@ func TestGetSingleView(t *testing.T) {
 	view := jenkins.GetView("test")
 	assert.Equal(t, len(view.Raw.Jobs), 1)
 	assert.Equal(t, view.Raw.Name, "test")
+}
+
+func TestGetAllBuildsGenerator(t *testing.T) {
+	job := jenkins.GetJob("testJob")
+	count := 0
+	for buildObject := range job.GetAllBuildsGenerator() {
+		count++
+		assert.Equal(t, RESULT_STATUS_FAILURE, buildObject.GetResult())
+	}
+	assert.Equal(t, count, 6)
 }
 
 func TestCreation(t *testing.T) {

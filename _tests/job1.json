@@ -12,12 +12,28 @@
   "buildable" : true,
   "builds" : [
     {
-      "number" : 1,
-      "url" : "http://localhost:8080/job/testJob/1/"
+      "number" : 6,
+      "url" : "http://localhost:8080/job/testJob/6/"
     },
-      {
+    {
+      "number" : 5,
+      "url" : "http://localhost:8080/job/testJob/5/"
+    },
+    {
+      "number" : 4,
+      "url" : "http://localhost:8080/job/testJob/4/"
+    },
+    {
+      "number" : 3,
+      "url" : "http://localhost:8080/job/testJob/3/"
+    },
+    {
       "number" : 2,
       "url" : "http://localhost:8080/job/testJob/2/"
+    },
+    {
+      "number" : 1,
+      "url" : "http://localhost:8080/job/testJob/1/"
     }
   ],
   "color" : "red",
