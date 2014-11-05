@@ -39,7 +39,7 @@ type jobBuild struct {
 	URL    string
 }
 
-type updownProject struct {
+type job struct {
 	Name  string `json:"name"`
 	Url   string `json:"url"`
 	Color string `json:"color"`
@@ -59,12 +59,12 @@ type jobResponse struct {
 	Actions            interface{}
 	Buildable          bool `json:"buildable"`
 	Builds             []jobBuild
-	Color              string          `json:"color"`
-	ConcurrentBuild    bool            `json:"concurrentBuild"`
-	Description        string          `json:"description"`
-	DisplayName        string          `json:"displayName"`
-	DisplayNameOrNull  interface{}     `json:"displayNameOrNull"`
-	DownstreamProjects []updownProject `json:"downstreamProjects"`
+	Color              string      `json:"color"`
+	ConcurrentBuild    bool        `json:"concurrentBuild"`
+	Description        string      `json:"description"`
+	DisplayName        string      `json:"displayName"`
+	DisplayNameOrNull  interface{} `json:"displayNameOrNull"`
+	DownstreamProjects []job       `json:"downstreamProjects"`
 	FirstBuild         jobBuild
 	HealthReport       []struct {
 		Description   string `json:"description"`
@@ -86,10 +86,10 @@ type jobResponse struct {
 	Property              []struct {
 		ParameterDefinitions []parameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
-	QueueItem        interface{}     `json:"queueItem"`
-	Scm              struct{}        `json:"scm"`
-	UpstreamProjects []updownProject `json:"upstreamProjects"`
-	URL              string          `json:"url"`
+	QueueItem        interface{} `json:"queueItem"`
+	Scm              struct{}    `json:"scm"`
+	UpstreamProjects []job       `json:"upstreamProjects"`
+	URL              string      `json:"url"`
 }
 
 func (j *Job) GetName() string {
@@ -175,11 +175,11 @@ func (j *Job) GetAllBuilds() {
 	}
 }
 
-func (j *Job) GetUpstreamJobsMetadata() []updownProject {
+func (j *Job) GetUpstreamJobsMetadata() []job {
 	return j.Raw.UpstreamProjects
 }
 
-func (j *Job) GetDownstreamJobsMetadata() []updownProject {
+func (j *Job) GetDownstreamJobsMetadata() []job {
 	return j.Raw.DownstreamProjects
 }
 

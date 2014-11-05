@@ -18,6 +18,10 @@ type Executor struct {
 	Raw     *executorResponse
 	Jenkins *Jenkins
 }
+type view struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
 type executorResponse struct {
 	AssignedLabels []struct{}  `json:"assignedLabels"`
 	Description    interface{} `json:"description"`
@@ -40,8 +44,5 @@ type executorResponse struct {
 	UnlabeledLoad  struct{} `json:"unlabeledLoad"`
 	UseCrumbs      bool     `json:"useCrumbs"`
 	UseSecurity    bool     `json:"useSecurity"`
-	Views          []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"views"`
+	Views          []view   `json:"views"`
 }

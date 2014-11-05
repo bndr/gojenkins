@@ -25,6 +25,7 @@ var paths = map[string]func(http.ResponseWriter, *http.Request){
 	"/computer/api/json":          func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("nodes.json")) },
 	"/computer/(master)/api/json": func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("node1.json")) },
 	"/pluginManager/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("plugins.json")) },
+	"/view/test/api/json":         func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("view1.json")) },
 }
 
 func init() {
@@ -66,12 +67,16 @@ func TestGetPlugins(t *testing.T) {
 	assert.Equal(t, plugins.Count(), 23)
 }
 
-func TestGetNodes(t *testing.T) {
-
+func TestGetViews(t *testing.T) {
+	views := jenkins.GetAllViews()
+	assert.Equal(t, len(views), 2)
+	assert.Equal(t, len(views[1].Raw.Jobs), 1)
 }
 
-func TestGetSingleNode(t *testing.T) {
-
+func TestGetSingleView(t *testing.T) {
+	view := jenkins.GetView("test")
+	assert.Equal(t, len(view.Raw.Jobs), 1)
+	assert.Equal(t, view.Raw.Name, "test")
 }
 
 func readJson(path string) string {

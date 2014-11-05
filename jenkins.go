@@ -67,7 +67,7 @@ func (j *Jenkins) Init() *Jenkins {
 
 	// Check Connection
 	j.Raw = new(executorResponse)
-	j.Requester.Do("GET", "/", nil, j.Raw, nil)
+	j.Requester.GetJSON("/", j.Raw, nil)
 	j.Version = j.Requester.LastResponse.Header.Get("X-Jenkins")
 	if j.Raw == nil {
 		panic("Connection Failed, Please verify that the host and credentials are correct.")
@@ -301,6 +301,59 @@ func (j *Jenkins) ValidateFingerPrint(id string) bool {
 		return true
 	}
 	return false
+}
+
+func (j *Jenkins) GetView(name string) *View {
+	url := "/view/" + name
+	view := View{Jenkins: j, Raw: new(viewResponse), Base: url}
+	view.Poll()
+	return &view
+}
+
+func (j *Jenkins) GetAllViews() []*View {
+	j.Poll()
+	views := make([]*View, len(j.Raw.Views))
+	for i, v := range j.Raw.Views {
+		views[i] = j.GetView(v.Name)
+	}
+	return views
+}
+
+// Create View
+// First Parameter - name of the View
+// Second parameter - Type
+// Possible Types:
+// 		gojenkins.LIST_VIEW
+// 		gojenkins.NESTED_VIEW
+// 		gojenkins.MY_VIEW
+// 		gojenkins.DASHBOARD_VIEW
+// 		gojenkins.PIPELINE_VIEW
+// Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
+
+func (j *Jenkins) CreateView(name string, viewType string) bool {
+	exists := j.GetView(name)
+	if exists != nil {
+		Error.Println("View Already exists.")
+		return false
+	}
+	view := View{Jenkins: j, Raw: new(viewResponse), Base: "/view/" + name}
+	url := "/createView"
+	data := map[string]string{
+		"name":   name,
+		"type":   viewType,
+		"Submit": "OK",
+		"json": makeJson(map[string]string{
+			"name": name,
+			"mode": viewType,
+		}),
+	}
+	r := j.Requester.Post(url, nil, view.Raw, data)
+	return r.StatusCode == 200
+}
+
+func (j *Jenkins) Poll() int {
+	j.Requester.GetJSON("/", j.Raw, nil)
+	return j.Requester.LastResponse.StatusCode
 }
 
 // Creates a new Jenkins Instance

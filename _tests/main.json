@@ -39,6 +39,10 @@
     {
       "name" : "All",
       "url" : "http://localhost:8080/"
+    },
+    {
+      "name" : "test",
+      "url" : "http://localhost:8080/view/test"
     }
   ]
 }
