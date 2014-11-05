@@ -57,9 +57,18 @@ func TestGetAllBuilds(t *testing.T) {
 	assert.Equal(t, "FAILURE", builds[0].GetResult())
 }
 
+func TestBuildMethods(t *testing.T) {
+	job := jenkins.GetJob("testJob")
+	build := job.GetLastBuild()
+	params := build.GetParameters()
+	assert.Equal(t, "param1", params[0].Name)
+	// TODO: All Methods
+}
+
 func TestGetSingleJob(t *testing.T) {
 	job := jenkins.GetJob("testJob")
 	assert.Equal(t, false, job.IsRunning())
+	// TODO: All Methods
 }
 
 func TestGetPlugins(t *testing.T) {
@@ -77,6 +86,14 @@ func TestGetSingleView(t *testing.T) {
 	view := jenkins.GetView("test")
 	assert.Equal(t, len(view.Raw.Jobs), 1)
 	assert.Equal(t, view.Raw.Name, "test")
+}
+
+func TestCreation(t *testing.T) {
+	// TODO
+}
+
+func TestDeletion(t *testing.T) {
+	// TODO
 }
 
 func readJson(path string) string {

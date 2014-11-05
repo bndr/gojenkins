@@ -27,13 +27,6 @@ type Job struct {
 	Base    string
 }
 
-type ActionsObject struct {
-	FailCount  int64
-	SkipCount  int64
-	TotalCount int64
-	UrlName    string
-}
-
 type jobBuild struct {
 	Number int64
 	URL    string
@@ -56,7 +49,7 @@ type parameterDefinition struct {
 }
 
 type jobResponse struct {
-	Actions            interface{}
+	Actions            []generalObj
 	Buildable          bool `json:"buildable"`
 	Builds             []jobBuild
 	Color              string      `json:"color"`
@@ -163,7 +156,7 @@ func (j *Job) GetLastCompletedBuild() *Build {
 	return j.getBuildByType("lastCompletedBuild")
 }
 
-func (j *Job) GetAllBuilds() {
+func (j *Job) GetAllBuilds() []*Build {
 	j.Poll()
 	builds := make([]*Build, len(j.Raw.Builds))
 	for i, b := range j.Raw.Builds {
@@ -173,6 +166,7 @@ func (j *Job) GetAllBuilds() {
 			Raw:     &buildResponse{Number: b.Number, URL: b.URL},
 			Base:    "/job/" + j.GetName() + "/" + string(b.Number)}
 	}
+	return builds
 }
 
 func (j *Job) GetUpstreamJobsMetadata() []job {

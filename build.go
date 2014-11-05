@@ -28,38 +28,38 @@ type Build struct {
 	Depth   int
 }
 
-type Parameter struct {
+type parameter struct {
 	Name  string
 	Value string
 }
 
-type Branch struct {
+type branch struct {
 	SHA1 string
 	Name string
 }
 
-type BuildRevision struct {
+type buildRevision struct {
 	SHA1   string   `json:"SHA1"`
-	Branch []Branch `json:"branch"`
+	Branch []branch `json:"branch"`
 }
 
-type Builds struct {
+type builds struct {
 	BuildNumber int64         `json:"buildNumber"`
 	BuildResult interface{}   `json:"buildResult"`
-	Marked      BuildRevision `json:"marked"`
-	Revision    BuildRevision `json:"revision"`
+	Marked      buildRevision `json:"marked"`
+	Revision    buildRevision `json:"revision"`
 }
 
-type Culprit struct {
+type culprit struct {
 	AbsoluteUrl string
 	FullName    string
 }
 
-type GeneralObj struct {
-	Parameters              []Parameter              `json:"parameters"`
+type generalObj struct {
+	Parameters              []parameter              `json:"parameters"`
 	Causes                  []map[string]interface{} `json:"causes"`
-	BuildsByBranchName      map[string]Builds        `json:"buildsByBranchName"`
-	LastBuiltRevision       BuildRevision            `json:"lastBuiltRevision"`
+	BuildsByBranchName      map[string]builds        `json:"buildsByBranchName"`
+	LastBuiltRevision       buildRevision            `json:"lastBuiltRevision"`
 	RemoteUrls              []string                 `json:"remoteUrls"`
 	ScmName                 string                   `json:"scmName"`
 	MercurialNodeName       string                   `json:"mercurialNodeName"`
@@ -69,7 +69,7 @@ type GeneralObj struct {
 	UrlName                 string
 }
 
-type TestResult struct {
+type testResult struct {
 	Duration  int64 `json:"duration"`
 	Empty     bool  `json:"empty"`
 	FailCount int64 `json:"failCount"`
@@ -100,7 +100,7 @@ type TestResult struct {
 }
 
 type buildResponse struct {
-	Actions   []GeneralObj
+	Actions   []generalObj
 	Artifacts []struct {
 		DisplayPath  string `json:"displayPath"`
 		FileName     string `json:"fileName"`
@@ -132,7 +132,7 @@ type buildResponse struct {
 			Revision int
 		} `json:"revision"`
 	} `json:"changeSet"`
-	Culprits          []Culprit   `json:"culprits"`
+	Culprits          []culprit   `json:"culprits"`
 	Description       interface{} `json:"description"`
 	Duration          int64       `json:"duration"`
 	EstimatedDuration int64       `json:"estimatedDuration"`
@@ -158,7 +158,7 @@ func (b *Build) Info() *buildResponse {
 	return b.Raw
 }
 
-func (b *Build) GetActions() []GeneralObj {
+func (b *Build) GetActions() []generalObj {
 	return b.Raw.Actions
 }
 
@@ -186,7 +186,7 @@ func (b *Build) GetArtifacts() []Artifact {
 	return artifacts
 }
 
-func (b *Build) GetCulprits() []Culprit {
+func (b *Build) GetCulprits() []culprit {
 	return b.Raw.Culprits
 }
 
@@ -215,7 +215,7 @@ func (b *Build) GetCauses() []map[string]interface{} {
 	return nil
 }
 
-func (b *Build) GetParameters() []Parameter {
+func (b *Build) GetParameters() []parameter {
 	for _, a := range b.Raw.Actions {
 		if a.Parameters != nil {
 			return a.Parameters
@@ -311,7 +311,7 @@ func (b *Build) GetMatrixRuns() []*Build {
 	return result
 }
 
-func (b *Build) GetResultSet() *TestResult {
+func (b *Build) GetResultSet() *testResult {
 
 	for _, a := range b.Raw.Actions {
 		if a.TotalCount == 0 && a.UrlName == "" {
@@ -319,7 +319,7 @@ func (b *Build) GetResultSet() *TestResult {
 		}
 	}
 	url := b.Base + "/testReport"
-	var report TestResult
+	var report testResult
 	b.Jenkins.Requester.GetJSON(url, &report, nil)
 	if b.Jenkins.Requester.LastResponse.StatusCode == 200 {
 		return &report

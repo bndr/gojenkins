@@ -1,5 +1,13 @@
 {
   "actions" : [
+  {
+      "parameters" : [
+        {
+          "name" : "param1",
+          "value" : "valudef"
+        }
+      ]
+    },
     {
       "causes" : [
         {
