@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -182,10 +181,10 @@ func (j *Jenkins) GetNode(name string) *Node {
 	return nil
 }
 
-func (j *Jenkins) GetBuild(job string, number string) *Build {
-	build := Build{Jenkins: j, Job: j.GetJob(job), Raw: new(buildResponse), Depth: 1, Base: "/job/" + job + "/" + number}
-	if build.Poll() == 200 {
-		return &build
+func (j *Jenkins) GetBuild(jobName string, number int64) *Build {
+	job := j.GetJob(jobName)
+	if job != nil {
+		return job.GetBuild(number)
 	}
 	return nil
 }
@@ -214,30 +213,16 @@ func (j *Jenkins) GetAllNodes() []*Node {
 	return nodes
 }
 
-// Get all builds for a specific job.
-// If second parameter is bool, then the Build objects will be preloaded before return
-// e.g jenkins.GetAllBuilds("job",true)
-// By Default preloading is turned off.
-func (j *Jenkins) GetAllBuilds(job string, options ...interface{}) []*Build {
+// Get all builds Numbers and URLS for a specific job.
+// There are only build IDs here,
+// To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
+// or job.GetBuild(buildNumber)
+func (j *Jenkins) GetAllBuildIds(job string) []jobBuild {
 	jobObj := j.GetJob(job)
-	builds := make([]*Build, len(jobObj.Raw.Builds))
-	preload := false
-	if len(options) > 0 && options[0].(bool) {
-		preload = true
+	if jobObj != nil {
+		return jobObj.GetAllBuildIds()
 	}
-	for i, build := range jobObj.Raw.Builds {
-		if preload == false {
-			builds[i] = &Build{
-				Jenkins: j,
-				Job:     jobObj,
-				Depth:   1,
-				Raw:     &buildResponse{Number: build.Number, URL: build.URL},
-				Base:    "/job/" + jobObj.GetName() + "/" + strconv.FormatInt(build.Number, 10)}
-		} else {
-			builds[i] = jobObj.GetBuild(build.Number)
-		}
-	}
-	return builds
+	return nil
 }
 
 // Get All Possible jobs

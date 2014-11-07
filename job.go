@@ -156,39 +156,13 @@ func (j *Job) GetLastCompletedBuild() *Build {
 	return j.getBuildByType("lastCompletedBuild")
 }
 
-func (j *Job) GetAllBuilds() []*Build {
-	j.Poll()
-	builds := make([]*Build, len(j.Raw.Builds))
-	for i, b := range j.Raw.Builds {
-		builds[i] = &Build{
-			Jenkins: j.Jenkins,
-			Depth:   1,
-			Job:     j,
-			Raw:     &buildResponse{Number: b.Number, URL: b.URL},
-			Base:    "/job/" + j.GetName() + "/" + strconv.FormatInt(b.Number, 10)}
-		builds[i].Poll()
+// Returns All Builds with Number and URL
+func (j *Job) GetAllBuildIds() []jobBuild {
+	var buildsResp struct {
+		Builds []jobBuild `json:"allBuilds"`
 	}
-	return builds
-}
-
-func (j *Job) GetAllBuildsGenerator() <-chan *Build {
-	ch := make(chan *Build, len(j.Raw.Builds))
-	j.Poll()
-
-	go func() {
-		for _, b := range j.Raw.Builds {
-			b := &Build{
-				Jenkins: j.Jenkins,
-				Job:     j,
-				Depth:   1,
-				Raw:     &buildResponse{Number: b.Number, URL: b.URL},
-				Base:    "/job/" + j.GetName() + "/" + strconv.FormatInt(b.Number, 10)}
-			b.Poll()
-			ch <- b
-		}
-		close(ch)
-	}()
-	return ch
+	j.Jenkins.Requester.GetJSON(j.Base, &buildsResp, map[string]string{"tree": "allBuilds[number,url]"})
+	return buildsResp.Builds
 }
 
 func (j *Job) GetUpstreamJobsMetadata() []job {

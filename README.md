@@ -80,6 +80,9 @@ jenkins := gojenkins.CreateJenkins("http://localhost:8080/").Init()
 nodes := jenkins.GetAllNodes()
 
 for _, node := range nodes {
+
+  // Fetch Node Data
+  node.Poll()
 	if node.IsOnline() {
 		fmt.Println("Node is Online")
 	}
@@ -90,10 +93,13 @@ for _, node := range nodes {
 ### Get all Builds for specific Job, and check their status
 
 ```go
-builds := jenkins.GetAllBuilds("someJob",true) // If you don't preload the builds (second parameter, true = preload, false = don't preload), you will only get Build Ids
+jobName := "someJob"
+builds := jenkins.GetAllBuildIds(jobName)
 
 for _, build := range builds {
-	if "SUCCESS" == node.GetResult() {
+  buildId := build.Number
+  data := jenkins.GetBuild(jobName, buildId)
+	if "SUCCESS" == data.GetResult() {
 		fmt.Println("This build succeeded")
 	}
 }
@@ -130,29 +136,15 @@ for _, a := range artifacts {
 
 ```
 
-### Get All Builds without a generator and with
+### To always get fresh data use the .Poll() method
 
 ```go
 
 job := jenkins.GetJob("job")
-builds := jobs.GetAllBuilds()
+job.Poll()
 
-// Without Generator
-for _, buildObject := range builds {
-	fmt.Printf("%#v", buildObject)
-}
-
-```
-
-```go
-
-// With Generator
-
-job := jenkins.GetJob("job")
-
-for buildObject := range job.GetAllBuildsGenerator() {
-	fmt.Printf("%#v", buildObject)
-}
+build := job.getBuild(1)
+build.Poll()
 
 ```
 
