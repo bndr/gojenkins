@@ -176,15 +176,7 @@ func (j *Job) GetDownstreamJobsMetadata() []job {
 func (j *Job) GetUpstreamJobs() []*Job {
 	jobs := make([]*Job, len(j.Raw.UpstreamProjects))
 	for i, job := range j.Raw.UpstreamProjects {
-		jobs[i] = &Job{
-			Raw: &jobResponse{
-				Name:  job.Name,
-				Color: job.Color,
-				URL:   job.Url},
-			Jenkins: j.Jenkins,
-			Base:    "/job/" + job.Name,
-		}
-		jobs[i].Poll()
+		jobs[i] = j.Jenkins.GetJob(job.Name)
 	}
 	return jobs
 }
@@ -192,14 +184,7 @@ func (j *Job) GetUpstreamJobs() []*Job {
 func (j *Job) GetDownstreamJobs() []*Job {
 	jobs := make([]*Job, len(j.Raw.DownstreamProjects))
 	for i, job := range j.Raw.DownstreamProjects {
-		jobs[i] = &Job{
-			Raw: &jobResponse{
-				Name:  job.Name,
-				Color: job.Color,
-				URL:   job.Url},
-			Jenkins: j.Jenkins,
-		}
-		jobs[i].Poll()
+		jobs[i] = j.Jenkins.GetJob(job.Name)
 	}
 	return jobs
 }

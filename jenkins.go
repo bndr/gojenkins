@@ -207,8 +207,7 @@ func (j *Jenkins) GetAllNodes() []*Node {
 		if name == "master" {
 			name = "(master)"
 		}
-		nodes[i] = &Node{Raw: &node, Jenkins: j, Base: "/computer/" + name}
-		nodes[i].Poll()
+		nodes[i] = j.GetNode(name)
 	}
 	return nodes
 }
@@ -225,23 +224,22 @@ func (j *Jenkins) GetAllBuildIds(job string) []jobBuild {
 	return nil
 }
 
-// Get All Possible jobs
-// If preload is true, the Job object will be preloaded before returning.
-func (j *Jenkins) GetAllJobs(preload bool) []*Job {
+// Get Only Array of Job Names, Color, URL
+// Does not query each single Job.
+func (j *Jenkins) GetAllJobNames() []job {
+	exec := Executor{Raw: new(executorResponse), Jenkins: j}
+	j.Requester.GetJSON("/", exec.Raw, nil)
+	return exec.Raw.Jobs
+}
+
+// Get All Possible Job Objects.
+// Each job will be queried.
+func (j *Jenkins) GetAllJobs() []*Job {
 	exec := Executor{Raw: new(executorResponse), Jenkins: j}
 	j.Requester.GetJSON("/", exec.Raw, nil)
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
-		if preload == false {
-			jobs[i] = &Job{
-				Jenkins: j,
-				Raw: &jobResponse{Name: job.Name,
-					Color: job.Color,
-					URL:   job.URL},
-				Base: "/job/" + job.Name}
-		} else {
-			jobs[i] = j.GetJob(job.Name)
-		}
+		jobs[i] = j.GetJob(job.Name)
 	}
 	return jobs
 }
