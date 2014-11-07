@@ -50,7 +50,7 @@ func init() {
 }
 
 func TestGetAllJobs(t *testing.T) {
-	jobs := jenkins.GetAllJobs(true)
+	jobs := jenkins.GetAllJobs()
 	assert.Equal(t, 2, len(jobs))
 	assert.Equal(t, jobs[0].Raw.Color, "red")
 }
@@ -58,7 +58,7 @@ func TestGetAllJobs(t *testing.T) {
 func TestGetAllNodes(t *testing.T) {
 	nodes := jenkins.GetAllNodes()
 	assert.Equal(t, 2, len(nodes))
-	assert.Equal(t, nodes[0].GetName(), "node2")
+	assert.Equal(t, nodes[0].GetName(), "master")
 }
 
 func TestGetAllBuilds(t *testing.T) {
