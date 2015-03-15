@@ -240,10 +240,13 @@ func (j *Job) GetConfig() string {
 
 func (j *Job) GetParameters() []parameterDefinition {
 	j.Poll()
-	if len(j.Raw.Property) < 1 {
-		return nil
+	var parameters []parameterDefinition
+	for _, property := range j.Raw.Property {
+		for _, param := range property.ParameterDefinitions {
+			parameters = append(parameters, param)
+		}
 	}
-	return j.Raw.Property[0].ParameterDefinitions
+	return parameters
 }
 
 func (j *Job) IsQueued() bool {
