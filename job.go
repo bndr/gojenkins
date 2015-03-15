@@ -275,7 +275,7 @@ func (j *Job) InvokeSimple(params map[string]string) bool {
 		data.Set(k, v)
 	}
 	resp := j.Jenkins.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
-	if resp.StatusCode != 200 || resp.StatusCode != 201 {
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
 		Error.Println("Could not invoke job %s", j.GetName())
 		return false
 	}
