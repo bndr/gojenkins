@@ -25,6 +25,14 @@ var paths = map[string]func(http.ResponseWriter, *http.Request){
 			fmt.Fprintln(rw, readJson("job1.json"))
 		}
 	},
+	"/job/testJob/config.xml/api/json": func(rw http.ResponseWriter, req *http.Request) {
+		if req.Method == "GET" {
+			fmt.Fprintln(rw, readJson("job.xml"))
+		} else {
+			rw.WriteHeader(400)
+			fmt.Fprintln(rw, "Bad request")
+		}
+	},
 	"/job/testJob/1/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
 	"/job/testJob/2/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
 	"/job/testJob/3/api/json":     func(rw http.ResponseWriter, req *http.Request) { fmt.Fprintln(rw, readJson("job1_build1.json")) },
@@ -82,6 +90,7 @@ func TestBuildMethods(t *testing.T) {
 func TestGetSingleJob(t *testing.T) {
 	job := jenkins.GetJob("testJob")
 	assert.Equal(t, false, job.IsRunning())
+	assert.Contains(t, job.GetConfig(), "<project>")
 	// TODO: All Methods
 }
 

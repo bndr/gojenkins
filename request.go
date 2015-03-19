@@ -64,12 +64,12 @@ func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, queryst
 func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.SetHeader("Content-Type", "application/json")
 	r.Suffix = "api/json"
-	return r.Do("XML", endpoint, nil, responseStruct, querystring)
+	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
 
 func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
 	r.Suffix = ""
-	return r.Do("XML", endpoint, nil, responseStruct, querystring)
+	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
 
 func (r *Requester) SetHeader(key string, value string) *Requester {
@@ -96,6 +96,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 	if !strings.HasSuffix(endpoint, "/") {
 		endpoint += "/"
 	}
+
 	fileUpload := false
 	var files []string
 	url := r.Base + endpoint + r.Suffix
@@ -160,18 +161,32 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 		panic(err)
 	}
 
+	switch responseStruct.(type) {
+	case *string:
+		return r.ReadRawResponse(responseStruct)
+	default:
+		return r.ReadJSONResponse(responseStruct)
+	}
+}
+
+func (r *Requester) ReadRawResponse(responseStruct interface{}) *http.Response {
 	defer r.LastResponse.Body.Close()
 
-	if method == "XML" {
-		content, err := ioutil.ReadAll(r.LastResponse.Body)
-		if str, ok := responseStruct.(*string); ok {
-			*str = string(content)
-		}
-		if err != nil {
-			panic(err)
-		}
-		return r.LastResponse
+	content, err := ioutil.ReadAll(r.LastResponse.Body)
+	if str, ok := responseStruct.(*string); ok {
+		*str = string(content)
 	}
+
+	if err != nil {
+		panic(err)
+	}
+
+	return r.LastResponse
+}
+
+func (r *Requester) ReadJSONResponse(responseStruct interface{}) *http.Response {
+	defer r.LastResponse.Body.Close()
+
 	json.NewDecoder(r.LastResponse.Body).Decode(responseStruct)
 	return r.LastResponse
 }
