@@ -98,15 +98,19 @@ func (j *Job) GetDetails() *jobResponse {
 	return j.Raw
 }
 
-func (j *Job) GetBuild(id int64) *Build {
+func (j *Job) GetBuild(id int64) (*Build, error) {
 	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
-	if build.Poll() == 200 {
-		return &build
+	status, err := build.Poll()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if status == 200 {
+		return &build, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Job) getBuildByType(buildType string) *Build {
+func (j *Job) getBuildByType(buildType string) (*Build, error) {
 	allowed := map[string]jobBuild{
 		"lastStableBuild":     j.Raw.LastStableBuild,
 		"lastSuccessfulBuild": j.Raw.LastSuccessfulBuild,
@@ -127,43 +131,50 @@ func (j *Job) getBuildByType(buildType string) *Build {
 		Job:     j,
 		Raw:     new(buildResponse),
 		Base:    "/job/" + j.GetName() + "/" + number}
-	if build.Poll() == 200 {
-		return &build
+	status, err := build.Poll()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if status == 200 {
+		return &build, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Job) GetLastSuccessfulBuild() *Build {
+func (j *Job) GetLastSuccessfulBuild() (*Build, error) {
 	return j.getBuildByType("lastSuccessfulBuild")
 }
 
-func (j *Job) GetFirstBuild() *Build {
+func (j *Job) GetFirstBuild() (*Build, error) {
 	return j.getBuildByType("firstBuild")
 }
 
-func (j *Job) GetLastBuild() *Build {
+func (j *Job) GetLastBuild() (*Build, error) {
 	return j.getBuildByType("lastBuild")
 }
 
-func (j *Job) GetLastStableBuild() *Build {
+func (j *Job) GetLastStableBuild() (*Build, error) {
 	return j.getBuildByType("lastStableBuild")
 }
 
-func (j *Job) GetLastFailedBuild() *Build {
+func (j *Job) GetLastFailedBuild() (*Build, error) {
 	return j.getBuildByType("lastFailedBuild")
 }
 
-func (j *Job) GetLastCompletedBuild() *Build {
+func (j *Job) GetLastCompletedBuild() (*Build, error) {
 	return j.getBuildByType("lastCompletedBuild")
 }
 
 // Returns All Builds with Number and URL
-func (j *Job) GetAllBuildIds() []jobBuild {
+func (j *Job) GetAllBuildIds() ([]jobBuild, error) {
 	var buildsResp struct {
 		Builds []jobBuild `json:"allBuilds"`
 	}
-	j.Jenkins.Requester.GetJSON(j.Base, &buildsResp, map[string]string{"tree": "allBuilds[number,url]"})
-	return buildsResp.Builds
+	_, err := j.Jenkins.Requester.GetJSON(j.Base, &buildsResp, map[string]string{"tree": "allBuilds[number,url]"})
+	if err != nil {
+		return nil, err
+	}
+	return buildsResp.Builds, nil
 }
 
 func (j *Job) GetUpstreamJobsMetadata() []job {
@@ -174,20 +185,28 @@ func (j *Job) GetDownstreamJobsMetadata() []job {
 	return j.Raw.DownstreamProjects
 }
 
-func (j *Job) GetUpstreamJobs() []*Job {
+func (j *Job) GetUpstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.UpstreamProjects))
 	for i, job := range j.Raw.UpstreamProjects {
-		jobs[i] = j.Jenkins.GetJob(job.Name)
+		ji, err := j.Jenkins.GetJob(job.Name)
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = ji
 	}
-	return jobs
+	return jobs, nil
 }
 
-func (j *Job) GetDownstreamJobs() []*Job {
+func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.DownstreamProjects))
 	for i, job := range j.Raw.DownstreamProjects {
-		jobs[i] = j.Jenkins.GetJob(job.Name)
+		ji, err := j.Jenkins.GetJob(job.Name)
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = ji
 	}
-	return jobs
+	return jobs, nil
 }
 
 func (j *Job) Enable() (bool, error) {
@@ -273,19 +292,29 @@ func (j *Job) GetParameters() []parameterDefinition {
 	return parameters
 }
 
-func (j *Job) IsQueued() bool {
-	j.Poll()
-	return j.Raw.InQueue
+func (j *Job) IsQueued() (bool, error) {
+	if _, err := j.Poll(); err != nil {
+		return false, err
+	}
+	return j.Raw.InQueue, nil
 }
 
-func (j *Job) IsRunning() bool {
-	j.Poll()
-	return j.GetLastBuild().IsRunning()
+func (j *Job) IsRunning() (bool, error) {
+	if _, err := j.Poll(); err != nil {
+		return false, err
+	}
+	lastBuild, err := j.GetLastBuild()
+	if err != nil {
+		return false, err
+	}
+	return lastBuild.IsRunning(), nil
 }
 
-func (j *Job) IsEnabled() bool {
-	j.Poll()
-	return j.Raw.Color != "disabled"
+func (j *Job) IsEnabled() (bool, error) {
+	if _, err := j.Poll(); err != nil {
+		return false, err
+	}
+	return j.Raw.Color != "disabled", nil
 }
 
 func (j *Job) HasQueuedBuild() {
@@ -313,11 +342,19 @@ func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
 }
 
 func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
-	if j.IsQueued() {
-		Error.Printf("%s is already running", j.GetName())
-		return false, errors.New(j.GetName() + " is already running")
+	isQueued, err := j.IsQueued()
+	if err != nil {
+		return false, err
 	}
-	if j.IsRunning() && skipIfRunning {
+	if isQueued {
+		Error.Printf("%s is already running", j.GetName())
+		return false, nil
+	}
+	isRunning, err := j.IsRunning()
+	if err != nil {
+		return false, err
+	}
+	if isRunning && skipIfRunning {
 		Warning.Printf("%s Will not request new build because %s is already running", j.GetName())
 	}
 
@@ -352,7 +389,10 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-func (j *Job) Poll() int {
-	j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
-	return j.Jenkins.Requester.LastResponse.StatusCode
+func (j *Job) Poll() (int, error) {
+	_, err := j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return j.Jenkins.Requester.LastResponse.StatusCode, nil
 }

@@ -186,20 +186,24 @@ func (j *Jenkins) GetNode(name string) *Node {
 	return nil
 }
 
-func (j *Jenkins) GetBuild(jobName string, number int64) *Build {
-	job := j.GetJob(jobName)
-	if job != nil {
-		return job.GetBuild(number)
+func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
+	job, err := j.GetJob(jobName)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return job.GetBuild(number)
 }
 
-func (j *Jenkins) GetJob(id string) *Job {
+func (j *Jenkins) GetJob(id string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + id}
-	if job.Poll() == 200 {
-		return &job
+	status, err := job.Poll()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
 }
 
 func (j *Jenkins) GetAllNodes() []*Node {
@@ -221,12 +225,12 @@ func (j *Jenkins) GetAllNodes() []*Node {
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
-func (j *Jenkins) GetAllBuildIds(job string) []jobBuild {
-	jobObj := j.GetJob(job)
-	if jobObj != nil {
-		return jobObj.GetAllBuildIds()
+func (j *Jenkins) GetAllBuildIds(job string) ([]jobBuild, error) {
+	jobObj, err := j.GetJob(job)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return jobObj.GetAllBuildIds()
 }
 
 // Get Only Array of Job Names, Color, URL
@@ -239,14 +243,18 @@ func (j *Jenkins) GetAllJobNames() []job {
 
 // Get All Possible Job Objects.
 // Each job will be queried.
-func (j *Jenkins) GetAllJobs() []*Job {
+func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	exec := Executor{Raw: new(executorResponse), Jenkins: j}
 	j.Requester.GetJSON("/", exec.Raw, nil)
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
-		jobs[i] = j.GetJob(job.Name)
+		ji, err := j.GetJob(job.Name)
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = ji
 	}
-	return jobs
+	return jobs, nil
 }
 
 // Returns a Queue
