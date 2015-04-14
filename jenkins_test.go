@@ -58,7 +58,7 @@ func init() {
 }
 
 func TestGetAllJobs(t *testing.T) {
-	jobs := jenkins.GetAllJobs()
+	jobs, _ := jenkins.GetAllJobs()
 	assert.Equal(t, 2, len(jobs))
 	assert.Equal(t, jobs[0].Raw.Color, "red")
 }
@@ -70,9 +70,9 @@ func TestGetAllNodes(t *testing.T) {
 }
 
 func TestGetAllBuilds(t *testing.T) {
-	builds := jenkins.GetAllBuildIds("testJob")
+	builds, _ := jenkins.GetAllBuildIds("testJob")
 	for _, b := range builds {
-		build := jenkins.GetBuild("testJob", b.Number)
+		build, _ := jenkins.GetBuild("testJob", b.Number)
 		assert.Equal(t, "FAILURE", build.GetResult())
 		assert.Equal(t, "FAILURE", build.GetResult())
 	}
@@ -80,16 +80,17 @@ func TestGetAllBuilds(t *testing.T) {
 }
 
 func TestBuildMethods(t *testing.T) {
-	job := jenkins.GetJob("testJob")
-	build := job.GetLastBuild()
+	job, _ := jenkins.GetJob("testJob")
+	build, _ := job.GetLastBuild()
 	params := build.GetParameters()
 	assert.Equal(t, "param1", params[0].Name)
 	// TODO: All Methods
 }
 
 func TestGetSingleJob(t *testing.T) {
-	job := jenkins.GetJob("testJob")
-	assert.Equal(t, false, job.IsRunning())
+	job, _ := jenkins.GetJob("testJob")
+	isRunning, _ := job.IsRunning()
+	assert.Equal(t, false, isRunning)
 	assert.Contains(t, job.GetConfig(), "<project>")
 	// TODO: All Methods
 }
