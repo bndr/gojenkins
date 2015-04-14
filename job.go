@@ -17,6 +17,7 @@ package gojenkins
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strconv"
 )
@@ -189,19 +190,37 @@ func (j *Job) GetDownstreamJobs() []*Job {
 	return jobs
 }
 
-func (j *Job) Enable() bool {
-	resp := j.Jenkins.Requester.Post(j.Base+"/enable", nil, nil, nil)
-	return resp.StatusCode == 200
+func (j *Job) Enable() (bool, error) {
+	resp, err := j.Jenkins.Requester.Post(j.Base+"/enable", nil, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
 }
 
-func (j *Job) Disable() bool {
-	resp := j.Jenkins.Requester.Post(j.Base+"/disable", nil, nil, nil)
-	return resp.StatusCode == 200
+func (j *Job) Disable() (bool, error) {
+	resp, err := j.Jenkins.Requester.Post(j.Base+"/disable", nil, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
 }
 
-func (j *Job) Delete() bool {
-	resp := j.Jenkins.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
-	return resp.StatusCode == 200
+func (j *Job) Delete() (bool, error) {
+	resp, err := j.Jenkins.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
 }
 
 func (j *Job) Rename(name string) {
@@ -210,26 +229,31 @@ func (j *Job) Rename(name string) {
 	j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
 }
 
-func (j *Job) Create(config string, qr ...interface{}) *Job {
+func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	var querystring map[string]string
 	if len(qr) > 0 {
 		querystring = qr[0].(map[string]string)
 	}
-	resp := j.Jenkins.Requester.PostXML("/createItem", config, j.Raw, querystring)
-	if resp.Status == "200" {
-		return j
-	} else {
-		return nil
+	resp, err := j.Jenkins.Requester.PostXML("/createItem", config, j.Raw, querystring)
+	if err != nil {
+		return nil, err
 	}
+	if resp.StatusCode == 200 {
+		return j, nil
+	}
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-func (j *Job) Copy(from string, newName string) *Job {
+func (j *Job) Copy(from string, newName string) (*Job, error) {
 	qr := map[string]string{"name": newName, "from": from, "mode": "copy"}
-	resp := j.Jenkins.Requester.Post("/createItem", nil, nil, qr)
-	if resp.StatusCode == 200 {
-		return j
+	resp, err := j.Jenkins.Requester.Post("/createItem", nil, nil, qr)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if resp.StatusCode == 200 {
+		return j, nil
+	}
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 func (j *Job) GetConfig() string {
@@ -268,7 +292,7 @@ func (j *Job) HasQueuedBuild() {
 
 }
 
-func (j *Job) InvokeSimple(params map[string]string) bool {
+func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
 	endpoint := "/build"
 	if len(j.GetParameters()) > 0 {
 		endpoint = "/buildWithParameters"
@@ -277,18 +301,21 @@ func (j *Job) InvokeSimple(params map[string]string) bool {
 	for k, v := range params {
 		data.Set(k, v)
 	}
-	resp := j.Jenkins.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
+	resp, err := j.Jenkins.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
+	if err != nil {
+		return false, err
+	}
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
 		Error.Println("Could not invoke job %s", j.GetName())
-		return false
+		return false, errors.New("Could not invoke job " + j.GetName())
 	}
-	return true
+	return true, nil
 }
 
-func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) bool {
+func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
 	if j.IsQueued() {
 		Error.Printf("%s is already running", j.GetName())
-		return false
+		return false, errors.New(j.GetName() + " is already running")
 	}
 	if j.IsRunning() && skipIfRunning {
 		Warning.Printf("%s Will not request new build because %s is already running", j.GetName())
@@ -315,8 +342,14 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 
 	buildParams["json"] = string(makeJson(params))
 	b, _ := json.Marshal(buildParams)
-	resp := j.Jenkins.Requester.PostFiles(j.Base+base, bytes.NewBuffer(b), nil, reqParams, files).StatusCode
-	return resp == 200 || resp == 201
+	resp, err := j.Jenkins.Requester.PostFiles(j.Base+base, bytes.NewBuffer(b), nil, reqParams, files)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode == 200 || resp.StatusCode == 201 {
+		return true, nil
+	}
+	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 func (j *Job) Poll() int {
