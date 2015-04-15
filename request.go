@@ -180,10 +180,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 		}
 		return rawResponse, nil
 	default:
-		jsonResponse, err := r.ReadJSONResponse(responseStruct)
-		if err != nil {
-			return nil, err
-		}
+		jsonResponse := r.ReadJSONResponse(responseStruct)
 		return jsonResponse, nil
 	}
 }
@@ -203,12 +200,8 @@ func (r *Requester) ReadRawResponse(responseStruct interface{}) (*http.Response,
 	return r.LastResponse, nil
 }
 
-func (r *Requester) ReadJSONResponse(responseStruct interface{}) (*http.Response, error) {
+func (r *Requester) ReadJSONResponse(responseStruct interface{}) *http.Response {
 	defer r.LastResponse.Body.Close()
-
-	err := json.NewDecoder(r.LastResponse.Body).Decode(responseStruct)
-	if err != nil {
-		return nil, err
-	}
-	return r.LastResponse, nil
+	json.NewDecoder(r.LastResponse.Body).Decode(responseStruct)
+	return r.LastResponse
 }

@@ -49,7 +49,7 @@ var (
 // Init Method. Should be called after creating a Jenkins Instance.
 // e.g jenkins := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
-func (j *Jenkins) Init() *Jenkins {
+func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
 	// Skip SSL Verification?
 	tr := &http.Transport{
@@ -68,12 +68,15 @@ func (j *Jenkins) Init() *Jenkins {
 
 	// Check Connection
 	j.Raw = new(executorResponse)
-	j.Requester.GetJSON("/", j.Raw, nil)
+	_, err := j.Requester.GetJSON("/", j.Raw, nil)
+	if err != nil {
+		return nil, err
+	}
 	j.Version = j.Requester.LastResponse.Header.Get("X-Jenkins")
 	if j.Raw == nil {
 		panic("Connection Failed, Please verify that the host and credentials are correct.")
 	}
-	return j
+	return j, nil
 }
 
 func (j *Jenkins) initLoggers() {
