@@ -27,12 +27,27 @@ These are some of the features that are currently implemented:
 
 import "github.com/bndr/gojenkins"
 
-jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+jenkins, err := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
 
-build := jenkins.GetJob("job_name").GetLastSuccessfulBuild()
+if err != nil {
+  panic("Something Went Wrong")
+}
+
+build, err := jenkins.GetJob("job_name").GetLastSuccessfulBuild()
+
+if err != nil {
+  panic("Job Does Not Exist")
+}
+
 duration := build.GetDuration()
 
-job := jenkins.GetJob("jobname").Rename("SomeotherJobName")
+job, err := jenkins.GetJob("jobname")
+
+if err != nil {
+  panic("Job does not exist")
+}
+
+job.Rename("SomeotherJobName")
 
 configString := `<?xml version='1.0' encoding='UTF-8'?> 
 <project>
@@ -65,13 +80,13 @@ For all of the examples below first create a jenkins object
 ```go
 import "github.com/bndr/gojenkins"
 
-jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+jenkins, _ := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
 ```
 
 or if you don't need authentication:
 
 ```go
-jenkins := gojenkins.CreateJenkins("http://localhost:8080/").Init()
+jenkins, _ := gojenkins.CreateJenkins("http://localhost:8080/").Init()
 ```
 
 ### Check Status of all nodes
@@ -94,19 +109,34 @@ for _, node := range nodes {
 
 ```go
 jobName := "someJob"
-builds := jenkins.GetAllBuildIds(jobName)
+builds, err := jenkins.GetAllBuildIds(jobName)
+
+if err != nil {
+  panic(err)
+}
 
 for _, build := range builds {
   buildId := build.Number
-  data := jenkins.GetBuild(jobName, buildId)
+  data, err := jenkins.GetBuild(jobName, buildId)
+  
+  if err != nil {
+    panic(err)
+  }
+
 	if "SUCCESS" == data.GetResult() {
 		fmt.Println("This build succeeded")
 	}
 }
 
 // Get Last Successful/Failed/Stable Build for a Job
-jenkins.GetJob("someJob").GetLastSuccessfulBuild()
-jenkins.GetJob("someJob").GetLastStableBuild()
+job, err := jenkins.GetJob("someJob")
+
+if err != nil {
+  panic(err)
+}
+
+job.GetLastSuccessfulBuild()
+job.GetLastStableBuild()
 
 ```
 
@@ -126,8 +156,8 @@ for _, task := range tasks {
 
 ```go
 
-job := jenkins.GetJob("job")
-build := job.GetBuild(1)
+job, _ := jenkins.GetJob("job")
+build, _ := job.GetBuild(1)
 artifacts := build.GetArtifacts()
 
 for _, a := range artifacts {
@@ -140,10 +170,10 @@ for _, a := range artifacts {
 
 ```go
 
-job := jenkins.GetJob("job")
+job, _ := jenkins.GetJob("job")
 job.Poll()
 
-build := job.getBuild(1)
+build, _ := job.getBuild(1)
 build.Poll()
 
 ```
