@@ -67,7 +67,10 @@ func (n *Node) GetName() string {
 }
 
 func (n *Node) Delete() bool {
-	resp := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
+	resp, err := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
+	if err != nil {
+		return false
+	}
 	return resp.StatusCode == 200
 }
 

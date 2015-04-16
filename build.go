@@ -15,6 +15,7 @@
 package gojenkins
 
 import (
+	"errors"
 	"regexp"
 	"strconv"
 	"time"
@@ -224,23 +225,30 @@ func (b *Build) GetParameters() []parameter {
 	return nil
 }
 
-func (b *Build) GetDownstreamBuilds() []*Build {
+func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 	downstreamJobs := b.GetDownstreamJobNames()
 	fingerprints := b.GetAllFingerprints()
 	result := make([]*Build, 0)
 	for _, fingerprint := range fingerprints {
 		for _, usage := range fingerprint.Raw.Usage {
 			if inSlice(usage.Name, downstreamJobs) {
-				job := b.Jenkins.GetJob(usage.Name)
+				job, err := b.Jenkins.GetJob(usage.Name)
+				if err != nil {
+					return nil, err
+				}
 				for _, ranges := range usage.Ranges.Ranges {
 					for i := ranges.Start; i <= ranges.End; i++ {
-						result = append(result, job.GetBuild(i))
+						build, err := job.GetBuild(i)
+						if err != nil {
+							return nil, err
+						}
+						result = append(result, build)
 					}
 				}
 			}
 		}
 	}
-	return result
+	return result, nil
 }
 
 func (b *Build) GetDownstreamJobNames() []string {
@@ -268,14 +276,14 @@ func (b *Build) GetAllFingerprints() []*Fingerprint {
 	return result
 }
 
-func (b *Build) GetUpstreamJob() *Job {
+func (b *Build) GetUpstreamJob() (*Job, error) {
 	causes := b.GetCauses()
 	if len(causes) > 0 {
 		if job, ok := causes[0]["upstreamProject"]; ok {
 			return b.Jenkins.GetJob(job.(string))
 		}
 	}
-	return nil
+	return nil, errors.New("Unable to get Upstream Job")
 }
 
 func (b *Build) GetUpstreamBuildNumber() int64 {
@@ -288,15 +296,18 @@ func (b *Build) GetUpstreamBuildNumber() int64 {
 	return 0
 }
 
-func (b *Build) GetUpstreamBuild() *Build {
-	job := b.GetUpstreamJob()
+func (b *Build) GetUpstreamBuild() (*Build, error) {
+	job, err := b.GetUpstreamJob()
+	if err != nil {
+		return nil, err
+	}
 	if job != nil {
 		buildNumber := b.GetUpstreamBuildNumber()
 		if buildNumber != 0 {
 			return job.GetBuild(b.GetUpstreamBuildNumber())
 		}
 	}
-	return nil
+	return nil, errors.New("Build not found")
 }
 
 func (b *Build) GetMatrixRuns() []*Build {
@@ -380,7 +391,7 @@ func (b *Build) IsRunning() bool {
 
 // Poll for current data. Optional parameter - depth.
 // More about depth here: https://wiki.jenkins-ci.org/display/JENKINS/Remote+access+API
-func (b *Build) Poll(options ...interface{}) int {
+func (b *Build) Poll(options ...interface{}) (int, error) {
 	depth := strconv.Itoa(b.Depth)
 	for _, o := range options {
 		switch v := o.(type) {
@@ -395,6 +406,9 @@ func (b *Build) Poll(options ...interface{}) int {
 	qr := map[string]string{
 		"depth": depth,
 	}
-	b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
-	return b.Jenkins.Requester.LastResponse.StatusCode
+	_, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
+	if err != nil {
+		return 0, err
+	}
+	return b.Jenkins.Requester.LastResponse.StatusCode, nil
 }

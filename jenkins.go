@@ -17,10 +17,12 @@ package gojenkins
 
 import (
 	"crypto/tls"
+	"errors"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -47,7 +49,7 @@ var (
 // Init Method. Should be called after creating a Jenkins Instance.
 // e.g jenkins := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
-func (j *Jenkins) Init() *Jenkins {
+func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
 	// Skip SSL Verification?
 	tr := &http.Transport{
@@ -66,12 +68,15 @@ func (j *Jenkins) Init() *Jenkins {
 
 	// Check Connection
 	j.Raw = new(executorResponse)
-	j.Requester.GetJSON("/", j.Raw, nil)
+	_, err := j.Requester.GetJSON("/", j.Raw, nil)
+	if err != nil {
+		return nil, err
+	}
 	j.Version = j.Requester.LastResponse.Header.Get("X-Jenkins")
 	if j.Raw == nil {
 		panic("Connection Failed, Please verify that the host and credentials are correct.")
 	}
-	return j
+	return j, nil
 }
 
 func (j *Jenkins) initLoggers() {
@@ -95,10 +100,10 @@ func (j *Jenkins) Info() *executorResponse {
 }
 
 // Create a new Node
-func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) *Node {
+func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) (*Node, error) {
 	node := j.GetNode(name)
 	if node != nil {
-		return node
+		return node, nil
 	}
 	node = &Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
@@ -119,26 +124,29 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		}),
 	}
 
-	resp := j.Requester.GetXML("/computer/doCreateItem", nil, qr)
+	resp, err := j.Requester.GetXML("/computer/doCreateItem", nil, qr)
+	if err != nil {
+		return nil, err
+	}
 	if resp.StatusCode < 400 {
 		node.Poll()
-		return node
+		return node, nil
 	}
-	return nil
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 // Create a new job from config File
 // Method takes XML string as first parameter, and if the name is not specified in the config file
 // takes name as string as second parameter
 // e.g jenkins.CreateJob("<config></config>","newJobName")
-func (j *Jenkins) CreateJob(config string, options ...interface{}) *Job {
+func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error) {
 	qr := make(map[string]string)
 	if len(options) > 0 {
 		qr["name"] = options[0].(string)
 	}
 	job := Job{Jenkins: j, Raw: new(jobResponse)}
 	job.Create(config, qr)
-	return &job
+	return &job, nil
 }
 
 // Rename a job.
@@ -151,20 +159,20 @@ func (j *Jenkins) RenameJob(job string, name string) *Job {
 
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
-func (j *Jenkins) CopyJob(copyFrom string, newName string) *Job {
+func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + newName}
 	return job.Copy(copyFrom, newName)
 }
 
 // Delete a job.
-func (j *Jenkins) DeleteJob(name string) bool {
+func (j *Jenkins) DeleteJob(name string) (bool, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
-func (j *Jenkins) BuildJob(name string, options ...interface{}) bool {
+func (j *Jenkins) BuildJob(name string, options ...interface{}) (bool, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
@@ -181,20 +189,24 @@ func (j *Jenkins) GetNode(name string) *Node {
 	return nil
 }
 
-func (j *Jenkins) GetBuild(jobName string, number int64) *Build {
-	job := j.GetJob(jobName)
-	if job != nil {
-		return job.GetBuild(number)
+func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
+	job, err := j.GetJob(jobName)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return job.GetBuild(number)
 }
 
-func (j *Jenkins) GetJob(id string) *Job {
+func (j *Jenkins) GetJob(id string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + id}
-	if job.Poll() == 200 {
-		return &job
+	status, err := job.Poll()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
 }
 
 func (j *Jenkins) GetAllNodes() []*Node {
@@ -216,12 +228,12 @@ func (j *Jenkins) GetAllNodes() []*Node {
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
-func (j *Jenkins) GetAllBuildIds(job string) []jobBuild {
-	jobObj := j.GetJob(job)
-	if jobObj != nil {
-		return jobObj.GetAllBuildIds()
+func (j *Jenkins) GetAllBuildIds(job string) ([]jobBuild, error) {
+	jobObj, err := j.GetJob(job)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return jobObj.GetAllBuildIds()
 }
 
 // Get Only Array of Job Names, Color, URL
@@ -234,14 +246,18 @@ func (j *Jenkins) GetAllJobNames() []job {
 
 // Get All Possible Job Objects.
 // Each job will be queried.
-func (j *Jenkins) GetAllJobs() []*Job {
+func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	exec := Executor{Raw: new(executorResponse), Jenkins: j}
 	j.Requester.GetJSON("/", exec.Raw, nil)
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
-		jobs[i] = j.GetJob(job.Name)
+		ji, err := j.GetJob(job.Name)
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = ji
 	}
-	return jobs
+	return jobs, nil
 }
 
 // Returns a Queue
@@ -313,11 +329,11 @@ func (j *Jenkins) GetAllViews() []*View {
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 
-func (j *Jenkins) CreateView(name string, viewType string) bool {
+func (j *Jenkins) CreateView(name string, viewType string) (bool, error) {
 	exists := j.GetView(name)
 	if exists != nil {
 		Error.Println("View Already exists.")
-		return false
+		return false, errors.New("View already exists")
 	}
 	view := View{Jenkins: j, Raw: new(viewResponse), Base: "/view/" + name}
 	url := "/createView"
@@ -330,8 +346,14 @@ func (j *Jenkins) CreateView(name string, viewType string) bool {
 			"mode": viewType,
 		}),
 	}
-	r := j.Requester.Post(url, nil, view.Raw, data)
-	return r.StatusCode == 200
+	r, err := j.Requester.Post(url, nil, view.Raw, data)
+	if err != nil {
+		return false, err
+	}
+	if r.StatusCode == 200 {
+		return true, nil
+	}
+	return false, errors.New(strconv.Itoa(r.StatusCode))
 }
 
 func (j *Jenkins) Poll() int {

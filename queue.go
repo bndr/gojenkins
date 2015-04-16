@@ -98,7 +98,7 @@ func (t *Task) Cancel() bool {
 	return t.Jenkins.Requester.LastResponse.StatusCode == 200
 }
 
-func (t *Task) GetJob() *Job {
+func (t *Task) GetJob() (*Job, error) {
 	return t.Jenkins.GetJob(t.Raw.Task.Name)
 }
 

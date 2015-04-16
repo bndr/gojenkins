@@ -38,36 +38,36 @@ type Requester struct {
 	Suffix       string
 }
 
-func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) *http.Response {
+func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.Suffix = "api/json"
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
-func (r *Requester) PostFiles(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string, files []string) *http.Response {
+func (r *Requester) PostFiles(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string, files []string) (*http.Response, error) {
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring, files)
 }
 
-func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) *http.Response {
+func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	payload := bytes.NewBuffer([]byte(xml))
 	r.SetHeader("Content-Type", "application/xml")
 	r.Suffix = ""
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
-func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
+func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	r.SetHeader("Content-Type", "application/json")
 	r.Suffix = "api/json"
 	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
 
-func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
+func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	r.SetHeader("Content-Type", "application/json")
 	r.Suffix = "api/json"
 	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
 
-func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) *http.Response {
+func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	r.Suffix = ""
 	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
@@ -92,7 +92,7 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 	return output
 }
 
-func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) *http.Response {
+func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
 	if !strings.HasSuffix(endpoint, "/") {
 		endpoint += "/"
 	}
@@ -119,29 +119,40 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 			fileData, err := os.Open(file)
 			if err != nil {
 				Error.Println(err.Error())
-				return nil
+				return nil, err
 			}
 
 			part, err := writer.CreateFormFile("file", filepath.Base(file))
 			if err != nil {
 				Error.Println(err.Error())
+				return nil, err
 			}
-			_, err = io.Copy(part, fileData)
+			if _, err = io.Copy(part, fileData); err != nil {
+				return nil, err
+			}
 			defer fileData.Close()
 		}
 		var params map[string]string
 		json.NewDecoder(payload).Decode(&params)
 		for key, val := range params {
-			_ = writer.WriteField(key, val)
+			if err = writer.WriteField(key, val); err != nil {
+				return nil, err
+			}
 		}
-		err = writer.Close()
+		if err = writer.Close(); err != nil {
+			return nil, err
+		}
 		req, err = http.NewRequest(method, url, body)
+		if err != nil {
+			return nil, err
+		}
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 	} else {
 
 		req, err = http.NewRequest(method, url, payload)
 		if err != nil {
 			Error.Println(err.Error())
+			return nil, err
 		}
 	}
 
@@ -158,18 +169,23 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 	r.LastResponse, err = r.Client.Do(req)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	switch responseStruct.(type) {
 	case *string:
-		return r.ReadRawResponse(responseStruct)
+		rawResponse, err := r.ReadRawResponse(responseStruct)
+		if err != nil {
+			return nil, err
+		}
+		return rawResponse, nil
 	default:
-		return r.ReadJSONResponse(responseStruct)
+		jsonResponse := r.ReadJSONResponse(responseStruct)
+		return jsonResponse, nil
 	}
 }
 
-func (r *Requester) ReadRawResponse(responseStruct interface{}) *http.Response {
+func (r *Requester) ReadRawResponse(responseStruct interface{}) (*http.Response, error) {
 	defer r.LastResponse.Body.Close()
 
 	content, err := ioutil.ReadAll(r.LastResponse.Body)
@@ -178,15 +194,14 @@ func (r *Requester) ReadRawResponse(responseStruct interface{}) *http.Response {
 	}
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return r.LastResponse
+	return r.LastResponse, nil
 }
 
 func (r *Requester) ReadJSONResponse(responseStruct interface{}) *http.Response {
 	defer r.LastResponse.Body.Close()
-
 	json.NewDecoder(r.LastResponse.Body).Decode(responseStruct)
 	return r.LastResponse
 }

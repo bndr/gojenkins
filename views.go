@@ -1,5 +1,10 @@
 package gojenkins
 
+import (
+	"errors"
+	"strconv"
+)
+
 type View struct {
 	Raw     *viewResponse
 	Jenkins *Jenkins
@@ -23,19 +28,31 @@ var (
 )
 
 // Returns True if successfully added Job, otherwise false
-func (v *View) AddJob(name string) bool {
+func (v *View) AddJob(name string) (bool, error) {
 	url := "/addJobToView"
 	qr := map[string]string{"name": name}
-	resp := v.Jenkins.Requester.Post(v.Base+url, nil, nil, qr)
-	return resp.StatusCode == 200
+	resp, err := v.Jenkins.Requester.Post(v.Base+url, nil, nil, qr)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode == 200 {
+		return true, nil
+	}
+	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 // Returns True if successfully deleted Job, otherwise false
-func (v *View) DeleteJob(name string) bool {
+func (v *View) DeleteJob(name string) (bool, error) {
 	url := "/removeJobFromView"
 	qr := map[string]string{"name": name}
-	resp := v.Jenkins.Requester.Post(v.Base+url, nil, nil, qr)
-	return resp.StatusCode == 200
+	resp, err := v.Jenkins.Requester.Post(v.Base+url, nil, nil, qr)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode == 200 {
+		return true, nil
+	}
+	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 func (v *View) Poll() int {
