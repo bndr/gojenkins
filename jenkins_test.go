@@ -61,7 +61,11 @@ func TestCreateBuilds(t *testing.T) {
 }
 
 func TestCreateViews(t *testing.T) {
-	jenkins.CreateView("test_view", LIST_VIEW)
+	view, err := jenkins.CreateView("test_view", LIST_VIEW)
+	assert.Nil(t, err)
+	assert.Equal(t, "test_view", view.GetName())
+	assert.Equal(t, "", view.GetDescription())
+	assert.Equal(t, 0, view.GetJobs())
 }
 
 func TestGetAllJobs(t *testing.T) {

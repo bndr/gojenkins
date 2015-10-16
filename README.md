@@ -152,6 +152,24 @@ for _, task := range tasks {
 
 ```
 
+### Create View and add Jobs to it
+
+```go
+
+view, err := jenkins.CreateView("test_view", gojenkins.LIST_VIEW)
+
+if err != nil {
+  panic(err)
+}
+
+status, err := view.AddJob("jobName")
+
+if status {
+  fmt.Println("Job has been added to view")
+}
+
+```
+
 ### Get All Artifacts for a Build and Save them to a folder
 
 ```go

@@ -335,13 +335,13 @@ func (j *Jenkins) GetAllViews() []*View {
 // 		gojenkins.DASHBOARD_VIEW
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
-func (j *Jenkins) CreateView(name string, viewType string) (bool, error) {
+func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 	exists := j.GetView(name)
 	if exists.Raw.Name != "" {
 		Error.Println("View Already exists.")
-		return false, errors.New("View already exists")
+		return exists, errors.New("View already exists")
 	}
-	view := View{Jenkins: j, Raw: new(viewResponse), Base: "/view/" + name}
+	view := &View{Jenkins: j, Raw: new(viewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,
@@ -355,12 +355,13 @@ func (j *Jenkins) CreateView(name string, viewType string) (bool, error) {
 	r, err := j.Requester.Post(endpoint, nil, view.Raw, data)
 
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+
 	if r.StatusCode == 200 {
-		return true, nil
+		return j.GetView(name), nil
 	}
-	return false, errors.New(strconv.Itoa(r.StatusCode))
+	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
 func (j *Jenkins) Poll() int {
