@@ -1,7 +1,6 @@
 package gojenkins
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
@@ -62,9 +61,7 @@ func TestCreateBuilds(t *testing.T) {
 }
 
 func TestCreateViews(t *testing.T) {
-	resp, err := jenkins.CreateView("test_view", LIST_VIEW)
-	fmt.Printf("%#v", err)
-	fmt.Printf("%#v", resp)
+	jenkins.CreateView("test_view", LIST_VIEW)
 }
 
 func TestGetAllJobs(t *testing.T) {
