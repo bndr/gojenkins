@@ -15,7 +15,7 @@ var (
 
 
 func init() {
-	jenkins = CreateJenkins("http://192.168.99.100:8080", "admin", "admin")
+	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
 	jenkins.Init()
 }
 

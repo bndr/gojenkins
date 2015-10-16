@@ -10,9 +10,10 @@ go:
   - 1.4
   - tip
 
-before_isntall:
+before_install:
   - docker pull jenkins
-  - docker run -p 8080:8080 jenkins
+  - docker run -d -p 8080:8080 jenkins
+  - sleep 30
   - docker ps -a
 
 install:
