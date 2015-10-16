@@ -65,7 +65,7 @@ func TestCreateViews(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "test_view", view.GetName())
 	assert.Equal(t, "", view.GetDescription())
-	assert.Equal(t, 0, view.GetJobs())
+	assert.Equal(t, 0, len(view.GetJobs()))
 }
 
 func TestGetAllJobs(t *testing.T) {
