@@ -21,9 +21,11 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"fmt"
 )
 
 // Request Methods
@@ -62,8 +64,8 @@ func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, queryst
 }
 
 func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
-	r.SetHeader("Content-Type", "application/json")
-	r.Suffix = "api/json"
+	r.SetHeader("Content-Type", "application/xml")
+	r.Suffix = ""
 	return r.Do("GET", endpoint, nil, responseStruct, querystring)
 }
 
@@ -93,13 +95,14 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 }
 
 func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
-	if !strings.HasSuffix(endpoint, "/") {
+	if !strings.HasSuffix(endpoint, "/") && !strings.Contains(endpoint, "doCreateItem") {
 		endpoint += "/"
 	}
 
 	fileUpload := false
 	var files []string
 	url := r.Base + endpoint + r.Suffix
+
 	for _, o := range options {
 		switch v := o.(type) {
 		case map[string]string:
@@ -151,7 +154,6 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 
 		req, err = http.NewRequest(method, url, payload)
 		if err != nil {
-			Error.Println(err.Error())
 			return nil, err
 		}
 	}
@@ -168,8 +170,14 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 
 	r.LastResponse, err = r.Client.Do(req)
 
+
 	if err != nil {
 		return nil, err
+	}
+	errorText := r.LastResponse.Header.Get("X-Error")
+
+	if errorText != "" {
+		return nil, errors.New(errorText)
 	}
 
 	switch responseStruct.(type) {

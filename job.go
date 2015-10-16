@@ -258,6 +258,7 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
+		j.Poll()
 		return j, nil
 	}
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
@@ -322,6 +323,15 @@ func (j *Job) HasQueuedBuild() {
 }
 
 func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
+	isQueued, err := j.IsQueued()
+	if err != nil {
+		return false, err
+	}
+	if isQueued {
+		Error.Printf("%s is already running", j.GetName())
+		return false, nil
+	}
+
 	endpoint := "/build"
 	if len(j.GetParameters()) > 0 {
 		endpoint = "/buildWithParameters"

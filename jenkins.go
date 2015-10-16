@@ -24,6 +24,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"net/url"
 )
 
 // Basic Authentication
@@ -111,7 +112,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	qr := map[string]string{
 		"name": name,
 		"type": NODE_TYPE,
-		"json": makeJson(map[string]interface{}{
+		"json": url.QueryEscape(makeJson(map[string]interface{}{
 			"name":               name,
 			"nodeDescription":    description,
 			"remoteFS":           remoteFS,
@@ -121,10 +122,11 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
 			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
 			"launcher":           map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"},
-		}),
+		})),
 	}
 
-	resp, err := j.Requester.GetXML("/computer/doCreateItem", nil, qr)
+	resp, err := j.Requester.Get("/computer/doCreateItem", nil, qr)
+
 	if err != nil {
 		return nil, err
 	}
@@ -143,10 +145,15 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 	qr := make(map[string]string)
 	if len(options) > 0 {
 		qr["name"] = options[0].(string)
+	} else {
+		return nil , errors.New("Error Creating Job, job name is missing")
 	}
-	job := Job{Jenkins: j, Raw: new(jobResponse)}
-	job.Create(config, qr)
-	return &job, nil
+	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + qr["name"]}
+	job, err := jobObj.Create(config, qr)
+	if err != nil {
+		return nil, err
+	}
+	return job, nil
 }
 
 // Rename a job.
@@ -328,25 +335,25 @@ func (j *Jenkins) GetAllViews() []*View {
 // 		gojenkins.DASHBOARD_VIEW
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
-
 func (j *Jenkins) CreateView(name string, viewType string) (bool, error) {
 	exists := j.GetView(name)
-	if exists != nil {
+	if exists.Raw.Name != "" {
 		Error.Println("View Already exists.")
 		return false, errors.New("View already exists")
 	}
 	view := View{Jenkins: j, Raw: new(viewResponse), Base: "/view/" + name}
-	url := "/createView"
+	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,
-		"type":   viewType,
+		"mode":   viewType,
 		"Submit": "OK",
-		"json": makeJson(map[string]string{
+		"json": url.QueryEscape(makeJson(map[string]string{
 			"name": name,
 			"mode": viewType,
-		}),
+		})),
 	}
-	r, err := j.Requester.Post(url, nil, view.Raw, data)
+	r, err := j.Requester.Post(endpoint, nil, view.Raw, data)
+
 	if err != nil {
 		return false, err
 	}
