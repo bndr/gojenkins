@@ -20,6 +20,7 @@ import (
 	"errors"
 	"net/url"
 	"strconv"
+	"fmt"
 )
 
 type Job struct {
@@ -359,7 +360,6 @@ func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
 		return false, err
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		Error.Println("Could not invoke job %s", j.GetName())
 		return false, errors.New("Could not invoke job " + j.GetName())
 	}
 	return true, nil
@@ -379,7 +379,7 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 		return false, err
 	}
 	if isRunning && skipIfRunning {
-		Warning.Printf("%s Will not request new build because %s is already running", j.GetName())
+		return false, errors.New(fmt.Sprintf("%s Will not request new build because %s is already running", j.GetName()))
 	}
 
 	base := "/build"
