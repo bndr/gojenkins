@@ -329,7 +329,7 @@ func (j *Job) IsEnabled() (bool, error) {
 }
 
 func (j *Job) HasQueuedBuild() {
-
+	panic("Not Implemented yet")
 }
 
 func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
