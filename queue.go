@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -85,17 +85,20 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 	return tasks
 }
 
-func (q *Queue) CancelTask(id int64) bool {
+func (q *Queue) CancelTask(id int64) (bool, error) {
 	task := q.GetTaskById(id)
 	return task.Cancel()
 }
 
-func (t *Task) Cancel() bool {
+func (t *Task) Cancel() (bool, error) {
 	qr := map[string]string{
 		"id": strconv.FormatInt(t.Raw.ID, 10),
 	}
-	t.Jenkins.Requester.Post(t.Jenkins.GetQueueUrl()+"/cancelItem", nil, t.Raw, qr)
-	return t.Jenkins.Requester.LastResponse.StatusCode == 200
+	_, err := t.Jenkins.Requester.Post(t.Jenkins.GetQueueUrl()+"/cancelItem", nil, t.Raw, qr)
+	if err != nil {
+		return false, err
+	}
+	return t.Jenkins.Requester.LastResponse.StatusCode == 200, nil
 }
 
 func (t *Task) GetJob() (*Job, error) {
@@ -124,7 +127,10 @@ func (t *Task) GetCauses() []map[string]interface{} {
 	return nil
 }
 
-func (q *Queue) Poll() int {
-	q.Jenkins.Requester.GetJSON(q.Base, q.Raw, nil)
-	return q.Jenkins.Requester.LastResponse.StatusCode
+func (q *Queue) Poll() (int, error) {
+	_, err := q.Jenkins.Requester.GetJSON(q.Base, q.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return q.Jenkins.Requester.LastResponse.StatusCode, nil
 }

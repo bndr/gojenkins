@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -35,7 +35,12 @@ type Artifact struct {
 // Get raw byte data of Artifact
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
-	a.Jenkins.Requester.Get(a.Path, &data, nil)
+	_, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
 	code := a.Jenkins.Requester.LastResponse.StatusCode
 	if code != 200 {
 		Error.Printf("Jenkins responded with StatusCode: %d", code)
@@ -45,13 +50,11 @@ func (a Artifact) GetData() ([]byte, error) {
 }
 
 // Save artifact to a specific path, using your own filename.
-func (a Artifact) Save(path string) {
-	Info.Printf("Saving artifact @ %s to %s", a.Path, path)
+func (a Artifact) Save(path string) (bool, error) {
 	data, err := a.GetData()
 
 	if err != nil {
-		Error.Println("No Data received, not saving file.")
-		return
+		return false, errors.New("No Data received, not saving file.")
 	}
 
 	if _, err = os.Stat(path); err == nil {
@@ -62,29 +65,39 @@ func (a Artifact) Save(path string) {
 	a.validateDownload(path)
 
 	if err != nil {
-		Error.Println(err.Error())
+		return false, err
 	}
+	return true, nil
 }
 
 // Save Artifact to directory using Artifact filename.
-func (a Artifact) SaveToDir(dir string) {
+func (a Artifact) SaveToDir(dir string) (bool, error) {
 	if _, err := os.Stat(dir); err != nil {
 		Error.Printf("Can't Save Artifact. Directory %s does not exist...", dir)
-		return
+		return false, errors.New(fmt.Sprintf("Can't Save Artifact. Directory %s does not exist...", dir))
 	}
-	a.Save(path.Join(dir, a.FileName))
+	saved, err := a.Save(path.Join(dir, a.FileName))
+	if err != nil {
+		return saved, nil
+	}
+	return saved, nil
 }
 
 // Compare Remote and local MD5
-func (a Artifact) validateDownload(path string) bool {
+func (a Artifact) validateDownload(path string) (bool, error) {
 	localHash := a.getMD5local(path)
+
 	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(fingerPrintResponse)}
 
-	if !fp.ValidateForBuild(a.FileName, a.Build) {
-		Error.Println("Fingerprint of the downloaded artifact could not be verified")
-		return false
+	valid , err := fp.ValidateForBuild(a.FileName, a.Build)
+
+	if err != nil {
+		return false, err
 	}
-	return true
+	if !valid {
+		return false, errors.New("Fingerprint of the downloaded artifact could not be verified")
+	}
+	return true, nil
 }
 
 // Get Local MD5

@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -13,6 +13,8 @@
 // under the License.
 
 package gojenkins
+
+import "errors"
 
 // Nodes
 
@@ -58,72 +60,110 @@ type nodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
-func (n *Node) Info() *nodeResponse {
-	return n.Raw
+func (n *Node) Info() (*nodeResponse, error) {
+	_, err := n.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return n.Raw, nil
 }
 
 func (n *Node) GetName() string {
 	return n.Raw.DisplayName
 }
 
-func (n *Node) Delete() bool {
+func (n *Node) Delete() (bool, error) {
 	resp, err := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
-		return false
+		return false, err
 	}
-	return resp.StatusCode == 200
+	return resp.StatusCode == 200, nil
 }
 
-func (n *Node) IsOnline() bool {
-	n.Poll()
-	return !n.Raw.Offline
+func (n *Node) IsOnline() (bool, error) {
+	_, err := n.Poll()
+	if err != nil {
+		return false, err
+	}
+	return !n.Raw.Offline, nil
 }
 
-func (n *Node) IsTemporarilyOffline() bool {
-	n.Poll()
-	return n.Raw.TemporarilyOffline
+func (n *Node) IsTemporarilyOffline() (bool, error) {
+	_, err := n.Poll()
+	if err != nil {
+		return false, err
+	}
+	return n.Raw.TemporarilyOffline, nil
 }
 
-func (n *Node) IsIdle() bool {
-	n.Poll()
-	return n.Raw.Idle
+func (n *Node) IsIdle() (bool, error) {
+	_, err := n.Poll()
+	if err != nil {
+		return false, err
+	}
+	return n.Raw.Idle, nil
 }
 
-func (n *Node) IsJnlpAgent() bool {
-	n.Poll()
-	return n.Raw.JnlpAgent
+func (n *Node) IsJnlpAgent() (bool, error) {
+	_, err := n.Poll()
+	if err != nil {
+		return false, err
+	}
+	return n.Raw.JnlpAgent, nil
 }
 
-func (n *Node) SetOnline() {
-	n.Poll()
+func (n *Node) SetOnline() (bool, error) {
+	_, err := n.Poll()
+
+	if err != nil {
+		return false, err
+	}
+
 	if n.Raw.Offline && !n.Raw.TemporarilyOffline {
-		panic("Node is Permanently offline, can't bring it up")
+		return false, errors.New("Node is Permanently offline, can't bring it up")
 	}
 
 	if n.Raw.Offline && n.Raw.TemporarilyOffline {
-		n.ToggleTemporarilyOffline()
+		return n.ToggleTemporarilyOffline()
 	}
+
+	return false, nil
 }
 
-func (n *Node) SetOffline() {
+func (n *Node) SetOffline() (bool, error) {
 	if !n.Raw.Offline {
-		n.ToggleTemporarilyOffline()
+		return n.ToggleTemporarilyOffline()
 	}
+	return false, errors.New("Node already Offline")
 }
 
-func (n *Node) ToggleTemporarilyOffline(options ...interface{}) {
-	state_before := n.IsTemporarilyOffline()
+func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
+	state_before, err := n.IsTemporarilyOffline()
+	if err != nil {
+		return false, err
+	}
 	qr := map[string]string{"offlineMessage": "requested from gojenkins"}
 	if len(options) > 0 {
 		qr["offlineMessage"] = options[0].(string)
 	}
-	n.Jenkins.Requester.GetJSON(n.Base+"/toggleOffline", nil, qr)
-	if state_before == n.IsTemporarilyOffline() {
-		panic("Node state not changed")
+	_, err = n.Jenkins.Requester.GetJSON(n.Base+"/toggleOffline", nil, qr)
+	if err != nil {
+		return false, err
 	}
+	new_state, err := n.IsTemporarilyOffline()
+	if err != nil {
+		return false, err
+	}
+	if state_before == new_state {
+		return false, errors.New("Node state not changed")
+	}
+	return false, nil
 }
 
-func (n *Node) Poll() int {
-	n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
-	return n.Jenkins.Requester.LastResponse.StatusCode
+func (n *Node) Poll() (int, error) {
+	_, err := n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return n.Jenkins.Requester.LastResponse.StatusCode, nil
 }

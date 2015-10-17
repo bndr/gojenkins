@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -24,7 +24,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"net/url"
 )
 
 // Basic Authentication
@@ -69,14 +68,17 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 
 	// Check Connection
 	j.Raw = new(executorResponse)
-	_, err := j.Requester.GetJSON("/", j.Raw, nil)
+	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+
 	if err != nil {
 		return nil, err
 	}
-	j.Version = j.Requester.LastResponse.Header.Get("X-Jenkins")
+
+	j.Version = rsp.Header.Get("X-Jenkins")
 	if j.Raw == nil {
-		panic("Connection Failed, Please verify that the host and credentials are correct.")
+		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
 	}
+
 	return j, nil
 }
 
@@ -95,24 +97,30 @@ func (j *Jenkins) initLoggers() {
 }
 
 // Get Basic Information About Jenkins
-func (j *Jenkins) Info() *executorResponse {
-	j.Requester.Do("GET", "/", nil, j.Raw, nil)
-	return j.Raw
+func (j *Jenkins) Info() (*executorResponse, error) {
+	_, err := j.Requester.Do("GET", "/", nil, j.Raw, nil)
+
+	if err != nil {
+		return nil, err
+	}
+	return j.Raw, nil
 }
 
 // Create a new Node
 func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) (*Node, error) {
-	node := j.GetNode(name)
+	node, _ := j.GetNode(name)
+
 	if node != nil {
 		return node, nil
 	}
+
 	node = &Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{
 		"name": name,
 		"type": NODE_TYPE,
-		"json": url.QueryEscape(makeJson(map[string]interface{}{
+		"json": makeJson(map[string]interface{}{
 			"name":               name,
 			"nodeDescription":    description,
 			"remoteFS":           remoteFS,
@@ -122,7 +130,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
 			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
 			"launcher":           map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"},
-		})),
+		}),
 	}
 
 	resp, err := j.Requester.Get("/computer/doCreateItem", nil, qr)
@@ -130,8 +138,12 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	if err != nil {
 		return nil, err
 	}
+
 	if resp.StatusCode < 400 {
-		node.Poll()
+		_, err := node.Poll()
+		if err != nil {
+			return nil, err
+		}
 		return node, nil
 	}
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
@@ -188,12 +200,16 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) (bool, error) {
 	return job.InvokeSimple(params)
 }
 
-func (j *Jenkins) GetNode(name string) *Node {
+func (j *Jenkins) GetNode(name string) (*Node, error) {
 	node := Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
-	if node.Poll() == 200 {
-		return &node
+	status, err := node.Poll()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	if status == 200 {
+		return &node, nil
+	}
+	return nil, errors.New("No node found")
 }
 
 func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
@@ -201,7 +217,12 @@ func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	if err != nil {
 		return nil, err
 	}
-	return job.GetBuild(number)
+	build, err := job.GetBuild(number)
+
+	if err != nil {
+		return nil, err
+	}
+	return build, nil
 }
 
 func (j *Jenkins) GetJob(id string) (*Job, error) {
@@ -216,9 +237,13 @@ func (j *Jenkins) GetJob(id string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Jenkins) GetAllNodes() []*Node {
+func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
-	j.Requester.GetJSON("/computer", computers, nil)
+	_, err := j.Requester.GetJSON("/computer", computers, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
 		name := node.DisplayName
@@ -226,9 +251,9 @@ func (j *Jenkins) GetAllNodes() []*Node {
 		if name == "master" {
 			name = "(master)"
 		}
-		nodes[i] = j.GetNode(name)
+		nodes[i], _ = j.GetNode(name)
 	}
-	return nodes
+	return nodes, nil
 }
 
 // Get all builds Numbers and URLS for a specific job.
@@ -245,17 +270,27 @@ func (j *Jenkins) GetAllBuildIds(job string) ([]jobBuild, error) {
 
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
-func (j *Jenkins) GetAllJobNames() []job {
+func (j *Jenkins) GetAllJobNames() ([]job, error) {
 	exec := Executor{Raw: new(executorResponse), Jenkins: j}
-	j.Requester.GetJSON("/", exec.Raw, nil)
-	return exec.Raw.Jobs
+	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return exec.Raw.Jobs, nil
 }
 
 // Get All Possible Job Objects.
 // Each job will be queried.
 func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	exec := Executor{Raw: new(executorResponse), Jenkins: j}
-	j.Requester.GetJSON("/", exec.Raw, nil)
+	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
 		ji, err := j.GetJob(job.Name)
@@ -268,10 +303,13 @@ func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 }
 
 // Returns a Queue
-func (j *Jenkins) GetQueue() *Queue {
+func (j *Jenkins) GetQueue() (*Queue, error) {
 	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
-	q.Poll()
-	return q
+	_, err := q.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return q, nil
 }
 
 func (j *Jenkins) GetQueueUrl() string {
@@ -279,50 +317,66 @@ func (j *Jenkins) GetQueueUrl() string {
 }
 
 // Get Artifact data by Hash
-func (j *Jenkins) GetArtifactData(id string) *fingerPrintResponse {
+func (j *Jenkins) GetArtifactData(id string) (*fingerPrintResponse, error) {
 	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
 	return fp.GetInfo()
 }
 
 // Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
-func (j *Jenkins) GetPlugins(depth int) *Plugins {
+func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 	p := Plugins{Jenkins: j, Raw: new(pluginResponse), Base: "/pluginManager", Depth: depth}
-	p.Poll()
-	return &p
+	_, err := p.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
 
 // Check if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
-func (j *Jenkins) HasPlugin(name string) *Plugin {
-	p := j.GetPlugins(1)
-	return p.Contains(name)
+func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
+	p, err := j.GetPlugins(1)
+
+	if err != nil {
+		return nil, err
+	}
+	return p.Contains(name), nil
 }
 
 // Verify Fingerprint
-func (j *Jenkins) ValidateFingerPrint(id string) bool {
+func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
-	if fp.Valid() {
-		Info.Printf("Jenkins says %s is valid", id)
-		return true
+	valid, err := fp.Valid()
+	if err != nil {
+		return false, err
 	}
-	return false
+	if valid {
+		return true, nil
+	}
+	return false, nil
 }
 
-func (j *Jenkins) GetView(name string) *View {
+func (j *Jenkins) GetView(name string) (*View, error) {
 	url := "/view/" + name
 	view := View{Jenkins: j, Raw: new(viewResponse), Base: url}
-	view.Poll()
-	return &view
+	_, err := view.Poll()
+	if err != nil {
+		return nil , err
+	}
+	return &view, nil
 }
 
-func (j *Jenkins) GetAllViews() []*View {
-	j.Poll()
+func (j *Jenkins) GetAllViews() ([]*View, error) {
+	_, err := j.Poll()
+	if err != nil {
+		return nil, err
+	}
 	views := make([]*View, len(j.Raw.Views))
 	for i, v := range j.Raw.Views {
-		views[i] = j.GetView(v.Name)
+		views[i], _ = j.GetView(v.Name)
 	}
-	return views
+	return views, nil
 }
 
 // Create View
@@ -336,7 +390,10 @@ func (j *Jenkins) GetAllViews() []*View {
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
-	exists := j.GetView(name)
+	exists, err := j.GetView(name)
+	if err != nil {
+		return nil, err
+	}
 	if exists.Raw.Name != "" {
 		Error.Println("View Already exists.")
 		return exists, errors.New("View already exists")
@@ -347,10 +404,10 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 		"name":   name,
 		"mode":   viewType,
 		"Submit": "OK",
-		"json": url.QueryEscape(makeJson(map[string]string{
+		"json": makeJson(map[string]string{
 			"name": name,
 			"mode": viewType,
-		})),
+		}),
 	}
 	r, err := j.Requester.Post(endpoint, nil, view.Raw, data)
 
@@ -359,14 +416,17 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 	}
 
 	if r.StatusCode == 200 {
-		return j.GetView(name), nil
+		return j.GetView(name)
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
-func (j *Jenkins) Poll() int {
-	j.Requester.GetJSON("/", j.Raw, nil)
-	return j.Requester.LastResponse.StatusCode
+func (j *Jenkins) Poll() (int, error) {
+	_, err := j.Requester.GetJSON("/", j.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return j.Requester.LastResponse.StatusCode, nil
 }
 
 // Creates a new Jenkins Instance

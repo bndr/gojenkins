@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -63,10 +63,13 @@ func (p *Plugins) Contains(name string) *Plugin {
 	return nil
 }
 
-func (p *Plugins) Poll() int {
+func (p *Plugins) Poll() (int, error) {
 	qr := map[string]string{
 		"depth": strconv.Itoa(p.Depth),
 	}
-	p.Jenkins.Requester.GetJSON(p.Base, p.Raw, qr)
-	return p.Jenkins.Requester.LastResponse.StatusCode
+	_, err := p.Jenkins.Requester.GetJSON(p.Base, p.Raw, qr)
+	if err != nil {
+		return 0, err
+	}
+	return p.Jenkins.Requester.LastResponse.StatusCode, nil
 }

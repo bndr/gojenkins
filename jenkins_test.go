@@ -13,21 +13,23 @@ var (
 )
 
 
-func init() {
+func TestInit(t *testing.T) {
 	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
-	jenkins.Init()
+	_, err := jenkins.Init()
+	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
 
 func TestCreateJobs(t *testing.T) {
 	job1ID := "Job1_test"
 	job2ID := "Job2_test"
+	job_data := getFileAsString("job.xml")
 
-	job1, _  := jenkins.CreateJob(readJson("job.xml"), job1ID)
+	job1, _  := jenkins.CreateJob(job_data, job1ID)
 	assert.Equal(t, "Some Job Description", job1.GetDescription())
 	assert.Equal(t, job1ID, job1.GetName())
 
 
-	job2, _  :=  jenkins.CreateJob(readJson("job.xml"), job2ID)
+	job2, _  :=  jenkins.CreateJob(job_data, job2ID)
 	assert.Equal(t, "Some Job Description", job2.GetDescription())
 	assert.Equal(t, job2ID, job2.GetName())
 }
@@ -36,8 +38,8 @@ func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
 	id2 := "node2_test"
-	node1, _  := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins")
 
+	node1, _  := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins")
 	assert.Equal(t, id1, node1.GetName())
 
 	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins")
@@ -61,11 +63,18 @@ func TestCreateBuilds(t *testing.T) {
 }
 
 func TestCreateViews(t *testing.T) {
-	view, err := jenkins.CreateView("test_view", LIST_VIEW)
+	list_view, err := jenkins.CreateView("test_list_view", LIST_VIEW)
 	assert.Nil(t, err)
-	assert.Equal(t, "test_view", view.GetName())
-	assert.Equal(t, "", view.GetDescription())
-	assert.Equal(t, 0, len(view.GetJobs()))
+	assert.Equal(t, "test_list_view", list_view.GetName())
+	assert.Equal(t, "", list_view.GetDescription())
+	assert.Equal(t, 0, len(list_view.GetJobs()))
+
+	my_view, err := jenkins.CreateView("test_my_view", MY_VIEW)
+	assert.Nil(t, err)
+	assert.Equal(t, "test_my_view", my_view.GetName())
+	assert.Equal(t, "", my_view.GetDescription())
+	assert.Equal(t, 2, len(my_view.GetJobs()))
+
 }
 
 func TestGetAllJobs(t *testing.T) {
@@ -75,7 +84,7 @@ func TestGetAllJobs(t *testing.T) {
 }
 
 func TestGetAllNodes(t *testing.T) {
-	nodes := jenkins.GetAllNodes()
+	nodes, _ := jenkins.GetAllNodes()
 	assert.Equal(t, 3, len(nodes))
 	assert.Equal(t, nodes[0].GetName(), "master")
 }
@@ -99,30 +108,31 @@ func TestBuildMethods(t *testing.T) {
 func TestGetSingleJob(t *testing.T) {
 	job, _ := jenkins.GetJob("Job1_test")
 	isRunning, _ := job.IsRunning()
+	config, _ := job.GetConfig()
 	assert.Equal(t, false, isRunning)
-	assert.Contains(t, job.GetConfig(), "<project>")
+	assert.Contains(t, config, "<project>")
 }
 
 func TestGetPlugins(t *testing.T) {
-	plugins := jenkins.GetPlugins(3)
+	plugins, _ := jenkins.GetPlugins(3)
 	assert.Equal(t, 19, plugins.Count())
 }
 
 func TestGetViews(t *testing.T) {
-	views := jenkins.GetAllViews()
-	assert.Equal(t, len(views), 2)
+	views, _ := jenkins.GetAllViews()
+	assert.Equal(t, len(views), 3)
 	assert.Equal(t, len(views[0].Raw.Jobs), 2)
 }
 
 func TestGetSingleView(t *testing.T) {
-	view := jenkins.GetView("All")
-	view2 := jenkins.GetView("test_view")
+	view, _ := jenkins.GetView("All")
+	view2, _ := jenkins.GetView("test_list_view")
 	assert.Equal(t, len(view.Raw.Jobs), 2)
 	assert.Equal(t, len(view2.Raw.Jobs), 0)
-	assert.Equal(t, view2.Raw.Name, "test_view")
+	assert.Equal(t, view2.Raw.Name, "test_list_view")
 }
 
-func readJson(path string) string {
+func getFileAsString(path string) string {
 	buf, err := ioutil.ReadFile("_tests/" + path)
 	if err != nil {
 		panic(err)

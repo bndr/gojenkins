@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -242,10 +242,14 @@ func (j *Job) Delete() (bool, error) {
 	return true, nil
 }
 
-func (j *Job) Rename(name string) {
+func (j *Job) Rename(name string) (bool, error) {
 	data := url.Values{}
 	data.Set("newName", name)
-	j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
+	_, err := j.Jenkins.Requester.Post(j.Base+"/doRename", bytes.NewBufferString(data.Encode()), nil, nil)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
@@ -276,21 +280,27 @@ func (j *Job) Copy(from string, newName string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-func (j *Job) GetConfig() string {
+func (j *Job) GetConfig() (string, error) {
 	var data string
-	j.Jenkins.Requester.GetXML(j.Base+"/config.xml", &data, nil)
-	return data
+	_, err := j.Jenkins.Requester.GetXML(j.Base+"/config.xml", &data, nil)
+	if err != nil {
+		return "", err
+	}
+	return data, nil
 }
 
-func (j *Job) GetParameters() []parameterDefinition {
-	j.Poll()
+func (j *Job) GetParameters() ([]parameterDefinition, error) {
+	_, err := j.Poll()
+	if err != nil {
+		return nil, err
+	}
 	var parameters []parameterDefinition
 	for _, property := range j.Raw.Property {
 		for _, param := range property.ParameterDefinitions {
 			parameters = append(parameters, param)
 		}
 	}
-	return parameters
+	return parameters, nil
 }
 
 func (j *Job) IsQueued() (bool, error) {
@@ -333,7 +343,11 @@ func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
 	}
 
 	endpoint := "/build"
-	if len(j.GetParameters()) > 0 {
+	parameters, err := j.GetParameters()
+	if err != nil {
+		return false, err
+	}
+	if len(parameters) > 0 {
 		endpoint = "/buildWithParameters"
 	}
 	data := url.Values{}

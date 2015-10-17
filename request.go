@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"errors"
 	"os"
 	"path/filepath"
@@ -100,12 +101,22 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 
 	fileUpload := false
 	var files []string
-	url := r.Base + endpoint + r.Suffix
+	URL, err := url.Parse(r.Base + endpoint + r.Suffix)
+
+	if err != nil {
+		return nil, err
+	}
 
 	for _, o := range options {
 		switch v := o.(type) {
 		case map[string]string:
-			url += r.parseQueryString(v)
+
+			querystring := make(url.Values)
+			for key, val := range v {
+				querystring.Set(key, val)
+			}
+
+			URL.RawQuery = querystring.Encode()
 			break
 		case []string:
 			fileUpload = true
@@ -113,7 +124,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 		}
 	}
 	var req *http.Request
-	var err error
+
 	if fileUpload {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
@@ -144,14 +155,14 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 		if err = writer.Close(); err != nil {
 			return nil, err
 		}
-		req, err = http.NewRequest(method, url, body)
+		req, err = http.NewRequest(method, URL.String(), body)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 	} else {
 
-		req, err = http.NewRequest(method, url, payload)
+		req, err = http.NewRequest(method, URL.String(), payload)
 		if err != nil {
 			return nil, err
 		}
@@ -173,6 +184,7 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 	if err != nil {
 		return nil, err
 	}
+
 	errorText := r.LastResponse.Header.Get("X-Error")
 
 	if errorText != "" {

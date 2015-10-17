@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -191,12 +191,15 @@ func (b *Build) GetCulprits() []culprit {
 	return b.Raw.Culprits
 }
 
-func (b *Build) Stop() bool {
+func (b *Build) Stop() (bool, error) {
 	if b.IsRunning() {
-		b.Jenkins.Requester.GetJSON(b.Base+"/stop", nil, nil)
-		return b.Jenkins.Requester.LastResponse.StatusCode == 200
+		_, err := b.Jenkins.Requester.GetJSON(b.Base+"/stop", nil, nil)
+		if err != nil {
+			return false, err
+		}
+		return b.Jenkins.Requester.LastResponse.StatusCode == 200, nil
 	}
-	return true
+	return true, nil
 }
 
 func (b *Build) GetConsoleOutput() string {
@@ -206,14 +209,17 @@ func (b *Build) GetConsoleOutput() string {
 	return content
 }
 
-func (b *Build) GetCauses() []map[string]interface{} {
-	b.Poll()
+func (b *Build) GetCauses() ([]map[string]interface{}, error) {
+	_, err := b.Poll()
+	if err != nil {
+		return nil, err
+	}
 	for _, a := range b.Raw.Actions {
 		if a.Causes != nil {
-			return a.Causes
+			return a.Causes, nil
 		}
 	}
-	return nil
+	return nil, errors.New("No Causes")
 }
 
 func (b *Build) GetParameters() []parameter {
@@ -277,7 +283,10 @@ func (b *Build) GetAllFingerprints() []*Fingerprint {
 }
 
 func (b *Build) GetUpstreamJob() (*Job, error) {
-	causes := b.GetCauses()
+	causes, err := b.GetCauses()
+	if err != nil {
+		return nil, err
+	}
 	if len(causes) > 0 {
 		if job, ok := causes[0]["upstreamProject"]; ok {
 			return b.Jenkins.GetJob(job.(string))
@@ -286,14 +295,17 @@ func (b *Build) GetUpstreamJob() (*Job, error) {
 	return nil, errors.New("Unable to get Upstream Job")
 }
 
-func (b *Build) GetUpstreamBuildNumber() int64 {
-	causes := b.GetCauses()
+func (b *Build) GetUpstreamBuildNumber() (int64, error) {
+	causes, err := b.GetCauses()
+	if err != nil {
+		return 0, err
+	}
 	if len(causes) > 0 {
 		if build, ok := causes[0]["upstreamBuild"]; ok {
-			return build.(int64)
+			return build.(int64), nil
 		}
 	}
-	return 0
+	return 0, nil
 }
 
 func (b *Build) GetUpstreamBuild() (*Build, error) {
@@ -302,16 +314,19 @@ func (b *Build) GetUpstreamBuild() (*Build, error) {
 		return nil, err
 	}
 	if job != nil {
-		buildNumber := b.GetUpstreamBuildNumber()
-		if buildNumber != 0 {
-			return job.GetBuild(b.GetUpstreamBuildNumber())
+		buildNumber, err := b.GetUpstreamBuildNumber()
+		if err == nil {
+			return job.GetBuild(buildNumber)
 		}
 	}
 	return nil, errors.New("Build not found")
 }
 
-func (b *Build) GetMatrixRuns() []*Build {
-	b.Poll(0)
+func (b *Build) GetMatrixRuns() ([]*Build, error) {
+	_, err := b.Poll(0)
+	if err != nil {
+		return nil, err
+	}
 	runs := b.Raw.Runs
 	result := make([]*Build, len(b.Raw.Runs))
 	r, _ := regexp.Compile("/job/" + b.Job.GetName() + "/label=(.*?)/(\\d+)/")
@@ -319,24 +334,26 @@ func (b *Build) GetMatrixRuns() []*Build {
 		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(buildResponse), Depth: 1, Base: r.FindString(run.Url)}
 		result[i].Poll()
 	}
-	return result
+	return result, nil
 }
 
-func (b *Build) GetResultSet() *testResult {
+func (b *Build) GetResultSet() (*testResult, error) {
 
 	for _, a := range b.Raw.Actions {
 		if a.TotalCount == 0 && a.UrlName == "" {
-			return nil
+			return nil, errors.New("No Result sets found")
 		}
 	}
 	url := b.Base + "/testReport"
 	var report testResult
-	b.Jenkins.Requester.GetJSON(url, &report, nil)
-	if b.Jenkins.Requester.LastResponse.StatusCode == 200 {
-		return &report
-	} else {
-		return nil
+
+	_, err := b.Jenkins.Requester.GetJSON(url, &report, nil)
+	if err != nil {
+		return nil, err
 	}
+
+	return &report, nil
+
 }
 
 func (b *Build) GetTimestamp() time.Time {
@@ -385,7 +402,10 @@ func (b *Build) IsGood() bool {
 }
 
 func (b *Build) IsRunning() bool {
-	b.Poll()
+	_, err := b.Poll()
+	if err != nil {
+		return false
+	}
 	return b.Raw.Building
 }
 

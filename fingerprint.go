@@ -1,4 +1,4 @@
-// Copyright 2014 Vadim Kravcenko
+// Copyright 2015 Vadim Kravcenko
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -13,6 +13,11 @@
 // under the License.
 
 package gojenkins
+
+import (
+	"fmt"
+	"errors"
+)
 
 type Fingerprint struct {
 	Jenkins *Jenkins
@@ -40,39 +45,51 @@ type fingerPrintResponse struct {
 	} `json:"usage"`
 }
 
-func (f Fingerprint) Valid() bool {
-	if f.Poll() != 200 || f.Raw.Hash != f.Id {
-		Info.Printf("Jenkins says %s is Invalid or the Status is unknown", f.Id)
-		return false
+func (f Fingerprint) Valid() (bool, error) {
+	status, err := f.Poll()
+
+	if err != nil {
+		return false, err
 	}
-	return true
+
+	if status != 200 || f.Raw.Hash != f.Id {
+		return false, errors.New(fmt.Sprintf("Jenkins says %s is Invalid or the Status is unknown", f.Id))
+	}
+	return true, nil
 }
 
-func (f Fingerprint) ValidateForBuild(filename string, build *Build) bool {
-	if f.Valid() {
-		return true
+func (f Fingerprint) ValidateForBuild(filename string, build *Build) (bool, error) {
+	valid, err := f.Valid()
+	if err != nil {
+		return false, err
+	}
+
+	if valid {
+		return true, nil
 	}
 
 	if f.Raw.FileName != filename {
-		return false
+		return false, errors.New("Filename does not Match")
 	}
 	if build != nil && f.Raw.Original.Name == build.Job.GetName() &&
 		f.Raw.Original.Number == build.GetBuildNumber() {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
-func (f Fingerprint) GetInfo() *fingerPrintResponse {
-	resp := f.Poll()
-	if resp == 200 {
-		return f.Raw
+func (f Fingerprint) GetInfo() (*fingerPrintResponse, error) {
+	_, err := f.Poll()
+	if err != nil {
+		return nil, err
 	}
-	Error.Println("Jenkins returned status code for Fingerprint %s: %d", f.Id, resp)
-	return nil
+	return f.Raw, nil
 }
 
-func (f Fingerprint) Poll() int {
-	f.Jenkins.Requester.GetJSON(f.Base+f.Id, f.Raw, nil)
-	return f.Jenkins.Requester.LastResponse.StatusCode
+func (f Fingerprint) Poll() (int, error) {
+	_, err := f.Jenkins.Requester.GetJSON(f.Base+f.Id, f.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return f.Jenkins.Requester.LastResponse.StatusCode, nil
 }
