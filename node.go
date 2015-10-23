@@ -127,7 +127,7 @@ func (n *Node) SetOnline() (bool, error) {
 		return n.ToggleTemporarilyOffline()
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (n *Node) SetOffline() (bool, error) {
@@ -146,7 +146,7 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	if len(options) > 0 {
 		qr["offlineMessage"] = options[0].(string)
 	}
-	_, err = n.Jenkins.Requester.GetJSON(n.Base+"/toggleOffline", nil, qr)
+	_, err = n.Jenkins.Requester.Post(n.Base+"/toggleOffline", nil, nil,  qr)
 	if err != nil {
 		return false, err
 	}
@@ -157,7 +157,7 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	if state_before == new_state {
 		return false, errors.New("Node state not changed")
 	}
-	return false, nil
+	return true, nil
 }
 
 func (n *Node) Poll() (int, error) {
