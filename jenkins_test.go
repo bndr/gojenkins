@@ -15,7 +15,7 @@ var (
 
 
 func TestInit(t *testing.T) {
-	jenkins = CreateJenkins("http://192.168.99.100:8080", "admin", "admin")
+	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
 	_, err := jenkins.Init()
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
