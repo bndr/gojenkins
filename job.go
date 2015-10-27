@@ -211,7 +211,7 @@ func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 }
 
 func (j *Job) Enable() (bool, error) {
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/enable", nil, nil, nil)
+	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/enable", "", nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -222,7 +222,7 @@ func (j *Job) Enable() (bool, error) {
 }
 
 func (j *Job) Disable() (bool, error) {
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/disable", nil, nil, nil)
+	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/disable", "", nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -233,7 +233,7 @@ func (j *Job) Disable() (bool, error) {
 }
 
 func (j *Job) Delete() (bool, error) {
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/doDelete", nil, nil, nil)
+	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/doDelete", "", nil, nil)
 	if err != nil {
 		return false, err
 	}
