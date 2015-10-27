@@ -133,7 +133,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		}),
 	}
 
-	resp, err := j.Requester.Get("/computer/doCreateItem", nil, qr)
+	resp, err := j.Requester.Post("/computer/doCreateItem", nil, nil, qr)
 
 	if err != nil {
 		return nil, err
@@ -180,7 +180,11 @@ func (j *Jenkins) RenameJob(job string, name string) *Job {
 // First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + newName}
-	return job.Copy(copyFrom, newName)
+	_, err := job.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return job.Copy(newName)
 }
 
 // Delete a job.

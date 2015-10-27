@@ -40,9 +40,15 @@ type Requester struct {
 	Suffix       string
 }
 
-func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+func (r *Requester) PostJSON(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.Suffix = "api/json"
+	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
+}
+
+func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	r.Suffix = ""
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
@@ -95,7 +101,7 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 }
 
 func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
-	if !strings.HasSuffix(endpoint, "/") && !strings.Contains(endpoint, "doCreateItem") {
+	if !strings.HasSuffix(endpoint, "/") && method != "POST"{
 		endpoint += "/"
 	}
 

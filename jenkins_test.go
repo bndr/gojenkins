@@ -6,6 +6,7 @@ import (
 	"testing"
 	"math/rand"
 	"time"
+	"fmt"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 
 
 func TestInit(t *testing.T) {
-	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
+	jenkins = CreateJenkins("http://192.168.99.100:8080", "admin", "admin")
 	_, err := jenkins.Init()
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
@@ -24,7 +25,10 @@ func TestCreateJobs(t *testing.T) {
 	job2ID := "Job2_test"
 	job_data := getFileAsString("job.xml")
 
-	job1, _  := jenkins.CreateJob(job_data, job1ID)
+	job1, err  := jenkins.CreateJob(job_data, job1ID)
+	if err != nil {
+		fmt.Print(err)
+	}
 	assert.Equal(t, "Some Job Description", job1.GetDescription())
 	assert.Equal(t, job1ID, job1.GetName())
 
@@ -111,6 +115,22 @@ func TestGetSingleJob(t *testing.T) {
 	config, _ := job.GetConfig()
 	assert.Equal(t, false, isRunning)
 	assert.Contains(t, config, "<project>")
+}
+
+func TestEnableDisableJob(t *testing.T) {
+	job, _ := jenkins.GetJob("Job1_test")
+	result, _ := job.Disable()
+	assert.Equal(t, true, result)
+	result, _ = job.Enable()
+	assert.Equal(t, true, result)
+}
+
+func TestCopyDeleteJob(t *testing.T) {
+	job, _ := jenkins.GetJob("Job1_test")
+	jobCopy, _ := job.Copy("Job1_test_copy")
+	assert.Equal(t, jobCopy.GetName(), "Job1_test_copy")
+	jobDelete, _ := job.Delete()
+	assert.Equal(t, true, jobDelete)
 }
 
 func TestGetPlugins(t *testing.T) {

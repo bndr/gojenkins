@@ -211,7 +211,7 @@ func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 }
 
 func (j *Job) Enable() (bool, error) {
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/enable", "", nil, nil)
+	resp, err := j.Jenkins.Requester.Post(j.Base+"/enable", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -222,7 +222,7 @@ func (j *Job) Enable() (bool, error) {
 }
 
 func (j *Job) Disable() (bool, error) {
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/disable", "", nil, nil)
+	resp, err := j.Jenkins.Requester.Post(j.Base+"/disable", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -233,7 +233,7 @@ func (j *Job) Disable() (bool, error) {
 }
 
 func (j *Job) Delete() (bool, error) {
-	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/doDelete", "", nil, nil)
+	resp, err := j.Jenkins.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -269,14 +269,19 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-func (j *Job) Copy(from string, newName string) (*Job, error) {
-	qr := map[string]string{"name": newName, "from": from, "mode": "copy"}
+func (j *Job) Copy(destinationName string) (*Job, error) {
+	qr := map[string]string{"name": destinationName, "from": j.GetName(), "mode": "copy"}
 	resp, err := j.Jenkins.Requester.Post("/createItem", nil, nil, qr)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		return j, nil
+		newJob := &Job{Jenkins: j.Jenkins, Raw: new(jobResponse), Base: "/job/" + destinationName}
+		_, err := newJob.Poll()
+		if err != nil {
+			return nil, err
+		}
+		return newJob, nil
 	}
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
