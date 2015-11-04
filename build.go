@@ -151,7 +151,7 @@ type buildResponse struct {
 	Runs              []struct {
 		Number int64
 		Url    string
-	} `json:"runs`
+	} `json:"runs"`
 }
 
 // Builds
