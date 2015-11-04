@@ -384,7 +384,7 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 		return false, err
 	}
 	if isRunning && skipIfRunning {
-		return false, errors.New(fmt.Sprintf("%s Will not request new build because %s is already running", j.GetName()))
+		return false, fmt.Errorf("Will not request new build because %s is already running", j.GetName())
 	}
 
 	base := "/build"
