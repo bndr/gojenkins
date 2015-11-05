@@ -18,9 +18,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"strconv"
-	"fmt"
 )
 
 type Job struct {

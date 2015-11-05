@@ -15,8 +15,8 @@
 package gojenkins
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 type Fingerprint struct {

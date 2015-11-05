@@ -89,7 +89,7 @@ func (a Artifact) validateDownload(path string) (bool, error) {
 
 	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(fingerPrintResponse)}
 
-	valid , err := fp.ValidateForBuild(a.FileName, a.Build)
+	valid, err := fp.ValidateForBuild(a.FileName, a.Build)
 
 	if err != nil {
 		return false, err

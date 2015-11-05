@@ -1,18 +1,17 @@
 package gojenkins
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"testing"
 	"math/rand"
+	"testing"
 	"time"
-	"fmt"
 )
 
 var (
 	jenkins *Jenkins
 )
-
 
 func TestInit(t *testing.T) {
 	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
@@ -25,15 +24,14 @@ func TestCreateJobs(t *testing.T) {
 	job2ID := "Job2_test"
 	job_data := getFileAsString("job.xml")
 
-	job1, err  := jenkins.CreateJob(job_data, job1ID)
+	job1, err := jenkins.CreateJob(job_data, job1ID)
 	if err != nil {
 		fmt.Print(err)
 	}
 	assert.Equal(t, "Some Job Description", job1.GetDescription())
 	assert.Equal(t, job1ID, job1.GetName())
 
-
-	job2, _  :=  jenkins.CreateJob(job_data, job2ID)
+	job2, _ := jenkins.CreateJob(job_data, job2ID)
 	assert.Equal(t, "Some Job Description", job2.GetDescription())
 	assert.Equal(t, job2ID, job2.GetName())
 }
@@ -43,7 +41,7 @@ func TestCreateNodes(t *testing.T) {
 	id1 := "node1_test"
 	id2 := "node2_test"
 
-	node1, _  := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins")
+	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins")
 	assert.Equal(t, id1, node1.GetName())
 
 	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins")
@@ -53,7 +51,7 @@ func TestCreateNodes(t *testing.T) {
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
-		item.InvokeSimple(map[string]string{"param1":"param1"})
+		item.InvokeSimple(map[string]string{"param1": "param1"})
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
@@ -165,9 +163,9 @@ func getRandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letters[rand.Intn(len(letters))]
-    }
-    return string(b)
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
