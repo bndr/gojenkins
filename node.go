@@ -146,7 +146,7 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	if len(options) > 0 {
 		qr["offlineMessage"] = options[0].(string)
 	}
-	_, err = n.Jenkins.Requester.Post(n.Base+"/toggleOffline", nil, nil,  qr)
+	_, err = n.Jenkins.Requester.Post(n.Base+"/toggleOffline", nil, nil, qr)
 	if err != nil {
 		return false, err
 	}

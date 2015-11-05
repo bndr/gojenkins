@@ -17,12 +17,12 @@ package gojenkins
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,7 +101,7 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 }
 
 func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
-	if !strings.HasSuffix(endpoint, "/") && method != "POST"{
+	if !strings.HasSuffix(endpoint, "/") && method != "POST" {
 		endpoint += "/"
 	}
 
@@ -179,13 +179,12 @@ func (r *Requester) Do(method string, endpoint string, payload io.Reader, respon
 	}
 
 	if r.Headers != nil {
-		for k, _ := range r.Headers {
+		for k := range r.Headers {
 			req.Header.Add(k, r.Headers.Get(k))
 		}
 	}
 
 	r.LastResponse, err = r.Client.Do(req)
-
 
 	if err != nil {
 		return nil, err

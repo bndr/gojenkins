@@ -158,7 +158,7 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 	if len(options) > 0 {
 		qr["name"] = options[0].(string)
 	} else {
-		return nil , errors.New("Error Creating Job, job name is missing")
+		return nil, errors.New("Error Creating Job, job name is missing")
 	}
 	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + qr["name"]}
 	job, err := jobObj.Create(config, qr)
@@ -366,7 +366,7 @@ func (j *Jenkins) GetView(name string) (*View, error) {
 	view := View{Jenkins: j, Raw: new(viewResponse), Base: url}
 	_, err := view.Poll()
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	return &view, nil
 }

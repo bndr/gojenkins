@@ -69,26 +69,21 @@ func (v *View) DeleteJob(name string) (bool, error) {
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-
 func (v *View) GetDescription() string {
 	return v.Raw.Description
 }
-
 
 func (v *View) GetJobs() []job {
 	return v.Raw.Jobs
 }
 
-
 func (v *View) GetName() string {
 	return v.Raw.Name
 }
 
-
 func (v *View) GetUrl() string {
 	return v.Raw.URL
 }
-
 
 func (v *View) Poll() (int, error) {
 	_, err := v.Jenkins.Requester.GetJSON(v.Base, v.Raw, nil)
