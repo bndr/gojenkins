@@ -168,12 +168,12 @@ func (n *Node) Poll() (int, error) {
 	return n.Jenkins.Requester.LastResponse.StatusCode, nil
 }
 
-func (n *Node) LanuchNodeBySSH() (int, error) {
+func (n *Node) LaunchNodeBySSH() (int, error) {
 	qr := map[string]string{
 		"json":   "",
-		"Submit": "Lanuch slave agent",
+		"Submit": "Launch slave agent",
 	}
-	_, err := n.Jenkins.Requester.Post(n.Base+"/lanuchSlaveAgent", nil, nil, qr)
+	_, err := n.Jenkins.Requester.Post(n.Base+"/launchSlaveAgent", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
