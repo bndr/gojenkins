@@ -167,3 +167,45 @@ func (n *Node) Poll() (int, error) {
 	}
 	return n.Jenkins.Requester.LastResponse.StatusCode, nil
 }
+
+func (n *Node) LanuchNodeBySSH() (int, error) {
+	qr := map[string]string{
+		"json":   "",
+		"Submit": "Lanuch slave agent",
+	}
+	_, err := n.Jenkins.Requester.Post(n.Base+"/lanuchSlaveAgent", nil, nil, qr)
+	if err != nil {
+		return 0, err
+	}
+	return n.Jenkins.Requester.LastResponse.StatusCode, nil
+}
+
+func (n *Node) Disconnect() (int, error) {
+	qr := map[string]string{
+		"offlineMessage": "",
+		"json":           makeJson(map[string]string{"offlineMessage": ""}),
+		"Submit":         "Yes",
+	}
+	_, err := n.Jenkins.Requester.Post(n.Base+"/doDisconnect", nil, nil, qr)
+	if err != nil {
+		return 0, err
+	}
+	return n.Jenkins.Requester.LastResponse.StatusCode, nil
+}
+
+func (n *Node) GetLogText() (string, error) {
+	var log string
+
+	_, err := n.Jenkins.Requester.Post(n.Base+"/log", nil, nil, nil)
+	if err != nil {
+		return "", err
+	}
+
+	qr := map[string]string{"start": "0"}
+	_, err = n.Jenkins.Requester.GetJSON(n.Base+"/logText/progressiveHtml/", &log, qr)
+	if err != nil {
+		return "", nil
+	}
+
+	return log, nil
+}
