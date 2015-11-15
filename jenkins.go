@@ -107,6 +107,9 @@ func (j *Jenkins) Info() (*executorResponse, error) {
 }
 
 // Create a new Node
+// Can be JNLPLauncher or SSHLauncher
+// Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", map[string]string{"method": "JNLPLauncher"})
+// By Default JNLPLauncher is created
 func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) (*Node, error) {
 	node, _ := j.GetNode(name)
 
@@ -114,14 +117,16 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		return node, nil
 	}
 
-	var params map[string]string
+	params := map[string]string{"method": "JNLPLauncher"}
+
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
 	}
 
 	if _, ok := params["method"]; !ok {
-		return nil, errors.New("not found lanucher method")
+		params["method"] = "JNLPLauncher"
 	}
+
 	method := params["method"]
 	var launcher map[string]string
 	switch method {
