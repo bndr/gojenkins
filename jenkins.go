@@ -114,6 +114,41 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		return node, nil
 	}
 
+	var params map[string]string
+	if len(options) > 0 {
+		params, _ = options[0].(map[string]string)
+	}
+
+	if _, ok := params["method"]; !ok {
+		return nil, errors.New("not found lanucher method")
+	}
+	method := params["method"]
+	var launcher map[string]string
+	switch method {
+	case "":
+		fallthrough
+	case "JNLPLauncher":
+		launcher = map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"}
+	case "SSHLauncher":
+		launcher = map[string]string{
+			"stapler-class":        "hudson.plugins.sshslaves.SSHLauncher",
+			"$class":               "hudson.plugins.sshslaves.SSHLauncher",
+			"host":                 params["host"],
+			"port":                 params["port"],
+			"credentialsId":        params["credentialsId"],
+			"jvmOptions":           params["jvmOptions"],
+			"javaPath":             params["javaPath"],
+			"prefixStartSlaveCmd":  params["prefixStartSlaveCmd"],
+			"suffixStartSlaveCmd":  params["suffixStartSlaveCmd"],
+			"maxNumRetries":        params["maxNumRetries"],
+			"retryWaitTime":        params["retryWaitTime"],
+			"lanuchTimeoutSeconds": params["lanuchTimeoutSeconds"],
+			"type":                 "hudson.slaves.DumbSlave",
+			"stapler-class-bag":    "true"}
+	default:
+		return nil, errors.New("launcher method not supported")
+	}
+
 	node = &Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
@@ -129,7 +164,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 			"type":               NODE_TYPE,
 			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
 			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
-			"launcher":           map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"},
+			"launcher":           launcher,
 		}),
 	}
 
