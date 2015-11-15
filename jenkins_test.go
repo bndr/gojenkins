@@ -40,6 +40,7 @@ func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
 	id2 := "node2_test"
+	id3 := "node3_test"
 
 	jnlp := map[string]string{"method": "JNLPLauncher"}
 	ssh := map[string]string{"method": "SSHLauncher"}
@@ -49,6 +50,9 @@ func TestCreateNodes(t *testing.T) {
 
 	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", ssh)
 	assert.Equal(t, id2, node2.GetName())
+
+	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins")
+	assert.Equal(t, id3, node3.GetName())
 }
 
 func TestCreateBuilds(t *testing.T) {
@@ -90,7 +94,7 @@ func TestGetAllJobs(t *testing.T) {
 
 func TestGetAllNodes(t *testing.T) {
 	nodes, _ := jenkins.GetAllNodes()
-	assert.Equal(t, 3, len(nodes))
+	assert.Equal(t, 4, len(nodes))
 	assert.Equal(t, nodes[0].GetName(), "master")
 }
 
