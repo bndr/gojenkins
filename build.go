@@ -193,7 +193,7 @@ func (b *Build) GetCulprits() []culprit {
 
 func (b *Build) Stop() (bool, error) {
 	if b.IsRunning() {
-		_, err := b.Jenkins.Requester.GetJSON(b.Base+"/stop", nil, nil)
+		_, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
 		if err != nil {
 			return false, err
 		}
