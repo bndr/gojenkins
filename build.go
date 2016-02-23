@@ -302,7 +302,12 @@ func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	}
 	if len(causes) > 0 {
 		if build, ok := causes[0]["upstreamBuild"]; ok {
-			return build.(int64), nil
+			switch t := build.(type) {
+			default:
+				return t.(int64), nil
+			case float64:
+				return int64(t), nil
+			}
 		}
 	}
 	return 0, nil
