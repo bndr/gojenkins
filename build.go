@@ -343,12 +343,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 }
 
 func (b *Build) GetResultSet() (*testResult, error) {
-
-	for _, a := range b.Raw.Actions {
-		if a.TotalCount == 0 && a.UrlName == "" {
-			return nil, errors.New("No Result sets found")
-		}
-	}
+	
 	url := b.Base + "/testReport"
 	var report testResult
 
