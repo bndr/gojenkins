@@ -413,7 +413,8 @@ func (b *Build) IsRunning() bool {
 // Poll for current data. Optional parameter - depth.
 // More about depth here: https://wiki.jenkins-ci.org/display/JENKINS/Remote+access+API
 func (b *Build) Poll(options ...interface{}) (int, error) {
-	depth := strconv.Itoa(b.Depth)
+	depth := "-1"
+
 	for _, o := range options {
 		switch v := o.(type) {
 		case string:
@@ -424,6 +425,10 @@ func (b *Build) Poll(options ...interface{}) (int, error) {
 			depth = strconv.FormatInt(v, 10)
 		}
 	}
+	if depth == "-1" {
+		depth = strconv.Itoa(b.Depth)
+	}
+
 	qr := map[string]string{
 		"depth": depth,
 	}
