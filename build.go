@@ -334,9 +334,10 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	}
 	runs := b.Raw.Runs
 	result := make([]*Build, len(b.Raw.Runs))
-	r, _ := regexp.Compile("/job/" + b.Job.GetName() + "/label=(.*?)/(\\d+)/")
+	r, _ := regexp.Compile("/labels?=(.*?)/(\\d+)/")
+
 	for i, run := range runs {
-		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(buildResponse), Depth: 1, Base: r.FindString(run.Url)}
+		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(buildResponse), Depth: 1, Base: b.Job.Base + r.FindString(run.Url)}
 		result[i].Poll()
 	}
 	return result, nil
