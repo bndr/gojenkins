@@ -219,7 +219,7 @@ func (j *Jenkins) RenameJob(job string, name string) *Job {
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + newName}
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + copyFrom}
 	_, err := job.Poll()
 	if err != nil {
 		return nil, err
