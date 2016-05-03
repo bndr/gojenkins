@@ -286,6 +286,22 @@ func (j *Job) Copy(destinationName string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+func (j *Job) UpdateConfig(config string) error {
+
+	var querystring map[string]string
+
+	resp, err := j.Jenkins.Requester.PostXML("/job/"+j.GetName()+"/config.xml", config, nil, querystring)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode == 200 {
+		j.Poll()
+		return nil
+	}
+	return errors.New(strconv.Itoa(resp.StatusCode))
+
+}
+
 func (j *Job) GetConfig() (string, error) {
 	var data string
 	_, err := j.Jenkins.Requester.GetXML(j.Base+"/config.xml", &data, nil)
