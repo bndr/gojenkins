@@ -290,7 +290,7 @@ func (j *Job) UpdateConfig(config string) error {
 
 	var querystring map[string]string
 
-	resp, err := j.Jenkins.Requester.PostXML("/job/"+j.GetName()+"/config.xml", config, nil, querystring)
+	resp, err := j.Jenkins.Requester.PostXML(j.Base+"/config.xml", config, nil, querystring)
 	if err != nil {
 		return err
 	}
