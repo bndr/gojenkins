@@ -11,7 +11,7 @@ go:
   - tip
 
 before_install:
-  - docker pull jenkins
+  - docker pull jenkins:1.651.1
   - docker run -d -p 8080:8080 jenkins
   - sleep 30
   - docker ps -a
