@@ -231,6 +231,18 @@ func (b *Build) GetParameters() []parameter {
 	return nil
 }
 
+func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
+	var envVars struct {
+		EnvMap map[string]string `json:"envMap"`
+	}
+	endpoint := b.Base + "/injectedEnvVars"
+	_, err := b.Jenkins.Requester.GetJSON(endpoint, &envVars, nil)
+	if err != nil {
+		return envVars.EnvMap, err
+	}
+	return envVars.EnvMap, nil
+}
+
 func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 	downstreamJobs := b.GetDownstreamJobNames()
 	fingerprints := b.GetAllFingerprints()
@@ -344,7 +356,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 }
 
 func (b *Build) GetResultSet() (*testResult, error) {
-	
+
 	url := b.Base + "/testReport"
 	var report testResult
 
