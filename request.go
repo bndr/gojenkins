@@ -40,6 +40,7 @@ type Requester struct {
 	Suffix       string
 }
 
+
 func (r *Requester) PostJSON(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.Suffix = "api/json"
@@ -98,6 +99,14 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 		delimiter = "&"
 	}
 	return output
+}
+
+//Add auth on redirect if required.
+func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error{
+	if r.BasicAuth != nil {
+		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
+	}
+	return nil
 }
 
 func (r *Requester) Do(method string, endpoint string, payload io.Reader, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
