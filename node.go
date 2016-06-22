@@ -19,10 +19,10 @@ import "errors"
 // Nodes
 
 type Computers struct {
-	BusyExecutors  int            `json:"busyExecutors"`
-	Computers      []nodeResponse `json:"computer"`
-	DisplayName    string         `json:"displayName"`
-	TotalExecutors int            `json:"totalExecutors"`
+	BusyExecutors  int             `json:"busyExecutors"`
+	Computers      []*nodeResponse `json:"computer"`
+	DisplayName    string          `json:"displayName"`
+	TotalExecutors int             `json:"totalExecutors"`
 }
 
 type Node struct {

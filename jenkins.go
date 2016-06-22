@@ -292,13 +292,9 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 
 	nodes := make([]*Node, len(computers.Computers))
 	for i, node := range computers.Computers {
-		name := node.DisplayName
-		// Special Case - Master Node
-		if name == "master" {
-			name = "(master)"
-		}
-		nodes[i], _ = j.GetNode(name)
+		nodes[i] = &Node{Jenkins: j, Raw: node, Base: "/computer/" + node.DisplayName}
 	}
+
 	return nodes, nil
 }
 
