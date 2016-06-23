@@ -20,18 +20,18 @@ import "errors"
 
 type Computers struct {
 	BusyExecutors  int             `json:"busyExecutors"`
-	Computers      []*nodeResponse `json:"computer"`
+	Computers      []*NodeResponse `json:"computer"`
 	DisplayName    string          `json:"displayName"`
 	TotalExecutors int             `json:"totalExecutors"`
 }
 
 type Node struct {
-	Raw     *nodeResponse
+	Raw     *NodeResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
-type nodeResponse struct {
+type NodeResponse struct {
 	Actions             []interface{} `json:"actions"`
 	DisplayName         string        `json:"displayName"`
 	Executors           []struct{}    `json:"executors"`
@@ -60,7 +60,7 @@ type nodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
-func (n *Node) Info() (*nodeResponse, error) {
+func (n *Node) Info() (*NodeResponse, error) {
 	_, err := n.Poll()
 	if err != nil {
 		return nil, err
