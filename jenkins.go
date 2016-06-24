@@ -156,7 +156,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		return nil, errors.New("launcher method not supported")
 	}
 
-	node = &Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
+	node = &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{
@@ -247,7 +247,7 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) (bool, error) {
 }
 
 func (j *Jenkins) GetNode(name string) (*Node, error) {
-	node := Node{Jenkins: j, Raw: new(nodeResponse), Base: "/computer/" + name}
+	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	status, err := node.Poll()
 	if err != nil {
 		return nil, err
@@ -285,6 +285,7 @@ func (j *Jenkins) GetJob(id string) (*Job, error) {
 
 func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
+
 	_, err := j.Requester.GetJSON("/computer", computers, nil)
 	if err != nil {
 		return nil, err
