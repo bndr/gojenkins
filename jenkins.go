@@ -286,7 +286,11 @@ func (j *Jenkins) GetJob(id string) (*Job, error) {
 func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
 
-	_, err := j.Requester.GetJSON("/computer", computers, nil)
+	qr := map[string]string{
+		"depth": "1",
+	}
+
+	_, err := j.Requester.GetJSON("/computer", computers, qr)
 	if err != nil {
 		return nil, err
 	}
