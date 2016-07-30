@@ -396,7 +396,7 @@ func (b *Build) GetRevision() string {
 	return ""
 }
 
-func (b *Build) GetRevistionBranch() string {
+func (b *Build) GetRevisionBranch() string {
 	vcs := b.Raw.ChangeSet.Kind
 	if vcs == "git" {
 		for _, a := range b.Raw.Actions {
