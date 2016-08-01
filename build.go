@@ -400,7 +400,7 @@ func (b *Build) GetRevisionBranch() string {
 	vcs := b.Raw.ChangeSet.Kind
 	if vcs == "git" {
 		for _, a := range b.Raw.Actions {
-			if a.LastBuiltRevision.Branch[0].SHA1 != "" {
+			if len(a.LastBuiltRevision.Branch) > 0 && a.LastBuiltRevision.Branch[0].SHA1 != "" {
 				return a.LastBuiltRevision.Branch[0].SHA1
 			}
 		}
