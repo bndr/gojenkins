@@ -40,24 +40,41 @@ type Requester struct {
 	Suffix       string
 }
 
+func (r *Requester) SetCrumb() error {
+	crumbData := map[string]string{}
+	response, err := r.GetJSON("/crumbIssuer/api/json", &crumbData, nil)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode == 200 && crumbData["crumbRequestField"] != "" {
+		r.SetHeader(crumbData["crumbRequestField"], crumbData["crumb"])
+	}
+
+	return nil
+}
 
 func (r *Requester) PostJSON(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+	r.SetCrumb()
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.Suffix = "api/json"
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
 func (r *Requester) Post(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+	r.SetCrumb()
 	r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.Suffix = ""
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring)
 }
 
 func (r *Requester) PostFiles(endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string, files []string) (*http.Response, error) {
+	r.SetCrumb()
 	return r.Do("POST", endpoint, payload, &responseStruct, querystring, files)
 }
 
 func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+	r.SetCrumb()
 	payload := bytes.NewBuffer([]byte(xml))
 	r.SetHeader("Content-Type", "application/xml")
 	r.Suffix = ""
@@ -102,7 +119,7 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 }
 
 //Add auth on redirect if required.
-func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error{
+func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
 	if r.BasicAuth != nil {
 		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
 	}
