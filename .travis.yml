@@ -5,16 +5,15 @@ services:
   - docker
 
 go:
-  - 1.2
-  - 1.3
-  - 1.4
   - tip
 
 before_install:
   - docker pull jenkins:1.651.1
-  - docker run -d -p 8080:8080 jenkins
+  - docker run -d --name=jenkins -p 8080:8080 jenkins:1.651.1
   - sleep 30
-  - docker ps -a
+  - docker inspect -f {{.State.Running}} jenkins | grep -q true
 
 install:
   - go get github.com/stretchr/testify/assert
+
+script: go test --race -v ./...
