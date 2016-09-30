@@ -21,6 +21,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -59,12 +60,18 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 	if j.Requester.Client == nil {
 		cookies, _ := cookiejar.New(nil)
 
+		if os.Getenv("HTTP_PROXY") != "" {
+			proxyUrl, _ := url.Parse(os.Getenv("HTTP_PROXY"))
+			tr.Proxy = http.ProxyURL(proxyUrl)
+		}
+
 		client := &http.Client{
 			Transport: tr,
 			Jar:       cookies,
 			// Fucntion to add auth on redirect.
 			CheckRedirect: j.Requester.redirectPolicyFunc,
 		}
+
 		j.Requester.Client = client
 	}
 
