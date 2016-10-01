@@ -67,9 +67,9 @@ func (p *Plugins) Poll() (int, error) {
 	qr := map[string]string{
 		"depth": strconv.Itoa(p.Depth),
 	}
-	_, err := p.Jenkins.Requester.GetJSON(p.Base, p.Raw, qr)
+	response, err := p.Jenkins.Requester.GetJSON(p.Base, p.Raw, qr)
 	if err != nil {
 		return 0, err
 	}
-	return p.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }

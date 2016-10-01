@@ -180,11 +180,11 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 }
 
 func (n *Node) Poll() (int, error) {
-	_, err := n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
+	response, err := n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
-	return n.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }
 
 func (n *Node) LaunchNodeBySSH() (int, error) {
@@ -192,11 +192,11 @@ func (n *Node) LaunchNodeBySSH() (int, error) {
 		"json":   "",
 		"Submit": "Launch slave agent",
 	}
-	_, err := n.Jenkins.Requester.Post(n.Base+"/launchSlaveAgent", nil, nil, qr)
+	response, err := n.Jenkins.Requester.Post(n.Base+"/launchSlaveAgent", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
-	return n.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }
 
 func (n *Node) Disconnect() (int, error) {
@@ -205,11 +205,11 @@ func (n *Node) Disconnect() (int, error) {
 		"json":           makeJson(map[string]string{"offlineMessage": ""}),
 		"Submit":         "Yes",
 	}
-	_, err := n.Jenkins.Requester.Post(n.Base+"/doDisconnect", nil, nil, qr)
+	response, err := n.Jenkins.Requester.Post(n.Base+"/doDisconnect", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
-	return n.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }
 
 func (n *Node) GetLogText() (string, error) {

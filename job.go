@@ -435,9 +435,9 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 }
 
 func (j *Job) Poll() (int, error) {
-	_, err := j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
+	response, err := j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
-	return j.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }

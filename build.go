@@ -193,11 +193,11 @@ func (b *Build) GetCulprits() []culprit {
 
 func (b *Build) Stop() (bool, error) {
 	if b.IsRunning() {
-		_, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
+		response, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
 		if err != nil {
 			return false, err
 		}
-		return b.Jenkins.Requester.LastResponse.StatusCode == 200, nil
+		return response.StatusCode == 200, nil
 	}
 	return true, nil
 }
@@ -444,9 +444,9 @@ func (b *Build) Poll(options ...interface{}) (int, error) {
 	qr := map[string]string{
 		"depth": depth,
 	}
-	_, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
+	response, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
 	if err != nil {
 		return 0, err
 	}
-	return b.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }

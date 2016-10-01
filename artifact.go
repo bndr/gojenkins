@@ -35,13 +35,13 @@ type Artifact struct {
 // Get raw byte data of Artifact
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
-	_, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
+	response, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	code := a.Jenkins.Requester.LastResponse.StatusCode
+	code := response.StatusCode
 	if code != 200 {
 		Error.Printf("Jenkins responded with StatusCode: %d", code)
 		return nil, errors.New("Could not get File Contents")

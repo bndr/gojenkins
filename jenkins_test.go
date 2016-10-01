@@ -1,12 +1,12 @@
 package gojenkins
 
 import (
-	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -25,13 +25,13 @@ func TestCreateJobs(t *testing.T) {
 	job_data := getFileAsString("job.xml")
 
 	job1, err := jenkins.CreateJob(job_data, job1ID)
-	if err != nil {
-		fmt.Print(err)
-	}
+	assert.Nil(t, err)
+	assert.NotNil(t, job1)
 	assert.Equal(t, "Some Job Description", job1.GetDescription())
 	assert.Equal(t, job1ID, job1.GetName())
 
 	job2, _ := jenkins.CreateJob(job_data, job2ID)
+	assert.NotNil(t, job2)
 	assert.Equal(t, "Some Job Description", job2.GetDescription())
 	assert.Equal(t, job2ID, job2.GetName())
 }
@@ -117,7 +117,8 @@ func TestBuildMethods(t *testing.T) {
 func TestGetSingleJob(t *testing.T) {
 	job, _ := jenkins.GetJob("Job1_test")
 	isRunning, _ := job.IsRunning()
-	config, _ := job.GetConfig()
+	config, err := job.GetConfig()
+	assert.Nil(t, err)
 	assert.Equal(t, false, isRunning)
 	assert.Contains(t, config, "<project>")
 }
@@ -155,6 +156,16 @@ func TestGetSingleView(t *testing.T) {
 	assert.Equal(t, len(view.Raw.Jobs), 2)
 	assert.Equal(t, len(view2.Raw.Jobs), 0)
 	assert.Equal(t, view2.Raw.Name, "test_list_view")
+}
+
+func TestConcurrentRequests(t *testing.T) {
+	for i := 0; i <= 16; i++ {
+		go func() {
+			jenkins.GetAllJobs()
+			jenkins.GetAllViews()
+			jenkins.GetAllNodes()
+		}()
+	}
 }
 
 func getFileAsString(path string) string {

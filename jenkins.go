@@ -107,7 +107,7 @@ func (j *Jenkins) initLoggers() {
 
 // Get Basic Information About Jenkins
 func (j *Jenkins) Info() (*executorResponse, error) {
-	_, err := j.Requester.Do("GET", "/", nil, j.Raw, nil)
+	_, err := j.Requester.Get("/", j.Raw, nil)
 
 	if err != nil {
 		return nil, err
@@ -476,11 +476,11 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 }
 
 func (j *Jenkins) Poll() (int, error) {
-	_, err := j.Requester.GetJSON("/", j.Raw, nil)
+	resp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
-	return j.Requester.LastResponse.StatusCode, nil
+	return resp.StatusCode, nil
 }
 
 // Creates a new Jenkins Instance
@@ -492,7 +492,7 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: false, Headers: http.Header{}}
+	j.Requester = &Requester{Base: base, SslVerify: false}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
