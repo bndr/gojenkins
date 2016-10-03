@@ -86,9 +86,9 @@ func (v *View) GetUrl() string {
 }
 
 func (v *View) Poll() (int, error) {
-	_, err := v.Jenkins.Requester.GetJSON(v.Base, v.Raw, nil)
+	response, err := v.Jenkins.Requester.GetJSON(v.Base, v.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
-	return v.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }
