@@ -131,7 +131,7 @@ func (j *Job) getBuildByType(buildType string) (*Build, error) {
 		Depth:   1,
 		Job:     j,
 		Raw:     new(buildResponse),
-		Base:    "/job/" + j.GetName() + "/" + number}
+		Base:    j.Base + "/" + number}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
