@@ -15,7 +15,9 @@
 package gojenkins
 
 import (
+	"bytes"
 	"errors"
+	"net/url"
 	"regexp"
 	"strconv"
 	"time"
@@ -420,6 +422,16 @@ func (b *Build) IsRunning() bool {
 		return false
 	}
 	return b.Raw.Building
+}
+
+func (b *Build) SetDescription(description string) error {
+	data := url.Values{}
+	data.Set("description", description)
+	if _, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Poll for current data. Optional parameter - depth.
