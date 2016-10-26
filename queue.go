@@ -132,5 +132,6 @@ func (q *Queue) Poll() (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return response.StatusCode, nil
 }

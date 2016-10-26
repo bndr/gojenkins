@@ -354,20 +354,12 @@ func (j *Job) HasQueuedBuild() {
 	panic("Not Implemented yet")
 }
 
-func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
-	isQueued, err := j.IsQueued()
-	if err != nil {
-		return false, err
-	}
-	if isQueued {
-		Error.Printf("%s is already running", j.GetName())
-		return false, nil
-	}
-
+// Invoke a job
+func (j *Job) InvokeSimple(params map[string]string) (*Task, error) {
 	endpoint := "/build"
 	parameters, err := j.GetParameters()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if len(parameters) > 0 {
 		endpoint = "/buildWithParameters"
@@ -378,31 +370,40 @@ func (j *Job) InvokeSimple(params map[string]string) (bool, error) {
 	}
 	resp, err := j.Jenkins.Requester.Post(j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		return false, errors.New("Could not invoke job " + j.GetName())
+		return nil, errors.New("Could not invoke job " + j.GetName())
 	}
-	return true, nil
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return nil, errors.New("Don't have key \"Location\" in response of header")
+	}
+
+	q, err := j.Jenkins.GetQueue()
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(location)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range q.Tasks() {
+		if fmt.Sprintf("/%s", t.Raw.URL) == u.Path {
+			return t, nil
+		}
+	}
+
+	return nil, errors.New("Don't find new task")
+
 }
 
-func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
-	isQueued, err := j.IsQueued()
-	if err != nil {
-		return false, err
-	}
-	if isQueued {
-		Error.Printf("%s is already running", j.GetName())
-		return false, nil
-	}
-	isRunning, err := j.IsRunning()
-	if err != nil {
-		return false, err
-	}
-	if isRunning && skipIfRunning {
-		return false, fmt.Errorf("Will not request new build because %s is already running", j.GetName())
-	}
-
+// Invoke a job
+func (j *Job) Invoke(files []string, params map[string]string, securityToken string) (*Task, error) {
 	base := "/build"
 
 	// If parameters are specified - url is /builWithParameters
@@ -426,12 +427,35 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 	b, _ := json.Marshal(buildParams)
 	resp, err := j.Jenkins.Requester.PostFiles(j.Base+base, bytes.NewBuffer(b), nil, reqParams, files)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	if resp.StatusCode == 200 || resp.StatusCode == 201 {
-		return true, nil
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return nil, errors.New("Could not invoke job " + j.GetName())
 	}
-	return false, errors.New(strconv.Itoa(resp.StatusCode))
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return nil, errors.New("Don't have key \"Location\" in response of header")
+	}
+
+	q, err := j.Jenkins.GetQueue()
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(location)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range q.Tasks() {
+		if fmt.Sprintf("/%s", t.Raw.URL) == u.Path {
+			return t, nil
+		}
+	}
+
+	return nil, errors.New("Don't find new task")
 }
 
 func (j *Job) Poll() (int, error) {
