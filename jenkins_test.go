@@ -107,6 +107,13 @@ func TestGetAllBuilds(t *testing.T) {
 	assert.Equal(t, 1, len(builds))
 }
 
+func TestGetLabel(t *testing.T) {
+	label, err := jenkins.GetLabel("test_label")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "test_label")
+	assert.Equal(t, 0, len(label.GetNodes()))
+}
+
 func TestBuildMethods(t *testing.T) {
 	job, _ := jenkins.GetJob("Job1_test")
 	build, _ := job.GetLastBuild()
