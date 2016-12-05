@@ -34,13 +34,17 @@ if err != nil {
   panic("Something Went Wrong")
 }
 
-build, err := jenkins.GetJob("job_name").GetLastSuccessfulBuild()
-
+build, err := jenkins.GetJob("job_name")
 if err != nil {
   panic("Job Does Not Exist")
 }
 
-duration := build.GetDuration()
+lastSuccessBuild := build.GetLastSuccessfulBuild()
+if err != nil {
+  panic("Last SuccessBuild does not exist")
+}
+
+duration := lastSuccessBuild.GetDuration()
 
 job, err := jenkins.GetJob("jobname")
 
@@ -50,7 +54,7 @@ if err != nil {
 
 job.Rename("SomeotherJobName")
 
-configString := `<?xml version='1.0' encoding='UTF-8'?> 
+configString := `<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description></description>
@@ -119,7 +123,7 @@ if err != nil {
 for _, build := range builds {
   buildId := build.Number
   data, err := jenkins.GetBuild(jobName, buildId)
-  
+
   if err != nil {
     panic(err)
   }
@@ -207,7 +211,7 @@ All Contributions are welcome. The todo list is on the bottom of this README. Fe
 
 ## TODO
 
-Although the basic features are implemented there are many optional features that are on the todo list. 
+Although the basic features are implemented there are many optional features that are on the todo list.
 
 * Kerberos Authentication
 * CLI Tool
