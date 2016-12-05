@@ -265,6 +265,18 @@ func (j *Jenkins) GetNode(name string) (*Node, error) {
 	return nil, errors.New("No node found")
 }
 
+func (j *Jenkins) GetLabel(name string) (*Label, error) {
+	label := Label{Jenkins: j, Raw: new(LabelResponse), Base: "/label/" + name}
+	status, err := label.Poll()
+	if err != nil {
+		return nil, err
+	}
+	if status == 200 {
+		return &label, nil
+	}
+	return nil, errors.New("No label found")
+}
+
 func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	job, err := j.GetJob(jobName)
 	if err != nil {
