@@ -18,6 +18,7 @@ package gojenkins
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -306,7 +307,7 @@ func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + parentId + "/job/" + childId}
 	status, err := job.Poll()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("trouble polling job: %v", err)
 	}
 	if status == 200 {
 		return &job, nil
