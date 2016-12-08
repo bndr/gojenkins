@@ -302,6 +302,18 @@ func (j *Jenkins) GetJob(id string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + parentId + "/job/" + childId}
+	status, err := job.Poll()
+	if err != nil {
+		return nil, err
+	}
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+
 func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
 
