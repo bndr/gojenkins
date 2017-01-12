@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 )
 
 type Job struct {
@@ -86,6 +87,12 @@ type jobResponse struct {
 	Scm              struct{}    `json:"scm"`
 	UpstreamProjects []job       `json:"upstreamProjects"`
 	URL              string      `json:"url"`
+}
+
+type history struct {
+	BuildNumber    int
+	BuildStatus    string
+	BuildTimestamp int64
 }
 
 func (j *Job) GetName() string {
@@ -458,4 +465,16 @@ func (j *Job) Poll() (int, error) {
 		return 0, err
 	}
 	return response.StatusCode, nil
+}
+
+func (j *Job) History() ([]*history, error) {
+	endpoint := j.Raw.URL[strings.Index(j.Raw.URL, "/job"):]
+	endpoint = strings.TrimSuffix(endpoint, "/")
+	endpoint += "/buildHistory/ajax"
+
+	resp, err := j.Jenkins.Requester.Get(endpoint, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return parseBuildHistory(resp.Body), nil
 }
