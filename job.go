@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"path"
 	"strconv"
-	"strings"
 )
 
 type Job struct {
@@ -468,11 +467,7 @@ func (j *Job) Poll() (int, error) {
 }
 
 func (j *Job) History() ([]*history, error) {
-	endpoint := j.Raw.URL[strings.Index(j.Raw.URL, "/job"):]
-	endpoint = strings.TrimSuffix(endpoint, "/")
-	endpoint += "/buildHistory/ajax"
-
-	resp, err := j.Jenkins.Requester.Get(endpoint, nil, nil)
+	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
 	if err != nil {
 		return nil, err
 	}

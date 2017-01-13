@@ -3,6 +3,7 @@ package gojenkins
 import (
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -69,6 +70,15 @@ func TestCreateBuilds(t *testing.T) {
 		assert.True(t, (len(builds) > 0))
 
 	}
+}
+
+func TestParseBuildHistory(t *testing.T) {
+	r, err := os.Open("_tests/build_history.txt")
+	if err != nil {
+		panic(err)
+	}
+	history := parseBuildHistory(r)
+	assert.True(t, len(history) == 3)
 }
 
 func TestCreateViews(t *testing.T) {
