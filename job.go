@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 )
 
 type Job struct {
@@ -86,6 +87,13 @@ type jobResponse struct {
 	Scm              struct{}    `json:"scm"`
 	UpstreamProjects []job       `json:"upstreamProjects"`
 	URL              string      `json:"url"`
+	Jobs             []job       `json:"jobs"`
+	PrimaryView      *view       `json:"primaryView"`
+	Views            []view      `json:"views"`
+}
+
+func (j *Job) parentBase() string {
+	return j.Base[:strings.LastIndex(j.Base, "/job")]
 }
 
 func (j *Job) GetName() string {
@@ -187,6 +195,10 @@ func (j *Job) GetDownstreamJobsMetadata() []job {
 	return j.Raw.DownstreamProjects
 }
 
+func (j *Job) GetInnerJobsMetadata() []job {
+	return j.Raw.Jobs
+}
+
 func (j *Job) GetUpstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.UpstreamProjects))
 	for i, job := range j.Raw.UpstreamProjects {
@@ -203,6 +215,30 @@ func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.DownstreamProjects))
 	for i, job := range j.Raw.DownstreamProjects {
 		ji, err := j.Jenkins.GetJob(job.Name)
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = ji
+	}
+	return jobs, nil
+}
+
+func (j *Job) GetInnerJob(id string) (*Job, error) {
+	job := Job{Jenkins: j.Jenkins, Raw: new(jobResponse), Base: j.Base + "/job/" + id}
+	status, err := job.Poll()
+	if err != nil {
+		return nil, err
+	}
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+
+func (j *Job) GetInnerJobs() ([]*Job, error) {
+	jobs := make([]*Job, len(j.Raw.Jobs))
+	for i, job := range j.Raw.Jobs {
+		ji, err := j.GetInnerJob(job.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +295,7 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	if len(qr) > 0 {
 		querystring = qr[0].(map[string]string)
 	}
-	resp, err := j.Jenkins.Requester.PostXML("/createItem", config, j.Raw, querystring)
+	resp, err := j.Jenkins.Requester.PostXML(j.parentBase()+"/createItem", config, j.Raw, querystring)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +308,7 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 
 func (j *Job) Copy(destinationName string) (*Job, error) {
 	qr := map[string]string{"name": destinationName, "from": j.GetName(), "mode": "copy"}
-	resp, err := j.Jenkins.Requester.Post("/createItem", nil, nil, qr)
+	resp, err := j.Jenkins.Requester.Post(j.parentBase()+"/createItem", nil, nil, qr)
 	if err != nil {
 		return nil, err
 	}
