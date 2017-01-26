@@ -15,5 +15,6 @@ before_install:
 
 install:
   - go get github.com/stretchr/testify/assert
+  - go get golang.org/x/net/html
 
 script: go test --race -v ./...

@@ -96,6 +96,12 @@ func (j *Job) parentBase() string {
 	return j.Base[:strings.LastIndex(j.Base, "/job")]
 }
 
+type history struct {
+	BuildNumber    int
+	BuildStatus    string
+	BuildTimestamp int64
+}
+
 func (j *Job) GetName() string {
 	return j.Raw.Name
 }
@@ -494,4 +500,12 @@ func (j *Job) Poll() (int, error) {
 		return 0, err
 	}
 	return response.StatusCode, nil
+}
+
+func (j *Job) History() ([]*history, error) {
+	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return parseBuildHistory(resp.Body), nil
 }
