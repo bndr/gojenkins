@@ -246,25 +246,26 @@ func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
 }
 
 func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
-	downstreamJobs := b.GetDownstreamJobNames()
-	fingerprints := b.GetAllFingerprints()
 	result := make([]*Build, 0)
-	for _, fingerprint := range fingerprints {
-		for _, usage := range fingerprint.Raw.Usage {
-			if inSlice(usage.Name, downstreamJobs) {
-				job, err := b.Jenkins.GetJob(usage.Name)
-				if err != nil {
-					return nil, err
-				}
-				for _, ranges := range usage.Ranges.Ranges {
-					for i := ranges.Start; i <= ranges.End; i++ {
-						build, err := job.GetBuild(i)
-						if err != nil {
-							return nil, err
-						}
-						result = append(result, build)
-					}
-				}
+	downstreamJobs, err := b.Job.GetDownstreamJobs()
+	if err != nil {
+		return nil, err
+	}
+	for _, job := range downstreamJobs {
+		allBuildIds, err := job.GetAllBuildIds()
+		if err != nil {
+			return nil, err
+		}
+		for _, buildId := range allBuildIds {
+			build, err := job.GetBuild(buildId.Number)
+			if err != nil {
+				return nil, err
+			}
+			upstreamBuild, _ := build.GetUpstreamBuild()
+			// cannot compare only id, it can be from different job
+			if b.GetUrl() == upstreamBuild.GetUrl() {
+				result = append(result, build)
+				break
 			}
 		}
 	}
