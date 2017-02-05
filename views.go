@@ -20,14 +20,14 @@ import (
 )
 
 type View struct {
-	Raw     *viewResponse
+	Raw     *ViewResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
-type viewResponse struct {
+type ViewResponse struct {
 	Description string        `json:"description"`
-	Jobs        []job         `json:"jobs"`
+	Jobs        []InnerJob    `json:"jobs"`
 	Name        string        `json:"name"`
 	Property    []interface{} `json:"property"`
 	URL         string        `json:"url"`
@@ -73,7 +73,7 @@ func (v *View) GetDescription() string {
 	return v.Raw.Description
 }
 
-func (v *View) GetJobs() []job {
+func (v *View) GetJobs() []InnerJob {
 	return v.Raw.Jobs
 }
 

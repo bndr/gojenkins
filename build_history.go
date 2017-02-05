@@ -9,12 +9,12 @@ import (
 )
 
 // Parse jenkins ajax response in order find the current jenkins build history
-func parseBuildHistory(d io.ReadCloser) []*history {
+func parseBuildHistory(d io.ReadCloser) []*History {
 	z := html.NewTokenizer(d)
 	depth := 0
 	buildRowCellDepth := -1
-	builds := make([]*history, 0)
-	var curBuild *history
+	builds := make([]*History, 0)
+	var curBuild *History
 	for {
 		tt := z.Next()
 		switch tt {
@@ -46,7 +46,7 @@ func parseBuildHistory(d io.ReadCloser) []*history {
 				if string(tn) == "td" {
 					if hasCssClass(a, "build-row-cell") {
 						buildRowCellDepth = depth
-						curBuild = &history{}
+						curBuild = &History{}
 						builds = append(builds, curBuild)
 					}
 				}

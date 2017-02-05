@@ -26,23 +26,23 @@ import (
 )
 
 type Job struct {
-	Raw     *jobResponse
+	Raw     *JobResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
-type jobBuild struct {
+type JobBuild struct {
 	Number int64
 	URL    string
 }
 
-type job struct {
+type InnerJob struct {
 	Name  string `json:"name"`
 	Url   string `json:"url"`
 	Color string `json:"color"`
 }
 
-type parameterDefinition struct {
+type ParameterDefinition struct {
 	DefaultParameterValue struct {
 		Name  string      `json:"name"`
 		Value interface{} `json:"value"`
@@ -52,17 +52,17 @@ type parameterDefinition struct {
 	Type        string `json:"type"`
 }
 
-type jobResponse struct {
+type JobResponse struct {
 	Actions            []generalObj
 	Buildable          bool `json:"buildable"`
-	Builds             []jobBuild
+	Builds             []JobBuild
 	Color              string      `json:"color"`
 	ConcurrentBuild    bool        `json:"concurrentBuild"`
 	Description        string      `json:"description"`
 	DisplayName        string      `json:"displayName"`
 	DisplayNameOrNull  interface{} `json:"displayNameOrNull"`
-	DownstreamProjects []job       `json:"downstreamProjects"`
-	FirstBuild         jobBuild
+	DownstreamProjects []InnerJob  `json:"downstreamProjects"`
+	FirstBuild         JobBuild
 	HealthReport       []struct {
 		Description   string `json:"description"`
 		IconClassName string `json:"iconClassName"`
@@ -71,32 +71,32 @@ type jobResponse struct {
 	} `json:"healthReport"`
 	InQueue               bool     `json:"inQueue"`
 	KeepDependencies      bool     `json:"keepDependencies"`
-	LastBuild             jobBuild `json:"lastBuild"`
-	LastCompletedBuild    jobBuild `json:"lastCompletedBuild"`
-	LastFailedBuild       jobBuild `json:"lastFailedBuild"`
-	LastStableBuild       jobBuild `json:"lastStableBuild"`
-	LastSuccessfulBuild   jobBuild `json:"lastSuccessfulBuild"`
-	LastUnstableBuild     jobBuild `json:"lastUnstableBuild"`
-	LastUnsuccessfulBuild jobBuild `json:"lastUnsuccessfulBuild"`
+	LastBuild             JobBuild `json:"lastBuild"`
+	LastCompletedBuild    JobBuild `json:"lastCompletedBuild"`
+	LastFailedBuild       JobBuild `json:"lastFailedBuild"`
+	LastStableBuild       JobBuild `json:"lastStableBuild"`
+	LastSuccessfulBuild   JobBuild `json:"lastSuccessfulBuild"`
+	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
+	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
 	Name                  string   `json:"name"`
 	NextBuildNumber       int64    `json:"nextBuildNumber"`
 	Property              []struct {
-		ParameterDefinitions []parameterDefinition `json:"parameterDefinitions"`
+		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
 	QueueItem        interface{} `json:"queueItem"`
 	Scm              struct{}    `json:"scm"`
-	UpstreamProjects []job       `json:"upstreamProjects"`
+	UpstreamProjects []InnerJob  `json:"upstreamProjects"`
 	URL              string      `json:"url"`
-	Jobs             []job       `json:"jobs"`
-	PrimaryView      *view       `json:"primaryView"`
-	Views            []view      `json:"views"`
+	Jobs             []InnerJob  `json:"jobs"`
+	PrimaryView      *ViewData   `json:"primaryView"`
+	Views            []ViewData  `json:"views"`
 }
 
 func (j *Job) parentBase() string {
 	return j.Base[:strings.LastIndex(j.Base, "/job")]
 }
 
-type history struct {
+type History struct {
 	BuildNumber    int
 	BuildStatus    string
 	BuildTimestamp int64
@@ -110,12 +110,12 @@ func (j *Job) GetDescription() string {
 	return j.Raw.Description
 }
 
-func (j *Job) GetDetails() *jobResponse {
+func (j *Job) GetDetails() *JobResponse {
 	return j.Raw
 }
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(buildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (j *Job) GetBuild(id int64) (*Build, error) {
 }
 
 func (j *Job) getBuildByType(buildType string) (*Build, error) {
-	allowed := map[string]jobBuild{
+	allowed := map[string]JobBuild{
 		"lastStableBuild":     j.Raw.LastStableBuild,
 		"lastSuccessfulBuild": j.Raw.LastSuccessfulBuild,
 		"lastBuild":           j.Raw.LastBuild,
@@ -145,7 +145,7 @@ func (j *Job) getBuildByType(buildType string) (*Build, error) {
 		Jenkins: j.Jenkins,
 		Depth:   1,
 		Job:     j,
-		Raw:     new(buildResponse),
+		Raw:     new(BuildResponse),
 		Base:    j.Base + "/" + number}
 	status, err := build.Poll()
 	if err != nil {
@@ -182,9 +182,9 @@ func (j *Job) GetLastCompletedBuild() (*Build, error) {
 }
 
 // Returns All Builds with Number and URL
-func (j *Job) GetAllBuildIds() ([]jobBuild, error) {
+func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	var buildsResp struct {
-		Builds []jobBuild `json:"allBuilds"`
+		Builds []JobBuild `json:"allBuilds"`
 	}
 	_, err := j.Jenkins.Requester.GetJSON(j.Base, &buildsResp, map[string]string{"tree": "allBuilds[number,url]"})
 	if err != nil {
@@ -193,15 +193,15 @@ func (j *Job) GetAllBuildIds() ([]jobBuild, error) {
 	return buildsResp.Builds, nil
 }
 
-func (j *Job) GetUpstreamJobsMetadata() []job {
+func (j *Job) GetUpstreamJobsMetadata() []InnerJob {
 	return j.Raw.UpstreamProjects
 }
 
-func (j *Job) GetDownstreamJobsMetadata() []job {
+func (j *Job) GetDownstreamJobsMetadata() []InnerJob {
 	return j.Raw.DownstreamProjects
 }
 
-func (j *Job) GetInnerJobsMetadata() []job {
+func (j *Job) GetInnerJobsMetadata() []InnerJob {
 	return j.Raw.Jobs
 }
 
@@ -230,7 +230,7 @@ func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 }
 
 func (j *Job) GetInnerJob(id string) (*Job, error) {
-	job := Job{Jenkins: j.Jenkins, Raw: new(jobResponse), Base: j.Base + "/job/" + id}
+	job := Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: j.Base + "/job/" + id}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -319,7 +319,7 @@ func (j *Job) Copy(destinationName string) (*Job, error) {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		newJob := &Job{Jenkins: j.Jenkins, Raw: new(jobResponse), Base: "/job/" + destinationName}
+		newJob := &Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: "/job/" + destinationName}
 		_, err := newJob.Poll()
 		if err != nil {
 			return nil, err
@@ -354,12 +354,12 @@ func (j *Job) GetConfig() (string, error) {
 	return data, nil
 }
 
-func (j *Job) GetParameters() ([]parameterDefinition, error) {
+func (j *Job) GetParameters() ([]ParameterDefinition, error) {
 	_, err := j.Poll()
 	if err != nil {
 		return nil, err
 	}
-	var parameters []parameterDefinition
+	var parameters []ParameterDefinition
 	for _, property := range j.Raw.Property {
 		for _, param := range property.ParameterDefinitions {
 			parameters = append(parameters, param)
@@ -502,7 +502,7 @@ func (j *Job) Poll() (int, error) {
 	return response.StatusCode, nil
 }
 
-func (j *Job) History() ([]*history, error) {
+func (j *Job) History() ([]*History, error) {
 	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
 	if err != nil {
 		return nil, err

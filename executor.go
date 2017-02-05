@@ -15,17 +15,17 @@
 package gojenkins
 
 type Executor struct {
-	Raw     *executorResponse
+	Raw     *ExecutorResponse
 	Jenkins *Jenkins
 }
-type view struct {
+type ViewData struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
-type executorResponse struct {
+type ExecutorResponse struct {
 	AssignedLabels  []struct{}  `json:"assignedLabels"`
 	Description     interface{} `json:"description"`
-	Jobs            []job       `json:"jobs"`
+	Jobs            []InnerJob  `json:"jobs"`
 	Mode            string      `json:"mode"`
 	NodeDescription string      `json:"nodeDescription"`
 	NodeName        string      `json:"nodeName"`
@@ -35,10 +35,10 @@ type executorResponse struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"primaryView"`
-	QuietingDown   bool     `json:"quietingDown"`
-	SlaveAgentPort int64    `json:"slaveAgentPort"`
-	UnlabeledLoad  struct{} `json:"unlabeledLoad"`
-	UseCrumbs      bool     `json:"useCrumbs"`
-	UseSecurity    bool     `json:"useSecurity"`
-	Views          []view   `json:"views"`
+	QuietingDown   bool       `json:"quietingDown"`
+	SlaveAgentPort int64      `json:"slaveAgentPort"`
+	UnlabeledLoad  struct{}   `json:"unlabeledLoad"`
+	UseCrumbs      bool       `json:"useCrumbs"`
+	UseSecurity    bool       `json:"useSecurity"`
+	Views          []ViewData `json:"views"`
 }

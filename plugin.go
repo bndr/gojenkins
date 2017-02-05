@@ -20,12 +20,12 @@ import (
 
 type Plugins struct {
 	Jenkins *Jenkins
-	Raw     *pluginResponse
+	Raw     *PluginResponse
 	Base    string
 	Depth   int
 }
 
-type pluginResponse struct {
+type PluginResponse struct {
 	Plugins []Plugin `json:"plugins"`
 }
 
