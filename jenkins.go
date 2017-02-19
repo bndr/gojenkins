@@ -461,7 +461,6 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 		return nil, err
 	}
 	if exists.Raw.Name != "" {
-		Error.Println("View Already exists.")
 		return exists, errors.New("View already exists")
 	}
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
