@@ -17,6 +17,7 @@ package gojenkins
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"log"
 	"net/http"
@@ -53,8 +54,16 @@ var (
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
 	// Skip SSL Verification?
+	tlsCfg := &tls.Config{
+		InsecureSkipVerify: !j.Requester.SslVerify,
+	}
+	if j.Requester.CACert != nil {
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(j.Requester.CACert)
+		tlsCfg.RootCAs = pool
+	}
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: !j.Requester.SslVerify},
+		TLSClientConfig: tlsCfg,
 	}
 
 	if j.Requester.Client == nil {
@@ -503,7 +512,7 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: false}
+	j.Requester = &Requester{Base: base, SslVerify: true}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
