@@ -28,7 +28,12 @@ These are some of the features that are currently implemented:
 
 import "github.com/bndr/gojenkins"
 
-jenkins, err := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin")
+// Provide CA certificate if server is using self-signed certificate
+// caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
+// jenkins.Requester.CACert = caCert
+_, err := jenkins.Init()
+
 
 if err != nil {
   panic("Something Went Wrong")

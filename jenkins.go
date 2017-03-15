@@ -61,6 +61,8 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 		pool := x509.NewCertPool()
 		pool.AppendCertsFromPEM(j.Requester.CACert)
 		tlsCfg.RootCAs = pool
+		// always verify certs if custom ca cert is used.
+		tlsCfg.InsecureSkipVerify = false
 	}
 	tr := &http.Transport{
 		TLSClientConfig: tlsCfg,
@@ -98,6 +100,14 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 	}
 
 	return j, nil
+}
+
+func (j *Jenkins) SetSSLVerify(verify bool) {
+	j.Requester.SslVerify = verify
+}
+
+func (j *Jenkins) UseCACertificate(caCert string) {
+	j.Requester.CACert = []byte(caCert)
 }
 
 func (j *Jenkins) initLoggers() {
