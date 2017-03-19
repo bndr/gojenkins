@@ -17,6 +17,7 @@ package gojenkins
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
@@ -37,7 +38,7 @@ type BasicAuth struct {
 type Jenkins struct {
 	Server    string
 	Version   string
-	Raw       *executorResponse
+	Raw       *ExecutorResponse
 	Requester *Requester
 }
 
@@ -54,8 +55,18 @@ var (
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
 	// Skip SSL Verification?
+	tlsCfg := &tls.Config{
+		InsecureSkipVerify: !j.Requester.SslVerify,
+	}
+	if j.Requester.CACert != nil {
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(j.Requester.CACert)
+		tlsCfg.RootCAs = pool
+		// always verify certs if custom ca cert is used.
+		tlsCfg.InsecureSkipVerify = false
+	}
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: !j.Requester.SslVerify},
+		TLSClientConfig: tlsCfg,
 	}
 
 	if j.Requester.Client == nil {
@@ -77,7 +88,7 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 	}
 
 	// Check Connection
-	j.Raw = new(executorResponse)
+	j.Raw = new(ExecutorResponse)
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
 
 	if err != nil {
@@ -107,7 +118,7 @@ func (j *Jenkins) initLoggers() {
 }
 
 // Get Basic Information About Jenkins
-func (j *Jenkins) Info() (*executorResponse, error) {
+func (j *Jenkins) Info() (*ExecutorResponse, error) {
 	_, err := j.Requester.Get("/", j.Raw, nil)
 
 	if err != nil {
@@ -210,7 +221,7 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 	} else {
 		return nil, errors.New("Error Creating Job, job name is missing")
 	}
-	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + qr["name"]}
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
 	job, err := jobObj.Create(config, qr)
 	if err != nil {
 		return nil, err
@@ -221,7 +232,7 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 // Rename a job.
 // First parameter job old name, Second parameter job new name.
 func (j *Jenkins) RenameJob(job string, name string) *Job {
-	jobObj := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + job}
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
 	jobObj.Rename(name)
 	return &jobObj
 }
@@ -229,7 +240,7 @@ func (j *Jenkins) RenameJob(job string, name string) *Job {
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + copyFrom}
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
 	_, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -239,14 +250,14 @@ func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 
 // Delete a job.
 func (j *Jenkins) DeleteJob(name string) (bool, error) {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
 func (j *Jenkins) BuildJob(name string, options ...interface{}) (int64, error) {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + name}
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
@@ -291,8 +302,8 @@ func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	return build, nil
 }
 
-func (j *Jenkins) GetJob(id string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + id}
+func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
 	status, err := job.Poll()
 	if err != nil {
 		return nil, err
@@ -339,7 +350,7 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
-func (j *Jenkins) GetAllBuildIds(job string) ([]jobBuild, error) {
+func (j *Jenkins) GetAllBuildIds(job string) ([]JobBuild, error) {
 	jobObj, err := j.GetJob(job)
 	if err != nil {
 		return nil, err
@@ -349,8 +360,8 @@ func (j *Jenkins) GetAllBuildIds(job string) ([]jobBuild, error) {
 
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
-func (j *Jenkins) GetAllJobNames() ([]job, error) {
-	exec := Executor{Raw: new(executorResponse), Jenkins: j}
+func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
+	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
 	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
 
 	if err != nil {
@@ -363,7 +374,7 @@ func (j *Jenkins) GetAllJobNames() ([]job, error) {
 // Get All Possible Job Objects.
 // Each job will be queried.
 func (j *Jenkins) GetAllJobs() ([]*Job, error) {
-	exec := Executor{Raw: new(executorResponse), Jenkins: j}
+	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
 	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
 
 	if err != nil {
@@ -404,7 +415,7 @@ func (j *Jenkins) GetArtifactData(id string) (*fingerPrintResponse, error) {
 // Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
 func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
-	p := Plugins{Jenkins: j, Raw: new(pluginResponse), Base: "/pluginManager", Depth: depth}
+	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
 	_, err := p.Poll()
 	if err != nil {
 		return nil, err
@@ -438,7 +449,7 @@ func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 
 func (j *Jenkins) GetView(name string) (*View, error) {
 	url := "/view/" + name
-	view := View{Jenkins: j, Raw: new(viewResponse), Base: url}
+	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
 	_, err := view.Poll()
 	if err != nil {
 		return nil, err
@@ -474,10 +485,9 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 		return nil, err
 	}
 	if exists.Raw.Name != "" {
-		Error.Println("View Already exists.")
 		return exists, errors.New("View already exists")
 	}
-	view := &View{Jenkins: j, Raw: new(viewResponse), Base: "/view/" + name}
+	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,
@@ -517,7 +527,7 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: false}
+	j.Requester = &Requester{Base: base, SslVerify: true}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
