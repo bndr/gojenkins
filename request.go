@@ -55,6 +55,7 @@ type Requester struct {
 	Base      string
 	BasicAuth *BasicAuth
 	Client    *http.Client
+	CACert    []byte
 	SslVerify bool
 }
 
