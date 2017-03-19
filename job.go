@@ -79,7 +79,7 @@ type JobResponse struct {
 	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
 	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
 	Name                  string   `json:"name"`
-	SubJobs               []job    `json:"jobs"`
+	SubJobs               []InnerJob    `json:"jobs"`
 	NextBuildNumber       int64    `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
