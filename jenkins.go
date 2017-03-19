@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -306,6 +307,18 @@ func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
 	status, err := job.Poll()
 	if err != nil {
 		return nil, err
+	}
+	if status == 200 {
+		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+
+func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
+	job := Job{Jenkins: j, Raw: new(jobResponse), Base: "/job/" + parentId + "/job/" + childId}
+	status, err := job.Poll()
+	if err != nil {
+		return nil, fmt.Errorf("trouble polling job: %v", err)
 	}
 	if status == 200 {
 		return &job, nil
