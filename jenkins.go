@@ -102,14 +102,6 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 	return j, nil
 }
 
-func (j *Jenkins) SetSSLVerify(verify bool) {
-	j.Requester.SslVerify = verify
-}
-
-func (j *Jenkins) UseCACertificate(caCert string) {
-	j.Requester.CACert = []byte(caCert)
-}
-
 func (j *Jenkins) initLoggers() {
 	Info = log.New(os.Stdout,
 		"INFO: ",
