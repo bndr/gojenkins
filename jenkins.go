@@ -80,7 +80,7 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 		client := &http.Client{
 			Transport: tr,
 			Jar:       cookies,
-			// Fucntion to add auth on redirect.
+			// Function to add auth on redirect.
 			CheckRedirect: j.Requester.redirectPolicyFunc,
 		}
 
