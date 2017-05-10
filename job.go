@@ -116,7 +116,8 @@ func (j *Job) GetDetails() *JobResponse {
 }
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
+	path := "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: path}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
@@ -124,7 +125,7 @@ func (j *Job) GetBuild(id int64) (*Build, error) {
 	if status == 200 {
 		return &build, nil
 	}
-	return nil, errors.New(strconv.Itoa(status))
+	return nil, errors.New(strconv.Itoa(status) + ": " + build.Jenkins.Server + path)
 }
 
 func (j *Job) getBuildByType(buildType string) (*Build, error) {
