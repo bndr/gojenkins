@@ -94,7 +94,7 @@ type JobResponse struct {
 }
 
 func (j *Job) parentBase() string {
-	return j.Base[:strings.LastIndex(j.Base, "/job")]
+	return j.Base[:strings.LastIndex(j.Base, "/job/")]
 }
 
 type History struct {

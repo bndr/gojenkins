@@ -22,7 +22,7 @@ func TestInit(t *testing.T) {
 
 func TestCreateJobs(t *testing.T) {
 	job1ID := "Job1_test"
-	job2ID := "Job2_test"
+	job2ID := "job2_test"
 	job_data := getFileAsString("job.xml")
 
 	job1, err := jenkins.CreateJob(job_data, job1ID)
