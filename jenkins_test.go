@@ -175,16 +175,6 @@ func TestGetSingleView(t *testing.T) {
 	assert.Equal(t, view2.Raw.Name, "test_list_view")
 }
 
-func TestConcurrentRequests(t *testing.T) {
-	for i := 0; i <= 16; i++ {
-		go func() {
-			jenkins.GetAllJobs()
-			jenkins.GetAllViews()
-			jenkins.GetAllNodes()
-		}()
-	}
-}
-
 func TestCreateFolder(t *testing.T) {
 	folder1ID := "folder1_test"
 	folder2ID := "folder2_test"
@@ -230,6 +220,16 @@ func TestGetFolder(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, folder2)
 	assert.Equal(t, folder2ID, folder2.GetName())
+}
+
+func TestConcurrentRequests(t *testing.T) {
+	for i := 0; i <= 16; i++ {
+		go func() {
+			jenkins.GetAllJobs()
+			jenkins.GetAllViews()
+			jenkins.GetAllNodes()
+		}()
+	}
 }
 
 func getFileAsString(path string) string {
