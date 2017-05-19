@@ -8,8 +8,8 @@ go:
   - tip
 
 before_install:
-  - docker pull jenkins:1.651.1
-  - docker run -d --name=jenkins -p 8080:8080 jenkins:1.651.1
+  - docker build . --tag=gojenkins
+  - docker run -d --name=jenkins -p 8080:8080 gojenkins
   - sleep 30
   - docker inspect -f {{.State.Running}} jenkins | grep -q true
 
