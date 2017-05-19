@@ -9,7 +9,7 @@ go:
 
 before_install:
   - docker build . --tag=gojenkins
-  - docker run -d --name=jenkins -p 8080:8080 gojenkins
+  - docker run -d --name=jenkins -p 8080:8080 --env JAVA_OPTS=-Djenkins.install.runSetupWizard=false gojenkins
   - sleep 30
   - docker inspect -f {{.State.Running}} jenkins | grep -q true
 
