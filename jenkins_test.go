@@ -185,6 +185,53 @@ func TestConcurrentRequests(t *testing.T) {
 	}
 }
 
+func TestCreateFolder(t *testing.T) {
+	folder1ID := "folder1_test"
+	folder2ID := "folder2_test"
+
+	folder1, err := jenkins.CreateFolder(folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder1)
+	assert.Equal(t, folder1ID, folder1.GetName())
+
+	folder2, err := jenkins.CreateFolder(folder2ID, folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder2)
+	assert.Equal(t, folder2ID, folder2.GetName())
+}
+
+func TestCreateJobInFolder(t *testing.T) {
+	jobName := "Job_test"
+	job_data := getFileAsString("job.xml")
+
+	job1, err := jenkins.CreateJobInFolder(job_data, jobName, "folder1_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, job1)
+	assert.Equal(t, "Some Job Description", job1.GetDescription())
+	assert.Equal(t, jobName, job1.GetName())
+
+	job2, err := jenkins.CreateJobInFolder(job_data, jobName, "folder1_test", "folder2_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, job2)
+	assert.Equal(t, "Some Job Description", job2.GetDescription())
+	assert.Equal(t, jobName, job2.GetName())
+}
+
+func TestGetFolder(t *testing.T) {
+	folder1ID := "folder1_test"
+	folder2ID := "folder2_test"
+
+	folder1, err := jenkins.GetFolder(folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder1)
+	assert.Equal(t, folder1ID, folder1.GetName())
+
+	folder2, err := jenkins.GetFolder(folder2ID, folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder2)
+	assert.Equal(t, folder2ID, folder2.GetName())
+}
+
 func getFileAsString(path string) string {
 	buf, err := ioutil.ReadFile("_tests/" + path)
 	if err != nil {

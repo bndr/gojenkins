@@ -210,6 +210,32 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+// Create a new folder
+// This folder can be nested in other parent folders
+// Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
+func (j *Jenkins) CreateFolder(name string, parents ...string) (*Folder, error) {
+	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
+	folder, err := folderObj.Create(name)
+	if err != nil {
+		return nil, err
+	}
+	return folder, nil
+}
+
+// Create a new job in the folder
+// Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
+func (j *Jenkins) CreateJobInFolder(config string, jobName string, parentIDs ...string) (*Job, error) {
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
+	qr := map[string]string{
+		"name": jobName,
+	}
+	job, err := jobObj.Create(config, qr)
+	if err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
 // Create a new job from config File
 // Method takes XML string as first parameter, and if the name is not specified in the config file
 // takes name as string as second parameter
@@ -322,6 +348,18 @@ func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
 	}
 	if status == 200 {
 		return &job, nil
+	}
+	return nil, errors.New(strconv.Itoa(status))
+}
+
+func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
+	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
+	status, err := folder.Poll()
+	if err != nil {
+		return nil, fmt.Errorf("trouble polling folder: %v", err)
+	}
+	if status == 200 {
+		return &folder, nil
 	}
 	return nil, errors.New(strconv.Itoa(status))
 }
