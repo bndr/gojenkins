@@ -132,12 +132,6 @@ func (j *Jenkins) Info() (*ExecutorResponse, error) {
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
 func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) (*Node, error) {
-	node, _ := j.GetNode(name)
-
-	if node != nil {
-		return node, nil
-	}
-
 	params := map[string]string{"method": "JNLPLauncher"}
 
 	if len(options) > 0 {
@@ -175,7 +169,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		return nil, errors.New("launcher method not supported")
 	}
 
-	node = &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
 	MODE := "NORMAL"
 	qr := map[string]string{
@@ -518,13 +512,6 @@ func (j *Jenkins) GetAllViews() ([]*View, error) {
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
-	exists, err := j.GetView(name)
-	if err != nil {
-		return nil, err
-	}
-	if exists.Raw.Name != "" {
-		return exists, errors.New("View already exists")
-	}
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
