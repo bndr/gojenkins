@@ -180,6 +180,52 @@ if status {
 
 ```
 
+### Create nested Folders and create Jobs in them
+
+```go
+
+// Create parent folder
+pFolder, err := jenkins.CreateFolder("parentFolder")
+if err != nil {
+  panic(err)
+}
+
+// Create child folder in parent folder
+cFolder, err := jenkins.CreateFolder("childFolder", pFolder.GetName())
+if err != nil {
+  panic(err)
+}
+
+// Create job in child folder
+configString := `<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders/>
+  <publishers/>
+  <buildWrappers/>
+</project>`
+
+job, err := jenkins.CreateJobInFolder(configString, "jobInFolder", pFolder.GetName(), cFolder.GetName())
+if err != nil {
+  panic(err)
+}
+
+if job != nil {
+	fmt.Println("Job has been created in child folder")
+}
+
+```
+
 ### Get All Artifacts for a Build and Save them to a folder
 
 ```go
