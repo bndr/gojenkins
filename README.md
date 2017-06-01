@@ -174,7 +174,7 @@ if err != nil {
 
 status, err := view.AddJob("jobName")
 
-if status {
+if status != nil {
   fmt.Println("Job has been added to view")
 }
 
