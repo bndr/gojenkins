@@ -144,6 +144,7 @@ type BuildResponse struct {
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`
 	Number            int64       `json:"number"`
+	QueueId           int64       `json:"queueId"`
 	Result            string      `json:"result"`
 	Timestamp         int64       `json:"timestamp"`
 	URL               string      `json:"url"`
