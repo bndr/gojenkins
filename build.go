@@ -212,6 +212,16 @@ func (b *Build) GetConsoleOutput() string {
 	return content
 }
 
+func (b *Build) GetConsoleOutputFromIndex(startID int64) string {
+        strstart := strconv.FormatInt(startID, 10)
+        url := b.Base + "/logText/progressiveText"
+        var content string
+        querymap := make(map[string]string)
+        querymap["start"] = strstart
+        b.Jenkins.Requester.Get(url, &content, querymap)
+        return content
+}
+
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
 	_, err := b.Poll()
 	if err != nil {
