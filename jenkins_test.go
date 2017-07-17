@@ -46,13 +46,13 @@ func TestCreateNodes(t *testing.T) {
 	jnlp := map[string]string{"method": "JNLPLauncher"}
 	ssh := map[string]string{"method": "SSHLauncher"}
 
-	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", jnlp)
+	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
 	assert.Equal(t, id1, node1.GetName())
 
-	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", ssh)
+	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
 	assert.Equal(t, id2, node2.GetName())
 
-	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins")
+	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
 	assert.Equal(t, id3, node3.GetName())
 }
 
@@ -122,6 +122,24 @@ func TestGetLabel(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, label.GetName(), "test_label")
 	assert.Equal(t, 0, len(label.GetNodes()))
+
+	label, err = jenkins.GetLabel("jdk7")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "jdk7")
+	assert.Equal(t, 1, len(label.GetNodes()))
+	assert.Equal(t, "node3_test", label.GetNodes()[0].NodeName)
+
+	label, err = jenkins.GetLabel("jdk8")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "jdk8")
+	assert.Equal(t, 1, len(label.GetNodes()))
+	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+
+	label, err = jenkins.GetLabel("docker")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "docker")
+	assert.Equal(t, 1, len(label.GetNodes()))
+	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
 }
 
 func TestBuildMethods(t *testing.T) {
