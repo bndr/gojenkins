@@ -346,7 +346,7 @@ func (j *Jenkins) GetJobXML(id string, parentIDs ...string) (string, error) {
 	}
 
 	body, _ := ioutil.ReadAll(response.Body)
-	return "", fmt.Errorf("status code: %d, body: %s", response.StatusCode, string(body))
+	return "", fmt.Errorf("status code: %d, body: %s, headers: %#v", response.StatusCode, string(body), response.Header)
 }
 
 func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {

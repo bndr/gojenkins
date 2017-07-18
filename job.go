@@ -300,7 +300,7 @@ func (j *Job) Delete() (bool, error) {
 	}
 	if resp.StatusCode != 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return false, fmt.Errorf("status code: %d, body: %s", resp.StatusCode, string(body))
+		return false, fmt.Errorf("status code: %d, body: %s, headers: %#v", resp.StatusCode, string(body), resp.Header)
 	}
 	return true, nil
 }
@@ -330,7 +330,7 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	return nil, fmt.Errorf("status code: %d, body: %s", resp.StatusCode, string(body))
+	return nil, fmt.Errorf("status code: %d, body: %s, headers: %#v", resp.StatusCode, string(body), resp.Header)
 }
 
 func (j *Job) Copy(destinationName string) (*Job, error) {
