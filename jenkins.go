@@ -334,6 +334,18 @@ func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+func (j *Jenkins) GetJobXML(id string, parentIDs ...string) (string, error) {
+	var job string
+	response, err := j.Requester.GetXML("/job/"+strings.Join(append(parentIDs, id), "/")+"/config.xml", &job, nil)
+	if err != nil {
+		return "", fmt.Errorf("error getting job XML: %v", err)
+	}
+	if response.StatusCode == http.StatusOK {
+		return job, nil
+	}
+	return "", errors.New(strconv.Itoa(response.StatusCode))
+}
+
 func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
 	status, err := job.Poll()
