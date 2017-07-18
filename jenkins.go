@@ -269,8 +269,8 @@ func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 }
 
 // Delete a job.
-func (j *Jenkins) DeleteJob(name string) (bool, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+func (j *Jenkins) DeleteJob(name string, parentIDs ...string) (bool, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, name), "/")}
 	return job.Delete()
 }
 
