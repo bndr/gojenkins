@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"path"
 	"strconv"
@@ -69,18 +70,18 @@ type JobResponse struct {
 		IconUrl       string `json:"iconUrl"`
 		Score         int64  `json:"score"`
 	} `json:"healthReport"`
-	InQueue               bool     `json:"inQueue"`
-	KeepDependencies      bool     `json:"keepDependencies"`
-	LastBuild             JobBuild `json:"lastBuild"`
-	LastCompletedBuild    JobBuild `json:"lastCompletedBuild"`
-	LastFailedBuild       JobBuild `json:"lastFailedBuild"`
-	LastStableBuild       JobBuild `json:"lastStableBuild"`
-	LastSuccessfulBuild   JobBuild `json:"lastSuccessfulBuild"`
-	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
-	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
-	Name                  string   `json:"name"`
-	SubJobs               []InnerJob    `json:"jobs"`
-	NextBuildNumber       int64    `json:"nextBuildNumber"`
+	InQueue               bool       `json:"inQueue"`
+	KeepDependencies      bool       `json:"keepDependencies"`
+	LastBuild             JobBuild   `json:"lastBuild"`
+	LastCompletedBuild    JobBuild   `json:"lastCompletedBuild"`
+	LastFailedBuild       JobBuild   `json:"lastFailedBuild"`
+	LastStableBuild       JobBuild   `json:"lastStableBuild"`
+	LastSuccessfulBuild   JobBuild   `json:"lastSuccessfulBuild"`
+	LastUnstableBuild     JobBuild   `json:"lastUnstableBuild"`
+	LastUnsuccessfulBuild JobBuild   `json:"lastUnsuccessfulBuild"`
+	Name                  string     `json:"name"`
+	SubJobs               []InnerJob `json:"jobs"`
+	NextBuildNumber       int64      `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
@@ -298,7 +299,8 @@ func (j *Job) Delete() (bool, error) {
 		return false, err
 	}
 	if resp.StatusCode != 200 {
-		return false, errors.New(strconv.Itoa(resp.StatusCode))
+		body, _ := ioutil.ReadAll(resp.Body)
+		return false, fmt.Errorf("status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 	return true, nil
 }
@@ -326,7 +328,9 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 		j.Poll()
 		return j, nil
 	}
-	return nil, errors.New(strconv.Itoa(resp.StatusCode))
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	return nil, fmt.Errorf("status code: %d, body: %s", resp.StatusCode, string(body))
 }
 
 func (j *Job) Copy(destinationName string) (*Job, error) {

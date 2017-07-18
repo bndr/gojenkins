@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -343,7 +344,9 @@ func (j *Jenkins) GetJobXML(id string, parentIDs ...string) (string, error) {
 	if response.StatusCode == http.StatusOK {
 		return job, nil
 	}
-	return "", errors.New(strconv.Itoa(response.StatusCode))
+
+	body, _ := ioutil.ReadAll(response.Body)
+	return "", fmt.Errorf("status code: %d, body: %s", response.StatusCode, string(body))
 }
 
 func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
