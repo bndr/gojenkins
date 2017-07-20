@@ -129,9 +129,10 @@ func (j *Jenkins) Info() (*ExecutorResponse, error) {
 
 // Create a new Node
 // Can be JNLPLauncher or SSHLauncher
-// Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", map[string]string{"method": "JNLPLauncher"})
+// Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
-func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, options ...interface{}) (*Node, error) {
+// Multiple labels should be separated by blanks
+func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
 	params := map[string]string{"method": "JNLPLauncher"}
 
 	if len(options) > 0 {
@@ -182,6 +183,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 			"numExecutors":       numExecutors,
 			"mode":               MODE,
 			"type":               NODE_TYPE,
+			"labelString":        label,
 			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
 			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
 			"launcher":           launcher,
