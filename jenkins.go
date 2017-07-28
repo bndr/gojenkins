@@ -90,7 +90,24 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+	if err != nil {
+		return nil, err
+	}
 
+	j.Version = rsp.Header.Get("X-Jenkins")
+	if j.Raw == nil {
+		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
+	}
+
+	return j, nil
+}
+
+func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
+	j.initLoggers()
+
+	j.Requester.Client = client
+
+	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err != nil {
 		return nil, err
 	}
