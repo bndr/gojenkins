@@ -149,9 +149,9 @@ func (n *Node) SetOnline() (bool, error) {
 	return true, nil
 }
 
-func (n *Node) SetOffline() (bool, error) {
+func (n *Node) SetOffline(options ...interface{}) (bool, error) {
 	if !n.Raw.Offline {
-		return n.ToggleTemporarilyOffline()
+		return n.ToggleTemporarilyOffline(options...)
 	}
 	return false, errors.New("Node already Offline")
 }
