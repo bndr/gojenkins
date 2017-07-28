@@ -108,16 +108,12 @@ func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
 	j.Requester.Client = client
 
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
-	if err != nil {
-		return nil, err
+
+	if err == nil {
+		j.Version = rsp.Header.Get("X-Jenkins")
 	}
 
-	j.Version = rsp.Header.Get("X-Jenkins")
-	if j.Raw == nil {
-		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
-	}
-
-	return j, nil
+	return j, err
 }
 
 func (j *Jenkins) initLoggers() {
