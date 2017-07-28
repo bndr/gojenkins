@@ -499,8 +499,8 @@ func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 }
 
 func (j *Jenkins) GetView(name string) (*View, error) {
-	url := "/view/" + name
-	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
+	u := "/view/" + name
+	view := View{Jenkins: j, Raw: new(ViewResponse), Base: u}
 	_, err := view.Poll()
 	if err != nil {
 		return nil, err
