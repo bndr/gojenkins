@@ -39,9 +39,8 @@ type APIRequest struct {
 	Suffix   string
 }
 
-func (ar *APIRequest) SetHeader(key string, value string) *APIRequest {
+func (ar *APIRequest) SetHeader(key string, value string) {
 	ar.Headers.Set(key, value)
-	return ar
 }
 
 func NewAPIRequest(method string, endpoint string, payload io.Reader) *APIRequest {
