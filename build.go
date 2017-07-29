@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+// Build represents a specific build instance in Jenkins.
 type Build struct {
 	Raw     *BuildResponse
 	Job     *Job

@@ -21,14 +21,15 @@ const (
 )
 
 func setupTests(t *testing.T) {
-	jenkins = CreateJenkins(BaseURL, UserName, Password)
-	_, err := jenkins.InitWithClient(http.DefaultClient)
-	assert.Nil(t, err)
+	if jenkins == nil {
+		jenkins = CreateJenkins(BaseURL, UserName, Password)
+		_, err := jenkins.InitWithClient(http.DefaultClient)
+		assert.Nil(t, err)
+	}
 }
 
 func TestInit(t *testing.T) {
 	setupTests(t)
-	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
 	_, err := jenkins.Init()
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
@@ -207,7 +208,7 @@ func TestGetPlugins(t *testing.T) {
 }
 
 func TestGetViews(t *testing.T) {
-	//setupTests(t)
+	setupTests(t)
 	views, _ := jenkins.GetAllViews()
 	assert.Equal(t, len(views), 3)
 	assert.Equal(t, len(views[0].Raw.Jobs), 2)
