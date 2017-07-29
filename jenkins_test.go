@@ -21,7 +21,7 @@ const (
 
 func createClient(t *testing.T) {
 	if jenkins == nil {
-		jenkins = CreateJenkins(BaseURL, UserName, Password)
+		jenkins = New(BaseURL, UserName, Password)
 		_, err := jenkins.Init()
 		assert.Nil(t, err)
 	}

@@ -46,11 +46,10 @@ var (
 )
 
 // Init Method. Should be called after creating a Jenkins Instance.
-// e.g jenkins := CreateJenkins("url").Init()
+// e.g jenkins := New("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	j.Raw = new(ExecutorResponse)
 	j.Requester.Client = http.DefaultClient
 	// Check Connection
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
@@ -63,7 +62,6 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 // InitWithClient creates a Jenkins client instance with a given http.Client from the user.
 func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
 	j.initLoggers()
-	j.Raw = new(ExecutorResponse)
 	j.Requester.Client = client
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err == nil {
@@ -514,10 +512,10 @@ func (j *Jenkins) Poll() (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Creates a new Jenkins Instance
-// Optional parameters are: username, password
+// New creates a new Jenkins Instance.
+// Optional parameters are: username, password.
 // After creating an instance call init method.
-func CreateJenkins(base string, auth ...interface{}) *Jenkins {
+func New(base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
@@ -527,5 +525,6 @@ func CreateJenkins(base string, auth ...interface{}) *Jenkins {
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
+	j.Raw = new(ExecutorResponse)
 	return j
 }
