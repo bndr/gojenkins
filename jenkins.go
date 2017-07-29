@@ -515,15 +515,18 @@ func (j *Jenkins) Poll() (int, error) {
 // New creates a new Jenkins Instance.
 // Optional parameters are: username, password.
 // After creating an instance call init method.
-func New(base string, auth ...interface{}) *Jenkins {
+func New(base, username, password string) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{BaseURL: base}
-	if len(auth) == 2 {
-		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
+	j.Requester = &Requester{
+		BaseURL: base,
+		BasicAuth: &BasicAuth{
+			Username: username,
+			Password: password,
+		},
 	}
 	j.Raw = new(ExecutorResponse)
 	return j
