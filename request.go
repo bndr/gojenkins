@@ -51,11 +51,9 @@ func NewAPIRequest(method string, endpoint string, payload io.Reader) *APIReques
 }
 
 type Requester struct {
-	Base      string
+	BaseURL   string
 	BasicAuth *BasicAuth
 	Client    *http.Client
-	CACert    []byte
-	SslVerify bool
 }
 
 func (r *Requester) SetCrumb(ar *APIRequest) error {
@@ -143,14 +141,6 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 	return output
 }
 
-//Add auth on redirect if required.
-func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
-	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
-	}
-	return nil
-}
-
 func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
 	if !strings.HasSuffix(ar.Endpoint, "/") && ar.Method != "POST" {
 		ar.Endpoint += "/"
@@ -158,7 +148,7 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 
 	fileUpload := false
 	var files []string
-	URL, err := url.Parse(r.Base + ar.Endpoint + ar.Suffix)
+	URL, err := url.Parse(r.BaseURL + ar.Endpoint + ar.Suffix)
 
 	if err != nil {
 		return nil, err
@@ -223,10 +213,6 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
 	}
 
 	for k := range ar.Headers {

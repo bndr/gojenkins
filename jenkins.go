@@ -521,7 +521,7 @@ func New(base string, auth ...interface{}) *Jenkins {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true}
+	j.Requester = &Requester{BaseURL: base}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
