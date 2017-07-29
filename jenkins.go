@@ -12,29 +12,26 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-// Gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
+// Package gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
 package gojenkins
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 )
 
-// Basic Authentication
+// BasicAuth represents Basic Authentication
 type BasicAuth struct {
 	Username string
 	Password string
 }
 
+// Jenkins represents a Jenkins client connection
 type Jenkins struct {
 	Server    string
 	Version   string
@@ -42,7 +39,6 @@ type Jenkins struct {
 	Requester *Requester
 }
 
-// Loggers
 var (
 	Info    *log.Logger
 	Warning *log.Logger
@@ -54,65 +50,23 @@ var (
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	// Skip SSL Verification?
-	tlsCfg := &tls.Config{
-		InsecureSkipVerify: !j.Requester.SslVerify,
-	}
-	if j.Requester.CACert != nil {
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM(j.Requester.CACert)
-		tlsCfg.RootCAs = pool
-		// always verify certs if custom ca cert is used.
-		tlsCfg.InsecureSkipVerify = false
-	}
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	if j.Requester.Client == nil {
-		cookies, _ := cookiejar.New(nil)
-
-		if os.Getenv("HTTP_PROXY") != "" {
-			proxyUrl, _ := url.Parse(os.Getenv("HTTP_PROXY"))
-			tr.Proxy = http.ProxyURL(proxyUrl)
-		}
-
-		client := &http.Client{
-			Transport: tr,
-			Jar:       cookies,
-			// Function to add auth on redirect.
-			CheckRedirect: j.Requester.redirectPolicyFunc,
-		}
-
-		j.Requester.Client = client
-	}
-
+	j.Requester.Client = http.DefaultClient
 	// Check Connection
-	j.Raw = new(ExecutorResponse)
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	j.Version = rsp.Header.Get("X-Jenkins")
-	if j.Raw == nil {
-		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
-	}
-
-	return j, nil
-}
-
-func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
-	j.initLoggers()
-
-	j.Requester.Client = client
-
-	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
-
 	if err == nil {
 		j.Version = rsp.Header.Get("X-Jenkins")
 	}
+	return j, err
+}
 
+// InitWithClient creates a Jenkins client instance with a given http.Client from the user.
+func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
+	j.initLoggers()
+	j.Requester.Client = client
+	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+	if err == nil {
+		j.Version = rsp.Header.Get("X-Jenkins")
+	}
 	return j, err
 }
 
