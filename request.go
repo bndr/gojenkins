@@ -126,11 +126,6 @@ func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring
 	return r.Do(ar, responseStruct, querystring)
 }
 
-func (r *Requester) SetClient(client *http.Client) *Requester {
-	r.Client = client
-	return r
-}
-
 func (r *Requester) parseQueryString(queries map[string]string) string {
 	output := ""
 	delimiter := "?"
