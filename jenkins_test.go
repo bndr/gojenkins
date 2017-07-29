@@ -20,7 +20,7 @@ const (
 	Password = "admin"
 )
 
-func setupTests(t *testing.T) {
+func createClient(t *testing.T) {
 	if jenkins == nil {
 		jenkins = CreateJenkins(BaseURL, UserName, Password)
 		_, err := jenkins.InitWithClient(http.DefaultClient)
@@ -29,13 +29,13 @@ func setupTests(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	_, err := jenkins.Init()
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
 
 func TestCreateJobs(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	job1ID := "Job1_test"
 	job2ID := "job2_test"
 	job_data := getFileAsString("job.xml")
@@ -53,8 +53,7 @@ func TestCreateJobs(t *testing.T) {
 }
 
 func TestCreateNodes(t *testing.T) {
-
-	setupTests(t)
+	createClient(t)
 	id1 := "node1_test"
 	id2 := "node2_test"
 	id3 := "node3_test"
@@ -73,7 +72,7 @@ func TestCreateNodes(t *testing.T) {
 }
 
 func TestCreateBuilds(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
 		item.InvokeSimple(map[string]string{"param1": "param1"})
@@ -90,7 +89,7 @@ func TestCreateBuilds(t *testing.T) {
 }
 
 func TestParseBuildHistory(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	r, err := os.Open("_tests/build_history.txt")
 	if err != nil {
 		panic(err)
@@ -100,7 +99,7 @@ func TestParseBuildHistory(t *testing.T) {
 }
 
 func TestCreateViews(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	list_view, err := jenkins.CreateView("test_list_view", LIST_VIEW)
 	assert.Nil(t, err)
 	assert.Equal(t, "test_list_view", list_view.GetName())
@@ -116,21 +115,21 @@ func TestCreateViews(t *testing.T) {
 }
 
 func TestGetAllJobs(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	jobs, _ := jenkins.GetAllJobs()
 	assert.Equal(t, 2, len(jobs))
 	assert.Equal(t, jobs[0].Raw.Color, "blue")
 }
 
 func TestGetAllNodes(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	nodes, _ := jenkins.GetAllNodes()
 	assert.Equal(t, 4, len(nodes))
 	assert.Equal(t, nodes[0].GetName(), "master")
 }
 
 func TestGetAllBuilds(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	builds, _ := jenkins.GetAllBuildIds("Job1_test")
 	for _, b := range builds {
 		build, _ := jenkins.GetBuild("Job1_test", b.Number)
@@ -140,7 +139,7 @@ func TestGetAllBuilds(t *testing.T) {
 }
 
 func TestGetLabel(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	label, err := jenkins.GetLabel("test_label")
 	assert.Nil(t, err)
 	assert.Equal(t, label.GetName(), "test_label")
@@ -166,7 +165,7 @@ func TestGetLabel(t *testing.T) {
 }
 
 func TestBuildMethods(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	job, _ := jenkins.GetJob("Job1_test")
 	build, _ := job.GetLastBuild()
 	params := build.GetParameters()
@@ -174,7 +173,7 @@ func TestBuildMethods(t *testing.T) {
 }
 
 func TestGetSingleJob(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	job, _ := jenkins.GetJob("Job1_test")
 	isRunning, _ := job.IsRunning()
 	config, err := job.GetConfig()
@@ -184,7 +183,7 @@ func TestGetSingleJob(t *testing.T) {
 }
 
 func TestEnableDisableJob(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	job, _ := jenkins.GetJob("Job1_test")
 	result, _ := job.Disable()
 	assert.Equal(t, true, result)
@@ -193,7 +192,7 @@ func TestEnableDisableJob(t *testing.T) {
 }
 
 func TestCopyDeleteJob(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	job, _ := jenkins.GetJob("Job1_test")
 	jobCopy, _ := job.Copy("Job1_test_copy")
 	assert.Equal(t, jobCopy.GetName(), "Job1_test_copy")
@@ -202,20 +201,20 @@ func TestCopyDeleteJob(t *testing.T) {
 }
 
 func TestGetPlugins(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	plugins, _ := jenkins.GetPlugins(3)
 	assert.Equal(t, 5, plugins.Count())
 }
 
 func TestGetViews(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	views, _ := jenkins.GetAllViews()
 	assert.Equal(t, len(views), 3)
 	assert.Equal(t, len(views[0].Raw.Jobs), 2)
 }
 
 func TestGetSingleView(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	view, _ := jenkins.GetView("All")
 	view2, _ := jenkins.GetView("test_list_view")
 	assert.Equal(t, len(view.Raw.Jobs), 2)
@@ -224,7 +223,7 @@ func TestGetSingleView(t *testing.T) {
 }
 
 func TestCreateFolder(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	folder1ID := "folder1_test"
 	folder2ID := "folder2_test"
 
@@ -240,7 +239,7 @@ func TestCreateFolder(t *testing.T) {
 }
 
 func TestCreateJobInFolder(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	jobName := "Job_test"
 	job_data := getFileAsString("job.xml")
 
@@ -258,7 +257,7 @@ func TestCreateJobInFolder(t *testing.T) {
 }
 
 func TestGetFolder(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	folder1ID := "folder1_test"
 	folder2ID := "folder2_test"
 
@@ -274,7 +273,7 @@ func TestGetFolder(t *testing.T) {
 }
 
 func TestConcurrentRequests(t *testing.T) {
-	setupTests(t)
+	createClient(t)
 	for i := 0; i <= 16; i++ {
 		go func() {
 			jenkins.GetAllJobs()
