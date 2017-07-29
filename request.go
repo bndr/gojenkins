@@ -214,6 +214,7 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 		req.Header.Add(k, ar.Headers.Get(k))
 	}
 
+	req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
 	if response, err := r.Client.Do(req); err != nil {
 		return nil, err
 	} else {
