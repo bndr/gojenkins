@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 	"github.com/stretchr/testify/assert"
-	"net/http"
 )
 
 var (
@@ -23,7 +22,7 @@ const (
 func createClient(t *testing.T) {
 	if jenkins == nil {
 		jenkins = CreateJenkins(BaseURL, UserName, Password)
-		_, err := jenkins.InitWithClient(http.DefaultClient)
+		_, err := jenkins.Init()
 		assert.Nil(t, err)
 	}
 }

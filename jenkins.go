@@ -50,6 +50,7 @@ var (
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
+	j.Raw = new(ExecutorResponse)
 	j.Requester.Client = http.DefaultClient
 	// Check Connection
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
@@ -62,6 +63,7 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 // InitWithClient creates a Jenkins client instance with a given http.Client from the user.
 func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
 	j.initLoggers()
+	j.Raw = new(ExecutorResponse)
 	j.Requester.Client = client
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err == nil {
