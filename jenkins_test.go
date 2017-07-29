@@ -207,7 +207,7 @@ func TestGetPlugins(t *testing.T) {
 }
 
 func TestGetViews(t *testing.T) {
-	setupTests(t)
+	//setupTests(t)
 	views, _ := jenkins.GetAllViews()
 	assert.Equal(t, len(views), 3)
 	assert.Equal(t, len(views[0].Raw.Jobs), 2)
