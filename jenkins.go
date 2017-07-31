@@ -54,43 +54,11 @@ var (
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	// Skip SSL Verification?
-	tlsCfg := &tls.Config{
-		InsecureSkipVerify: !j.Requester.SslVerify,
-	}
-	if j.Requester.CACert != nil {
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM(j.Requester.CACert)
-		tlsCfg.RootCAs = pool
-		// always verify certs if custom ca cert is used.
-		tlsCfg.InsecureSkipVerify = false
-	}
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	if j.Requester.Client == nil {
-		cookies, _ := cookiejar.New(nil)
-
-		if os.Getenv("HTTP_PROXY") != "" {
-			proxyUrl, _ := url.Parse(os.Getenv("HTTP_PROXY"))
-			tr.Proxy = http.ProxyURL(proxyUrl)
-		}
-
-		client := &http.Client{
-			Transport: tr,
-			Jar:       cookies,
-			// Function to add auth on redirect.
-			CheckRedirect: j.Requester.redirectPolicyFunc,
-		}
-
-		j.Requester.Client = client
-	}
+	j.Requester.Client = http.DefaultClient
 
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
-
 	if err != nil {
 		return nil, err
 	}
