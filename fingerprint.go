@@ -23,10 +23,10 @@ type Fingerprint struct {
 	Jenkins *Jenkins
 	Base    string
 	Id      string
-	Raw     *fingerPrintResponse
+	Raw     *FingerPrintResponse
 }
 
-type fingerPrintResponse struct {
+type FingerPrintResponse struct {
 	FileName string `json:"fileName"`
 	Hash     string `json:"hash"`
 	Original struct {
@@ -78,7 +78,7 @@ func (f Fingerprint) ValidateForBuild(filename string, build *Build) (bool, erro
 	return false, nil
 }
 
-func (f Fingerprint) GetInfo() (*fingerPrintResponse, error) {
+func (f Fingerprint) GetInfo() (*FingerPrintResponse, error) {
 	_, err := f.Poll()
 	if err != nil {
 		return nil, err

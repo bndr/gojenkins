@@ -150,7 +150,7 @@ type BuildResponse struct {
 	URL               string      `json:"url"`
 	MavenArtifacts    interface{} `json:"mavenArtifacts"`
 	MavenVersionUsed  string      `json:"mavenVersionUsed"`
-	Fingerprint       []fingerPrintResponse
+	Fingerprint       []FingerPrintResponse
 	Runs              []struct {
 		Number int64
 		URL    string

@@ -87,7 +87,7 @@ func (a Artifact) SaveToDir(dir string) (bool, error) {
 func (a Artifact) validateDownload(path string) (bool, error) {
 	localHash := a.getMD5local(path)
 
-	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(fingerPrintResponse)}
+	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(FingerPrintResponse)}
 
 	valid, err := fp.ValidateForBuild(a.FileName, a.Build)
 
