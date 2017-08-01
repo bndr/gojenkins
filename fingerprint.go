@@ -19,6 +19,7 @@ import (
 	"fmt"
 )
 
+// Fingerprint represents a Fingerprint
 type Fingerprint struct {
 	Jenkins *Jenkins
 	Base    string
@@ -45,6 +46,7 @@ type fingerPrintResponse struct {
 	} `json:"usage"`
 }
 
+// Valid returns if a fingerprint is valid
 func (f Fingerprint) Valid() (bool, error) {
 	status, err := f.Poll()
 
@@ -53,11 +55,12 @@ func (f Fingerprint) Valid() (bool, error) {
 	}
 
 	if status != 200 || f.Raw.Hash != f.Id {
-		return false, errors.New(fmt.Sprintf("Jenkins says %s is Invalid or the Status is unknown", f.Id))
+		return false, fmt.Errorf("Jenkins says %s is Invalid or the Status is unknown", f.Id)
 	}
 	return true, nil
 }
 
+// ValidateForBuild validates the fingerprint for a build
 func (f Fingerprint) ValidateForBuild(filename string, build *Build) (bool, error) {
 	valid, err := f.Valid()
 	if err != nil {
@@ -78,6 +81,7 @@ func (f Fingerprint) ValidateForBuild(filename string, build *Build) (bool, erro
 	return false, nil
 }
 
+// GetInfo gets a fingerprint's info
 func (f Fingerprint) GetInfo() (*fingerPrintResponse, error) {
 	_, err := f.Poll()
 	if err != nil {
@@ -86,6 +90,7 @@ func (f Fingerprint) GetInfo() (*fingerPrintResponse, error) {
 	return f.Raw, nil
 }
 
+// Poll polls a fingerprint
 func (f Fingerprint) Poll() (int, error) {
 	response, err := f.Jenkins.Requester.GetJSON(f.Base+f.Id, f.Raw, nil)
 	if err != nil {

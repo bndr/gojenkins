@@ -25,6 +25,8 @@ func makeJson(data interface{}) string {
 }
 
 // Check if element is present in a slice.
+// deadcode
+/*
 func inSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -33,3 +35,4 @@ func inSlice(a string, list []string) bool {
 	}
 	return false
 }
+*/

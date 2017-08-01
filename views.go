@@ -19,12 +19,14 @@ import (
 	"strconv"
 )
 
+// View represents a view
 type View struct {
 	Raw     *ViewResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// ViewResponse represents a View JSON response
 type ViewResponse struct {
 	Description string        `json:"description"`
 	Jobs        []InnerJob    `json:"jobs"`
@@ -34,14 +36,19 @@ type ViewResponse struct {
 }
 
 var (
-	LIST_VIEW      = "hudson.model.ListView"
-	NESTED_VIEW    = "hudson.plugins.nested_view.NestedView"
-	MY_VIEW        = "hudson.model.MyView"
+	// LIST_VIEW is the string matching list view
+	LIST_VIEW = "hudson.model.ListView"
+	// NESTED_VIEW is the string matching nested view
+	NESTED_VIEW = "hudson.plugins.nested_view.NestedView"
+	// MY_VIEW is the string matching a personal view
+	MY_VIEW = "hudson.model.MyView"
+	// DASHBOARD_VIEW is the string matching a dashboard view
 	DASHBOARD_VIEW = "hudson.plugins.view.dashboard.Dashboard"
-	PIPELINE_VIEW  = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
+	// PIPELINE_VIEW is the string matching a pipeline view
+	PIPELINE_VIEW = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
 )
 
-// Returns True if successfully added Job, otherwise false
+// AddJob adds a job. Returns True if successfully added Job, otherwise false
 func (v *View) AddJob(name string) (bool, error) {
 	url := "/addJobToView"
 	qr := map[string]string{"name": name}
@@ -55,7 +62,7 @@ func (v *View) AddJob(name string) (bool, error) {
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-// Returns True if successfully deleted Job, otherwise false
+// DeleteJob deletes a job. Returns True if successfully deleted Job, otherwise false
 func (v *View) DeleteJob(name string) (bool, error) {
 	url := "/removeJobFromView"
 	qr := map[string]string{"name": name}
@@ -69,22 +76,27 @@ func (v *View) DeleteJob(name string) (bool, error) {
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+// GetDescription gets a view's description
 func (v *View) GetDescription() string {
 	return v.Raw.Description
 }
 
+// GetJobs gets a view's jobs
 func (v *View) GetJobs() []InnerJob {
 	return v.Raw.Jobs
 }
 
+// GetName gets a view's name
 func (v *View) GetName() string {
 	return v.Raw.Name
 }
 
+//GetUrl gets a view's url
 func (v *View) GetUrl() string {
 	return v.Raw.URL
 }
 
+// Poll polls a view
 func (v *View) Poll() (int, error) {
 	response, err := v.Jenkins.Requester.GetJSON(v.Base, v.Raw, nil)
 	if err != nil {

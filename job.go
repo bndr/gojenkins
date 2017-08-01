@@ -25,23 +25,27 @@ import (
 	"strings"
 )
 
+// Job represents a jenkins job
 type Job struct {
 	Raw     *JobResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// JobBuild represents a jenkins job build
 type JobBuild struct {
 	Number int64
 	URL    string
 }
 
+// InnerJob represents an inner job
 type InnerJob struct {
 	Name  string `json:"name"`
 	Url   string `json:"url"`
 	Color string `json:"color"`
 }
 
+// ParameterDefinition represents a parameter definition
 type ParameterDefinition struct {
 	DefaultParameterValue struct {
 		Name  string      `json:"name"`
@@ -52,6 +56,7 @@ type ParameterDefinition struct {
 	Type        string `json:"type"`
 }
 
+// JobResponse represents a job response
 type JobResponse struct {
 	Actions            []generalObj
 	Buildable          bool `json:"buildable"`
@@ -79,7 +84,6 @@ type JobResponse struct {
 	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
 	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
 	Name                  string   `json:"name"`
-	SubJobs               []InnerJob    `json:"jobs"`
 	NextBuildNumber       int64    `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
@@ -93,28 +97,37 @@ type JobResponse struct {
 	Views            []ViewData  `json:"views"`
 }
 
+// SubJobs gets subjobs
+func (j *Job) SubJobs() []InnerJob {
+	return j.Raw.Jobs
+}
 func (j *Job) parentBase() string {
 	return j.Base[:strings.LastIndex(j.Base, "/job/")]
 }
 
+// History represents a build history
 type History struct {
 	BuildNumber    int
 	BuildStatus    string
 	BuildTimestamp int64
 }
 
+// GetName gets the name for a job
 func (j *Job) GetName() string {
 	return j.Raw.Name
 }
 
+// GetDescription gets the description for a job
 func (j *Job) GetDescription() string {
 	return j.Raw.Description
 }
 
+// GetDetails gets the details for a job
 func (j *Job) GetDetails() *JobResponse {
 	return j.Raw
 }
 
+// GetBuild gets a job build by id
 func (j *Job) GetBuild(id int64) (*Build, error) {
 	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
@@ -158,31 +171,37 @@ func (j *Job) getBuildByType(buildType string) (*Build, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetLastSuccessfulBuild gets the last successful build for a job
 func (j *Job) GetLastSuccessfulBuild() (*Build, error) {
 	return j.getBuildByType("lastSuccessfulBuild")
 }
 
+// GetFirstBuild gets the first build for a job
 func (j *Job) GetFirstBuild() (*Build, error) {
 	return j.getBuildByType("firstBuild")
 }
 
+// GetLastBuild gets the last build for a job
 func (j *Job) GetLastBuild() (*Build, error) {
 	return j.getBuildByType("lastBuild")
 }
 
+// GetLastStableBuild gets the last stable build for a job
 func (j *Job) GetLastStableBuild() (*Build, error) {
 	return j.getBuildByType("lastStableBuild")
 }
 
+// GetLastFailedBuild gets the last failed build for a job
 func (j *Job) GetLastFailedBuild() (*Build, error) {
 	return j.getBuildByType("lastFailedBuild")
 }
 
+// GetLastCompletedBuild gets the last completed build for a job
 func (j *Job) GetLastCompletedBuild() (*Build, error) {
 	return j.getBuildByType("lastCompletedBuild")
 }
 
-// Returns All Builds with Number and URL
+// GetAllBuildIds Returns All Builds with Number and URL
 func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	var buildsResp struct {
 		Builds []JobBuild `json:"allBuilds"`
@@ -194,21 +213,25 @@ func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	return buildsResp.Builds, nil
 }
 
+// GetSubJobsMetadata gets the metadata for subjobs
 func (j *Job) GetSubJobsMetadata() []InnerJob {
-	return j.Raw.SubJobs
+	return j.SubJobs()
 }
 
+// GetUpstreamJobsMetadata gets the metadata for upstream jobs
 func (j *Job) GetUpstreamJobsMetadata() []InnerJob {
 	return j.Raw.UpstreamProjects
 }
 
+// GetDownstreamJobsMetadata gets the metadata for downstream jobs
 func (j *Job) GetDownstreamJobsMetadata() []InnerJob {
 	return j.Raw.DownstreamProjects
 }
 
+// GetSubJobs gets the subjobs for a job
 func (j *Job) GetSubJobs() ([]*Job, error) {
-	jobs := make([]*Job, len(j.Raw.SubJobs))
-	for i, job := range j.Raw.SubJobs {
+	jobs := make([]*Job, len(j.SubJobs()))
+	for i, job := range j.SubJobs() {
 		ji, err := j.Jenkins.GetSubJob(j.GetName(), job.Name)
 		if err != nil {
 			return nil, err
@@ -218,10 +241,12 @@ func (j *Job) GetSubJobs() ([]*Job, error) {
 	return jobs, nil
 }
 
+// GetInnerJobsMetadata gets the metadata for a job's inner jobs
 func (j *Job) GetInnerJobsMetadata() []InnerJob {
 	return j.Raw.Jobs
 }
 
+// GetUpstreamJobs gets the jobs that are upstream of the current job
 func (j *Job) GetUpstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.UpstreamProjects))
 	for i, job := range j.Raw.UpstreamProjects {
@@ -234,6 +259,7 @@ func (j *Job) GetUpstreamJobs() ([]*Job, error) {
 	return jobs, nil
 }
 
+// GetDownstreamJobs gets the jobs that are downstream of the current job
 func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.DownstreamProjects))
 	for i, job := range j.Raw.DownstreamProjects {
@@ -246,6 +272,7 @@ func (j *Job) GetDownstreamJobs() ([]*Job, error) {
 	return jobs, nil
 }
 
+// GetInnerJob gets an inner job for a job by id
 func (j *Job) GetInnerJob(id string) (*Job, error) {
 	job := Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: j.Base + "/job/" + id}
 	status, err := job.Poll()
@@ -258,6 +285,7 @@ func (j *Job) GetInnerJob(id string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetInnerJobs gets all the inner jobs for the current job
 func (j *Job) GetInnerJobs() ([]*Job, error) {
 	jobs := make([]*Job, len(j.Raw.Jobs))
 	for i, job := range j.Raw.Jobs {
@@ -270,6 +298,7 @@ func (j *Job) GetInnerJobs() ([]*Job, error) {
 	return jobs, nil
 }
 
+// Enable enables the current job
 func (j *Job) Enable() (bool, error) {
 	resp, err := j.Jenkins.Requester.Post(j.Base+"/enable", nil, nil, nil)
 	if err != nil {
@@ -281,6 +310,7 @@ func (j *Job) Enable() (bool, error) {
 	return true, nil
 }
 
+// Disable disables the current job
 func (j *Job) Disable() (bool, error) {
 	resp, err := j.Jenkins.Requester.Post(j.Base+"/disable", nil, nil, nil)
 	if err != nil {
@@ -292,6 +322,7 @@ func (j *Job) Disable() (bool, error) {
 	return true, nil
 }
 
+// Delete deletes the current job
 func (j *Job) Delete() (bool, error) {
 	resp, err := j.Jenkins.Requester.Post(j.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
@@ -303,6 +334,7 @@ func (j *Job) Delete() (bool, error) {
 	return true, nil
 }
 
+// Rename renames the current job
 func (j *Job) Rename(name string) (bool, error) {
 	data := url.Values{}
 	data.Set("newName", name)
@@ -313,6 +345,7 @@ func (j *Job) Rename(name string) (bool, error) {
 	return true, nil
 }
 
+// Create creates the current job
 func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	var querystring map[string]string
 	if len(qr) > 0 {
@@ -329,6 +362,7 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+// Copy copies the current job to the destination name
 func (j *Job) Copy(destinationName string) (*Job, error) {
 	qr := map[string]string{"name": destinationName, "from": j.GetName(), "mode": "copy"}
 	resp, err := j.Jenkins.Requester.Post(j.parentBase()+"/createItem", nil, nil, qr)
@@ -346,6 +380,7 @@ func (j *Job) Copy(destinationName string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+// UpdateConfig updates the current job with the specified config
 func (j *Job) UpdateConfig(config string) error {
 
 	var querystring map[string]string
@@ -362,6 +397,7 @@ func (j *Job) UpdateConfig(config string) error {
 
 }
 
+// GetConfig gets the config for the current job
 func (j *Job) GetConfig() (string, error) {
 	var data string
 	_, err := j.Jenkins.Requester.GetXML(j.Base+"/config.xml", &data, nil)
@@ -371,6 +407,7 @@ func (j *Job) GetConfig() (string, error) {
 	return data, nil
 }
 
+// GetParameters gets the parameters for the current job
 func (j *Job) GetParameters() ([]ParameterDefinition, error) {
 	_, err := j.Poll()
 	if err != nil {
@@ -378,13 +415,12 @@ func (j *Job) GetParameters() ([]ParameterDefinition, error) {
 	}
 	var parameters []ParameterDefinition
 	for _, property := range j.Raw.Property {
-		for _, param := range property.ParameterDefinitions {
-			parameters = append(parameters, param)
-		}
+		parameters = append(parameters, property.ParameterDefinitions...)
 	}
 	return parameters, nil
 }
 
+// IsQueued returns the queued state of the current job
 func (j *Job) IsQueued() (bool, error) {
 	if _, err := j.Poll(); err != nil {
 		return false, err
@@ -392,6 +428,7 @@ func (j *Job) IsQueued() (bool, error) {
 	return j.Raw.InQueue, nil
 }
 
+// IsRunning returns if the current job is running
 func (j *Job) IsRunning() (bool, error) {
 	if _, err := j.Poll(); err != nil {
 		return false, err
@@ -403,6 +440,7 @@ func (j *Job) IsRunning() (bool, error) {
 	return lastBuild.IsRunning(), nil
 }
 
+// IsEnabled returns if the current job is enabled
 func (j *Job) IsEnabled() (bool, error) {
 	if _, err := j.Poll(); err != nil {
 		return false, err
@@ -410,10 +448,12 @@ func (j *Job) IsEnabled() (bool, error) {
 	return j.Raw.Color != "disabled", nil
 }
 
+// HasQueuedBuild returns if the current job has queued builds
 func (j *Job) HasQueuedBuild() {
 	panic("Not Implemented yet")
 }
 
+// InvokeSimple is a simple invocation method for the current job
 func (j *Job) InvokeSimple(params map[string]string) (int64, error) {
 	isQueued, err := j.IsQueued()
 	if err != nil {
@@ -463,6 +503,7 @@ func (j *Job) InvokeSimple(params map[string]string) (int64, error) {
 	return number, nil
 }
 
+// Invoke is a complex invocation method for the current job
 func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
 	isQueued, err := j.IsQueued()
 	if err != nil {
@@ -511,6 +552,7 @@ func (j *Job) Invoke(files []string, skipIfRunning bool, params map[string]strin
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+// Poll polls the current job
 func (j *Job) Poll() (int, error) {
 	response, err := j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
 	if err != nil {
@@ -519,6 +561,7 @@ func (j *Job) Poll() (int, error) {
 	return response.StatusCode, nil
 }
 
+// History returns the history for the current job
 func (j *Job) History() ([]*History, error) {
 	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
 	if err != nil {

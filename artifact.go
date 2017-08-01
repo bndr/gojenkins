@@ -24,7 +24,7 @@ import (
 	"path"
 )
 
-// Represents an Artifact
+// Artifact represents an Artifact
 type Artifact struct {
 	Jenkins  *Jenkins
 	Build    *Build
@@ -32,7 +32,7 @@ type Artifact struct {
 	Path     string
 }
 
-// Get raw byte data of Artifact
+// GetData gets raw byte data of Artifact
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
 	response, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
@@ -54,27 +54,30 @@ func (a Artifact) Save(path string) (bool, error) {
 	data, err := a.GetData()
 
 	if err != nil {
-		return false, errors.New("No Data received, not saving file.")
+		return false, errors.New("No Data received, not saving file")
 	}
 
 	if _, err = os.Stat(path); err == nil {
 		Warning.Println("Local Copy already exists, Overwriting...")
 	}
 
-	err = ioutil.WriteFile(path, data, 0644)
-	a.validateDownload(path)
+	writeErr := ioutil.WriteFile(path, data, 0644)
+	_, validateErr := a.validateDownload(path)
+	if validateErr != nil {
+		return false, validateErr
+	}
 
-	if err != nil {
-		return false, err
+	if writeErr != nil {
+		return false, writeErr
 	}
 	return true, nil
 }
 
-// Save Artifact to directory using Artifact filename.
+// SaveToDir saves Artifact to directory using Artifact filename.
 func (a Artifact) SaveToDir(dir string) (bool, error) {
 	if _, err := os.Stat(dir); err != nil {
 		Error.Printf("Can't Save Artifact. Directory %s does not exist...", dir)
-		return false, errors.New(fmt.Sprintf("Can't Save Artifact. Directory %s does not exist...", dir))
+		return false, fmt.Errorf("Can't Save Artifact. Directory %s does not exist", dir)
 	}
 	saved, err := a.Save(path.Join(dir, a.FileName))
 	if err != nil {
@@ -109,9 +112,9 @@ func (a Artifact) getMD5local(path string) string {
 	}
 	buffer := make([]byte, 2^20)
 	n, err := localFile.Read(buffer)
-	defer localFile.Close()
+	defer func() { _ = localFile.Close() }()
 	for err == nil {
-		io.WriteString(h, string(buffer[0:n]))
+		_, _ = io.WriteString(h, string(buffer[0:n]))
 		n, err = localFile.Read(buffer)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))

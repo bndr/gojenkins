@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-// Gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
+// Package gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
 package gojenkins
 
 import (
@@ -29,12 +29,13 @@ import (
 	"strings"
 )
 
-// Basic Authentication
+// BasicAuth represents http basic auth
 type BasicAuth struct {
 	Username string
 	Password string
 }
 
+// Jenkins represents a Jenkins
 type Jenkins struct {
 	Server    string
 	Version   string
@@ -97,7 +98,7 @@ func (j *Jenkins) Init() (*Jenkins, error) {
 
 	j.Version = rsp.Header.Get("X-Jenkins")
 	if j.Raw == nil {
-		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
+		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct")
 	}
 
 	return j, nil
@@ -117,7 +118,7 @@ func (j *Jenkins) initLoggers() {
 		log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-// Get Basic Information About Jenkins
+// Info gets Basic Information About Jenkins
 func (j *Jenkins) Info() (*ExecutorResponse, error) {
 	_, err := j.Requester.Get("/", j.Raw, nil)
 
@@ -127,7 +128,7 @@ func (j *Jenkins) Info() (*ExecutorResponse, error) {
 	return j.Raw, nil
 }
 
-// Create a new Node
+// CreateNode creates a new Node
 // Can be JNLPLauncher or SSHLauncher
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
@@ -251,7 +252,7 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 	return job, nil
 }
 
-// Rename a job.
+// RenameJob renames a job.
 // First parameter job old name, Second parameter job new name.
 func (j *Jenkins) RenameJob(job string, name string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
@@ -259,7 +260,7 @@ func (j *Jenkins) RenameJob(job string, name string) *Job {
 	return &jobObj
 }
 
-// Create a copy of a job.
+// CopyJob creates a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
@@ -270,13 +271,13 @@ func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 	return job.Copy(newName)
 }
 
-// Delete a job.
+// DeleteJob deletes a job.
 func (j *Jenkins) DeleteJob(name string) (bool, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
 	return job.Delete()
 }
 
-// Invoke a job.
+// BuildJob invokes a job.
 // First parameter job name, second parameter is optional Build parameters.
 func (j *Jenkins) BuildJob(name string, options ...interface{}) (int64, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
@@ -287,6 +288,7 @@ func (j *Jenkins) BuildJob(name string, options ...interface{}) (int64, error) {
 	return job.InvokeSimple(params)
 }
 
+// GetNode gets the named node
 func (j *Jenkins) GetNode(name string) (*Node, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	status, err := node.Poll()
@@ -299,6 +301,7 @@ func (j *Jenkins) GetNode(name string) (*Node, error) {
 	return nil, errors.New("No node found")
 }
 
+// GetLabel gets a label
 func (j *Jenkins) GetLabel(name string) (*Label, error) {
 	label := Label{Jenkins: j, Raw: new(LabelResponse), Base: "/label/" + name}
 	status, err := label.Poll()
@@ -311,6 +314,7 @@ func (j *Jenkins) GetLabel(name string) (*Label, error) {
 	return nil, errors.New("No label found")
 }
 
+// GetBuild gets a build
 func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	job, err := j.GetJob(jobName)
 	if err != nil {
@@ -324,6 +328,7 @@ func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	return build, nil
 }
 
+// GetJob gets a job by id with parents
 func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
 	status, err := job.Poll()
@@ -336,6 +341,7 @@ func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetSubJob gets a subjob
 func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
 	status, err := job.Poll()
@@ -348,6 +354,7 @@ func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetFolder gets a folder
 func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
 	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
 	status, err := folder.Poll()
@@ -360,6 +367,7 @@ func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetAllNodes gets all nodes
 func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	computers := new(Computers)
 
@@ -380,7 +388,7 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	return nodes, nil
 }
 
-// Get all builds Numbers and URLS for a specific job.
+// GetAllBuildIds Gets all builds Numbers and URLS for a specific job.
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
@@ -392,7 +400,7 @@ func (j *Jenkins) GetAllBuildIds(job string) ([]JobBuild, error) {
 	return jobObj.GetAllBuildIds()
 }
 
-// Get Only Array of Job Names, Color, URL
+// GetAllJobNames Gets Only Array of Job Names, Color, URL
 // Does not query each single Job.
 func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
@@ -405,7 +413,7 @@ func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
 	return exec.Raw.Jobs, nil
 }
 
-// Get All Possible Job Objects.
+// GetAllJobs Gets All Possible Job Objects.
 // Each job will be queried.
 func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
@@ -426,7 +434,7 @@ func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	return jobs, nil
 }
 
-// Returns a Queue
+// GetQueue Returns a Queue
 func (j *Jenkins) GetQueue() (*Queue, error) {
 	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
 	_, err := q.Poll()
@@ -436,17 +444,18 @@ func (j *Jenkins) GetQueue() (*Queue, error) {
 	return q, nil
 }
 
+// GetQueueUrl gets the queue url
 func (j *Jenkins) GetQueueUrl() string {
 	return "/queue"
 }
 
-// Get Artifact data by Hash
+// GetArtifactData Gets Artifact data by Hash
 func (j *Jenkins) GetArtifactData(id string) (*fingerPrintResponse, error) {
 	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
 	return fp.GetInfo()
 }
 
-// Returns the list of all plugins installed on the Jenkins server.
+// GetPlugins Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
 func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
@@ -457,7 +466,7 @@ func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 	return &p, nil
 }
 
-// Check if the plugin is installed on the server.
+// HasPlugin Checks if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
 func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
 	p, err := j.GetPlugins(1)
@@ -468,7 +477,7 @@ func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
 	return p.Contains(name), nil
 }
 
-// Verify Fingerprint
+// ValidateFingerprint Verifies a Fingerprint
 func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 	fp := Fingerprint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(fingerPrintResponse)}
 	valid, err := fp.Valid()
@@ -481,6 +490,7 @@ func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 	return false, nil
 }
 
+// GetView gets a view
 func (j *Jenkins) GetView(name string) (*View, error) {
 	url := "/view/" + name
 	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
@@ -491,6 +501,7 @@ func (j *Jenkins) GetView(name string) (*View, error) {
 	return &view, nil
 }
 
+// GetAllViews gets all views
 func (j *Jenkins) GetAllViews() ([]*View, error) {
 	_, err := j.Poll()
 	if err != nil {
@@ -503,7 +514,7 @@ func (j *Jenkins) GetAllViews() ([]*View, error) {
 	return views, nil
 }
 
-// Create View
+// CreateView creates a view
 // First Parameter - name of the View
 // Second parameter - Type
 // Possible Types:
@@ -537,6 +548,7 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
+// Poll polls a response from the jenkins servers
 func (j *Jenkins) Poll() (int, error) {
 	resp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err != nil {
@@ -545,7 +557,7 @@ func (j *Jenkins) Poll() (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Creates a new Jenkins Instance
+// CreateJenkins Creates a new Jenkins Instance
 // Optional parameters are: username, password
 // After creating an instance call init method.
 func CreateJenkins(base string, auth ...interface{}) *Jenkins {

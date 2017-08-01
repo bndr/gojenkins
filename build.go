@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+// Build represents a Jenkins build
 type Build struct {
 	Raw     *BuildResponse
 	Job     *Job
@@ -41,11 +42,13 @@ type branch struct {
 	Name string
 }
 
+// BuildRevision represents a Jenkins Build revision
 type BuildRevision struct {
 	SHA1   string   `json:"SHA1"`
 	Branch []branch `json:"branch"`
 }
 
+// Builds represents builds
 type Builds struct {
 	BuildNumber int64         `json:"buildNumber"`
 	BuildResult interface{}   `json:"buildResult"`
@@ -72,6 +75,7 @@ type generalObj struct {
 	UrlName                 string
 }
 
+// TestResult represents a test result
 type TestResult struct {
 	Duration  int64 `json:"duration"`
 	Empty     bool  `json:"empty"`
@@ -102,6 +106,7 @@ type TestResult struct {
 	} `json:"suites"`
 }
 
+// BuildResponse represents a BuildResponse
 type BuildResponse struct {
 	Actions   []generalObj
 	Artifacts []struct {
@@ -158,25 +163,33 @@ type BuildResponse struct {
 }
 
 // Builds
+
+// Info gets build info
 func (b *Build) Info() *BuildResponse {
 	return b.Raw
 }
 
+// GetActions gets build actions
 func (b *Build) GetActions() []generalObj {
 	return b.Raw.Actions
 }
 
+// GetUrl gets build url
 func (b *Build) GetUrl() string {
 	return b.Raw.URL
 }
 
+// GetBuildNumber gets a build number
 func (b *Build) GetBuildNumber() int64 {
 	return b.Raw.Number
 }
+
+// GetResult gets a build result
 func (b *Build) GetResult() string {
 	return b.Raw.Result
 }
 
+// GetArtifacts gets a build's artifacts
 func (b *Build) GetArtifacts() []Artifact {
 	artifacts := make([]Artifact, len(b.Raw.Artifacts))
 	for i, artifact := range b.Raw.Artifacts {
@@ -190,10 +203,12 @@ func (b *Build) GetArtifacts() []Artifact {
 	return artifacts
 }
 
+// GetCulprits gets a builds culprits
 func (b *Build) GetCulprits() []culprit {
 	return b.Raw.Culprits
 }
 
+// Stop stops a build
 func (b *Build) Stop() (bool, error) {
 	if b.IsRunning() {
 		response, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
@@ -205,6 +220,7 @@ func (b *Build) Stop() (bool, error) {
 	return true, nil
 }
 
+// GetConsoleOutput gets the console output from a build
 func (b *Build) GetConsoleOutput() string {
 	url := b.Base + "/consoleText"
 	var content string
@@ -212,6 +228,7 @@ func (b *Build) GetConsoleOutput() string {
 	return content
 }
 
+// GetCauses gets the causes of a build
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
 	_, err := b.Poll()
 	if err != nil {
@@ -225,6 +242,7 @@ func (b *Build) GetCauses() ([]map[string]interface{}, error) {
 	return nil, errors.New("No Causes")
 }
 
+// GetParameters gets a builds parameters
 func (b *Build) GetParameters() []parameter {
 	for _, a := range b.Raw.Actions {
 		if a.Parameters != nil {
@@ -234,6 +252,7 @@ func (b *Build) GetParameters() []parameter {
 	return nil
 }
 
+// GetInjectedEnvVars gets injected env vars from a build
 func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
 	var envVars struct {
 		EnvMap map[string]string `json:"envMap"`
@@ -246,6 +265,7 @@ func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
 	return envVars.EnvMap, nil
 }
 
+// GetDownstreamBuilds gets downstream builds
 func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 	result := make([]*Build, 0)
 	downstreamJobs, err := b.Job.GetDownstreamJobs()
@@ -273,6 +293,7 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 	return result, nil
 }
 
+// GetDownstreamJobNames gets downstream job names
 func (b *Build) GetDownstreamJobNames() []string {
 	result := make([]string, 0)
 	downstreamJobs := b.Job.GetDownstreamJobsMetadata()
@@ -289,6 +310,7 @@ func (b *Build) GetDownstreamJobNames() []string {
 	return result
 }
 
+// GetAllFingerprints gets a builds fingerprints
 func (b *Build) GetAllFingerprints() []*Fingerprint {
 	b.Poll(3)
 	result := make([]*Fingerprint, len(b.Raw.Fingerprint))
@@ -298,6 +320,7 @@ func (b *Build) GetAllFingerprints() []*Fingerprint {
 	return result
 }
 
+// GetUpstreamJob gets an upstream job
 func (b *Build) GetUpstreamJob() (*Job, error) {
 	causes, err := b.GetCauses()
 	if err != nil {
@@ -311,6 +334,7 @@ func (b *Build) GetUpstreamJob() (*Job, error) {
 	return nil, errors.New("Unable to get Upstream Job")
 }
 
+// GetUptreamBuildNumber gets an upstream build number
 func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	causes, err := b.GetCauses()
 	if err != nil {
@@ -329,6 +353,7 @@ func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	return 0, nil
 }
 
+// GetUpstreamBuild gets an upstream build
 func (b *Build) GetUpstreamBuild() (*Build, error) {
 	job, err := b.GetUpstreamJob()
 	if err != nil {
@@ -343,6 +368,7 @@ func (b *Build) GetUpstreamBuild() (*Build, error) {
 	return nil, errors.New("Build not found")
 }
 
+// GetMatrixRuns gets matrix runs
 func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	_, err := b.Poll(0)
 	if err != nil {
@@ -350,7 +376,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	}
 	runs := b.Raw.Runs
 	result := make([]*Build, len(b.Raw.Runs))
-	r, _ := regexp.Compile("job/(.*?)/(.*?)/(\\d+)/")
+	r, _ := regexp.Compile(`job/(.*?)/(.*?)/(\d+)/`)
 
 	for i, run := range runs {
 		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.Url)}
@@ -359,6 +385,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	return result, nil
 }
 
+// GetResultSet gets a test result set for a build
 func (b *Build) GetResultSet() (*TestResult, error) {
 
 	url := b.Base + "/testReport"
@@ -373,15 +400,18 @@ func (b *Build) GetResultSet() (*TestResult, error) {
 
 }
 
+// GetTimestamp gets a build timestamp
 func (b *Build) GetTimestamp() time.Time {
 	msInt := int64(b.Raw.Timestamp)
 	return time.Unix(0, msInt*int64(time.Millisecond))
 }
 
+// GetDuration gets a build duration
 func (b *Build) GetDuration() int64 {
 	return b.Raw.Duration
 }
 
+// GetRevision gets a build's revision
 func (b *Build) GetRevision() string {
 	vcs := b.Raw.ChangeSet.Kind
 
@@ -400,6 +430,7 @@ func (b *Build) GetRevision() string {
 	return ""
 }
 
+// GetRevisionBranch gets a build's branch revision
 func (b *Build) GetRevisionBranch() string {
 	vcs := b.Raw.ChangeSet.Kind
 	if vcs == "git" {
@@ -414,10 +445,12 @@ func (b *Build) GetRevisionBranch() string {
 	return ""
 }
 
+// IsGood returns if a build was good
 func (b *Build) IsGood() bool {
 	return (!b.IsRunning() && b.Raw.Result == STATUS_SUCCESS)
 }
 
+// IsRunning returns if a build is running
 func (b *Build) IsRunning() bool {
 	_, err := b.Poll()
 	if err != nil {
@@ -426,14 +459,12 @@ func (b *Build) IsRunning() bool {
 	return b.Raw.Building
 }
 
+// SetDescription sets the description of a build
 func (b *Build) SetDescription(description string) error {
 	data := url.Values{}
 	data.Set("description", description)
-	if _, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil)
+	return err
 }
 
 // Poll for current data. Optional parameter - depth.

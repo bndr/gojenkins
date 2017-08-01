@@ -14,19 +14,24 @@
 
 package gojenkins
 
+// Label represents a Label
 type Label struct {
 	Raw     *LabelResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// MODE represents a node mode
 type MODE string
 
 const (
-	NORMAL    MODE = "NORMAL"
-	EXCLUSIVE      = "EXCLUSIVE"
+	// NORMAL is a constant for normal nodes
+	NORMAL MODE = "NORMAL"
+	// EXCLUSIVE is a constant for exclusive nodes
+	EXCLUSIVE = "EXCLUSIVE"
 )
 
+// LabelNode represents a labled node
 type LabelNode struct {
 	NodeName        string `json:"nodeName"`
 	NodeDescription string `json:"nodeDescription"`
@@ -35,6 +40,7 @@ type LabelNode struct {
 	Class           string `json:"_class"`
 }
 
+// LabelResponse represents a label response
 type LabelResponse struct {
 	Name           string      `json:"name"`
 	Description    string      `json:"description"`
@@ -45,14 +51,17 @@ type LabelResponse struct {
 	TotalExecutors int64       `json:"totalExecutors"`
 }
 
+// GetName gets the name for a label
 func (l *Label) GetName() string {
 	return l.Raw.Name
 }
 
+// GetNodes gets the nodes for a label
 func (l *Label) GetNodes() []LabelNode {
 	return l.Raw.Nodes
 }
 
+// Poll polls labels
 func (l *Label) Poll() (int, error) {
 	response, err := l.Jenkins.Requester.GetJSON(l.Base, l.Raw, nil)
 	if err != nil {

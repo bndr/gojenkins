@@ -18,6 +18,7 @@ import (
 	"strconv"
 )
 
+// Queue represents a queue
 type Queue struct {
 	Jenkins *Jenkins
 	Raw     *queueResponse
@@ -28,6 +29,7 @@ type queueResponse struct {
 	Items []taskResponse
 }
 
+// Task represents a task
 type Task struct {
 	Raw     *taskResponse
 	Jenkins *Jenkins
@@ -58,6 +60,7 @@ type generalAction struct {
 	Parameters []parameter
 }
 
+// Tasks gets tasks on a queue
 func (q *Queue) Tasks() []*Task {
 	tasks := make([]*Task, len(q.Raw.Items))
 	for i, t := range q.Raw.Items {
@@ -66,6 +69,7 @@ func (q *Queue) Tasks() []*Task {
 	return tasks
 }
 
+// GetTaskById gets a task by id
 func (q *Queue) GetTaskById(id int64) *Task {
 	for _, t := range q.Raw.Items {
 		if t.ID == id {
@@ -75,6 +79,7 @@ func (q *Queue) GetTaskById(id int64) *Task {
 	return nil
 }
 
+// GetTasksForJob gets tasks for a job
 func (q *Queue) GetTasksForJob(name string) []*Task {
 	tasks := make([]*Task, 0)
 	for _, t := range q.Raw.Items {
@@ -85,11 +90,13 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 	return tasks
 }
 
+// CancelTask cancels a task by id
 func (q *Queue) CancelTask(id int64) (bool, error) {
 	task := q.GetTaskById(id)
 	return task.Cancel()
 }
 
+// Cancel cancels the current task
 func (t *Task) Cancel() (bool, error) {
 	qr := map[string]string{
 		"id": strconv.FormatInt(t.Raw.ID, 10),
@@ -101,14 +108,17 @@ func (t *Task) Cancel() (bool, error) {
 	return response.StatusCode == 200, nil
 }
 
+// GetJob gets the job associated with a task
 func (t *Task) GetJob() (*Job, error) {
 	return t.Jenkins.GetJob(t.Raw.Task.Name)
 }
 
+// GetWhy gets the why a task was queued
 func (t *Task) GetWhy() string {
 	return t.Raw.Why
 }
 
+// GetParameters gets a task's parameters
 func (t *Task) GetParameters() []parameter {
 	for _, a := range t.Raw.Actions {
 		if a.Parameters != nil {
@@ -118,6 +128,7 @@ func (t *Task) GetParameters() []parameter {
 	return nil
 }
 
+// GetCauses returns a task's causes
 func (t *Task) GetCauses() []map[string]interface{} {
 	for _, a := range t.Raw.Actions {
 		if a.Causes != nil {
@@ -127,6 +138,7 @@ func (t *Task) GetCauses() []map[string]interface{} {
 	return nil
 }
 
+// Poll polls the queue
 func (q *Queue) Poll() (int, error) {
 	response, err := q.Jenkins.Requester.GetJSON(q.Base, q.Raw, nil)
 	if err != nil {

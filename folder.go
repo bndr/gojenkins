@@ -20,12 +20,14 @@ import (
 	"strings"
 )
 
+// Folder represents a folder
 type Folder struct {
 	Raw     *FolderResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// FolderResponse represents a folder response
 type FolderResponse struct {
 	Actions     []generalObj
 	Description string     `json:"description"`
@@ -41,10 +43,12 @@ func (f *Folder) parentBase() string {
 	return f.Base[:strings.LastIndex(f.Base, "/job")]
 }
 
+// GetName returns a folder name
 func (f *Folder) GetName() string {
 	return f.Raw.Name
 }
 
+// Create creates a folder
 func (f *Folder) Create(name string) (*Folder, error) {
 	mode := "com.cloudbees.hudson.plugins.folder.Folder"
 	data := map[string]string{
@@ -61,12 +65,13 @@ func (f *Folder) Create(name string) (*Folder, error) {
 		return nil, err
 	}
 	if r.StatusCode == 200 {
-		f.Poll()
+		_, _ = f.Poll()
 		return f, nil
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
+// Poll polls a folder
 func (f *Folder) Poll() (int, error) {
 	response, err := f.Jenkins.Requester.GetJSON(f.Base, f.Raw, nil)
 	if err != nil {

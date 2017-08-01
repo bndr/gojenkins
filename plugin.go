@@ -18,6 +18,7 @@ import (
 	"strconv"
 )
 
+// Plugins represents Plugins
 type Plugins struct {
 	Jenkins *Jenkins
 	Raw     *PluginResponse
@@ -25,10 +26,12 @@ type Plugins struct {
 	Depth   int
 }
 
+// PluginResponse represents a plugin response from jenkins
 type PluginResponse struct {
 	Plugins []Plugin `json:"plugins"`
 }
 
+// Plugin represents a plugin
 type Plugin struct {
 	Active        bool        `json:"active"`
 	BackupVersion interface{} `json:"backupVersion"`
@@ -50,10 +53,12 @@ type Plugin struct {
 	Version             string `json:"version"`
 }
 
+// Count returns the count of plugins
 func (p *Plugins) Count() int {
 	return len(p.Raw.Plugins)
 }
 
+// Contains returns if a plugin by name
 func (p *Plugins) Contains(name string) *Plugin {
 	for _, p := range p.Raw.Plugins {
 		if p.LongName == name || p.ShortName == name {
@@ -63,6 +68,7 @@ func (p *Plugins) Contains(name string) *Plugin {
 	return nil
 }
 
+// Poll polls a plugin
 func (p *Plugins) Poll() (int, error) {
 	qr := map[string]string{
 		"depth": strconv.Itoa(p.Depth),

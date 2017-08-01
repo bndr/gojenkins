@@ -14,14 +14,19 @@
 
 package gojenkins
 
+// Executor represents an executor
 type Executor struct {
 	Raw     *ExecutorResponse
 	Jenkins *Jenkins
 }
+
+// ViewData represents ViewData
 type ViewData struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
+
+// ExecutorResponse represents an executor response
 type ExecutorResponse struct {
 	AssignedLabels  []struct{}  `json:"assignedLabels"`
 	Description     interface{} `json:"description"`

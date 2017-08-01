@@ -18,6 +18,7 @@ import "errors"
 
 // Nodes
 
+// Computers represents a computer
 type Computers struct {
 	BusyExecutors  int             `json:"busyExecutors"`
 	Computers      []*NodeResponse `json:"computer"`
@@ -25,12 +26,14 @@ type Computers struct {
 	TotalExecutors int             `json:"totalExecutors"`
 }
 
+// Node represents a node
 type Node struct {
 	Raw     *NodeResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// NodeResponse represents a node response
 type NodeResponse struct {
 	Actions     []interface{} `json:"actions"`
 	DisplayName string        `json:"displayName"`
@@ -79,6 +82,7 @@ type NodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
+// Info returns a node's info
 func (n *Node) Info() (*NodeResponse, error) {
 	_, err := n.Poll()
 	if err != nil {
@@ -87,10 +91,12 @@ func (n *Node) Info() (*NodeResponse, error) {
 	return n.Raw, nil
 }
 
+// GetName gets a node's name
 func (n *Node) GetName() string {
 	return n.Raw.DisplayName
 }
 
+// Delete deletes a node
 func (n *Node) Delete() (bool, error) {
 	resp, err := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
@@ -99,6 +105,7 @@ func (n *Node) Delete() (bool, error) {
 	return resp.StatusCode == 200, nil
 }
 
+// IsOnline returns if a node is online
 func (n *Node) IsOnline() (bool, error) {
 	_, err := n.Poll()
 	if err != nil {
@@ -107,6 +114,7 @@ func (n *Node) IsOnline() (bool, error) {
 	return !n.Raw.Offline, nil
 }
 
+// IsTemporarilyOffline returns if a node is temporarily offline or not
 func (n *Node) IsTemporarilyOffline() (bool, error) {
 	_, err := n.Poll()
 	if err != nil {
@@ -115,6 +123,7 @@ func (n *Node) IsTemporarilyOffline() (bool, error) {
 	return n.Raw.TemporarilyOffline, nil
 }
 
+// IsIdle returns if a node is idle
 func (n *Node) IsIdle() (bool, error) {
 	_, err := n.Poll()
 	if err != nil {
@@ -123,6 +132,7 @@ func (n *Node) IsIdle() (bool, error) {
 	return n.Raw.Idle, nil
 }
 
+// IsJnlpAgent returns if a node is a jnlp agent
 func (n *Node) IsJnlpAgent() (bool, error) {
 	_, err := n.Poll()
 	if err != nil {
@@ -131,6 +141,7 @@ func (n *Node) IsJnlpAgent() (bool, error) {
 	return n.Raw.JnlpAgent, nil
 }
 
+// SetOnline sets a node online
 func (n *Node) SetOnline() (bool, error) {
 	_, err := n.Poll()
 
@@ -149,6 +160,7 @@ func (n *Node) SetOnline() (bool, error) {
 	return true, nil
 }
 
+// SetOffline sets a node offline
 func (n *Node) SetOffline(options ...interface{}) (bool, error) {
 	if !n.Raw.Offline {
 		return n.ToggleTemporarilyOffline(options...)
@@ -156,6 +168,7 @@ func (n *Node) SetOffline(options ...interface{}) (bool, error) {
 	return false, errors.New("Node already Offline")
 }
 
+// ToggleTemporarilyOffline toggles a node offline temporarily
 func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	state_before, err := n.IsTemporarilyOffline()
 	if err != nil {
@@ -179,6 +192,7 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	return true, nil
 }
 
+// Poll polls a node
 func (n *Node) Poll() (int, error) {
 	response, err := n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
 	if err != nil {
@@ -187,6 +201,7 @@ func (n *Node) Poll() (int, error) {
 	return response.StatusCode, nil
 }
 
+// LaunchNodeBySSH launches a node by SSH
 func (n *Node) LaunchNodeBySSH() (int, error) {
 	qr := map[string]string{
 		"json":   "",
@@ -199,6 +214,7 @@ func (n *Node) LaunchNodeBySSH() (int, error) {
 	return response.StatusCode, nil
 }
 
+// Disconnect disconnects a node
 func (n *Node) Disconnect() (int, error) {
 	qr := map[string]string{
 		"offlineMessage": "",
@@ -212,6 +228,7 @@ func (n *Node) Disconnect() (int, error) {
 	return response.StatusCode, nil
 }
 
+// GetLogText gets a node's log
 func (n *Node) GetLogText() (string, error) {
 	var log string
 
