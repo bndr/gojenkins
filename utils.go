@@ -23,13 +23,3 @@ func makeJson(data interface{}) string {
 	}
 	return string(json.RawMessage(str))
 }
-
-// Check if element is present in a slice.
-func inSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
