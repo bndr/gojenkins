@@ -74,7 +74,7 @@ func (a Artifact) Save(path string) (bool, error) {
 func (a Artifact) SaveToDir(dir string) (bool, error) {
 	if _, err := os.Stat(dir); err != nil {
 		Error.Printf("Can't Save Artifact. Directory %s does not exist...", dir)
-		return false, errors.New(fmt.Sprintf("Can't Save Artifact. Directory %s does not exist...", dir))
+		return false, fmt.Errorf("Can't Save Artifact. Directory %s does not exist...", dir)
 	}
 	saved, err := a.Save(path.Join(dir, a.FileName))
 	if err != nil {
