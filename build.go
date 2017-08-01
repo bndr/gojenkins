@@ -119,7 +119,7 @@ type BuildResponse struct {
 				FullName    string `json:"fullName"`
 			} `json:"author"`
 			Comment  string `json:"comment"`
-			CommitId string `json:"commitId"`
+			CommitID string `json:"commitId"`
 			Date     string `json:"date"`
 			ID       string `json:"id"`
 			Msg      string `json:"msg"`
@@ -144,7 +144,7 @@ type BuildResponse struct {
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`
 	Number            int64       `json:"number"`
-	QueueId           int64       `json:"queueId"`
+	QueueID           int64       `json:"queueId"`
 	Result            string      `json:"result"`
 	Timestamp         int64       `json:"timestamp"`
 	URL               string      `json:"url"`
@@ -153,7 +153,7 @@ type BuildResponse struct {
 	Fingerprint       []fingerPrintResponse
 	Runs              []struct {
 		Number int64
-		Url    string
+		URL    string
 	} `json:"runs"`
 }
 
@@ -253,12 +253,12 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 		return nil, err
 	}
 	for _, job := range downstreamJobs {
-		allBuildIds, err := job.GetAllBuildIds()
+		allBuildIDs, err := job.GetAllBuildIds()
 		if err != nil {
 			return nil, err
 		}
-		for _, buildId := range allBuildIds {
-			build, err := job.GetBuild(buildId.Number)
+		for _, buildID := range allBuildIDs {
+			build, err := job.GetBuild(buildID.Number)
 			if err != nil {
 				return nil, err
 			}
@@ -353,7 +353,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	r, _ := regexp.Compile("job/(.*?)/(.*?)/(\\d+)/")
 
 	for i, run := range runs {
-		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.Url)}
+		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
 		result[i].Poll()
 	}
 	return result, nil
