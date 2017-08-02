@@ -165,7 +165,6 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 			}
 
 			URL.RawQuery = querystring.Encode()
-			break
 		case []string:
 			fileUpload = true
 			files = v
