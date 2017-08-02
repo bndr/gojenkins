@@ -378,9 +378,7 @@ func (j *Job) GetParameters() ([]ParameterDefinition, error) {
 	}
 	var parameters []ParameterDefinition
 	for _, property := range j.Raw.Property {
-		for _, param := range property.ParameterDefinitions {
-			parameters = append(parameters, param)
-		}
+		parameters = append(parameters, property.ParameterDefinitions...)
 	}
 	return parameters, nil
 }
