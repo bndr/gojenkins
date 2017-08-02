@@ -28,7 +28,7 @@ These are some of the features that are currently implemented:
 
 import "github.com/bndr/gojenkins"
 
-jenkins := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin")
+jenkins := gojenkins.New("http://localhost:8080/", "admin", "admin")
 // Provide CA certificate if server is using self-signed certificate
 // caCert, _ := ioutil.ReadFile("/tmp/ca.crt")
 // jenkins.Requester.CACert = caCert
@@ -90,13 +90,13 @@ For all of the examples below first create a jenkins object
 ```go
 import "github.com/bndr/gojenkins"
 
-jenkins, _ := gojenkins.CreateJenkins("http://localhost:8080/", "admin", "admin").Init()
+jenkins, _ := gojenkins.New("http://localhost:8080/", "admin", "admin").Init()
 ```
 
 or if you don't need authentication:
 
 ```go
-jenkins, _ := gojenkins.CreateJenkins("http://localhost:8080/").Init()
+jenkins, _ := gojenkins.New("http://localhost:8080/").Init()
 ```
 
 ### Check Status of all nodes

@@ -39,9 +39,8 @@ type APIRequest struct {
 	Suffix   string
 }
 
-func (ar *APIRequest) SetHeader(key string, value string) *APIRequest {
+func (ar *APIRequest) SetHeader(key string, value string) {
 	ar.Headers.Set(key, value)
-	return ar
 }
 
 func NewAPIRequest(method string, endpoint string, payload io.Reader) *APIRequest {
@@ -52,11 +51,9 @@ func NewAPIRequest(method string, endpoint string, payload io.Reader) *APIReques
 }
 
 type Requester struct {
-	Base      string
+	BaseURL   string
 	BasicAuth *BasicAuth
 	Client    *http.Client
-	CACert    []byte
-	SslVerify bool
 }
 
 func (r *Requester) SetCrumb(ar *APIRequest) error {
@@ -129,11 +126,6 @@ func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring
 	return r.Do(ar, responseStruct, querystring)
 }
 
-func (r *Requester) SetClient(client *http.Client) *Requester {
-	r.Client = client
-	return r
-}
-
 func (r *Requester) parseQueryString(queries map[string]string) string {
 	output := ""
 	delimiter := "?"
@@ -144,14 +136,6 @@ func (r *Requester) parseQueryString(queries map[string]string) string {
 	return output
 }
 
-//Add auth on redirect if required.
-func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
-	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
-	}
-	return nil
-}
-
 func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
 	if !strings.HasSuffix(ar.Endpoint, "/") && ar.Method != "POST" {
 		ar.Endpoint += "/"
@@ -159,7 +143,7 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 
 	fileUpload := false
 	var files []string
-	URL, err := url.Parse(r.Base + ar.Endpoint + ar.Suffix)
+	URL, err := url.Parse(r.BaseURL + ar.Endpoint + ar.Suffix)
 
 	if err != nil {
 		return nil, err
@@ -226,14 +210,11 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 		}
 	}
 
-	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
-	}
-
 	for k := range ar.Headers {
 		req.Header.Add(k, ar.Headers.Get(k))
 	}
 
+	req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
 	if response, err := r.Client.Do(req); err != nil {
 		return nil, err
 	} else {

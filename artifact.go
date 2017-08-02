@@ -24,7 +24,7 @@ import (
 	"path"
 )
 
-// Represents an Artifact
+// Artifact represents a build artifact.
 type Artifact struct {
 	Jenkins  *Jenkins
 	Build    *Build
@@ -32,7 +32,7 @@ type Artifact struct {
 	Path     string
 }
 
-// Get raw byte data of Artifact
+// GetData returns the raw byte data of Artifact.
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
 	response, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
@@ -70,7 +70,7 @@ func (a Artifact) Save(path string) (bool, error) {
 	return true, nil
 }
 
-// Save Artifact to directory using Artifact filename.
+// SaveToDir will save an Artifact to directory using Artifact filename.
 func (a Artifact) SaveToDir(dir string) (bool, error) {
 	if _, err := os.Stat(dir); err != nil {
 		Error.Printf("Can't Save Artifact. Directory %s does not exist...", dir)
@@ -83,7 +83,7 @@ func (a Artifact) SaveToDir(dir string) (bool, error) {
 	return saved, nil
 }
 
-// Compare Remote and local MD5
+// validateDownload compares remote and local MD5.
 func (a Artifact) validateDownload(path string) (bool, error) {
 	localHash := a.getMD5local(path)
 
@@ -100,7 +100,7 @@ func (a Artifact) validateDownload(path string) (bool, error) {
 	return true, nil
 }
 
-// Get Local MD5
+// getMD5local gets the MD5 value for a local file.
 func (a Artifact) getMD5local(path string) string {
 	h := md5.New()
 	localFile, err := os.Open(path)

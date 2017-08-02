@@ -12,29 +12,26 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-// Gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
+// Package gojenkins is a Jenkins Client in Go, that exposes the jenkins REST api in a more developer friendly way.
 package gojenkins
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 )
 
-// Basic Authentication
+// BasicAuth represents Basic Authentication
 type BasicAuth struct {
 	Username string
 	Password string
 }
 
+// Jenkins represents a Jenkins client connection
 type Jenkins struct {
 	Server    string
 	Version   string
@@ -42,7 +39,6 @@ type Jenkins struct {
 	Requester *Requester
 }
 
-// Loggers
 var (
 	Info    *log.Logger
 	Warning *log.Logger
@@ -50,57 +46,28 @@ var (
 )
 
 // Init Method. Should be called after creating a Jenkins Instance.
-// e.g jenkins := CreateJenkins("url").Init()
+// e.g jenkins := New("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	// Skip SSL Verification?
-	tlsCfg := &tls.Config{
-		InsecureSkipVerify: !j.Requester.SslVerify,
-	}
-	if j.Requester.CACert != nil {
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM(j.Requester.CACert)
-		tlsCfg.RootCAs = pool
-		// always verify certs if custom ca cert is used.
-		tlsCfg.InsecureSkipVerify = false
-	}
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	if j.Requester.Client == nil {
-		cookies, _ := cookiejar.New(nil)
-
-		if os.Getenv("HTTP_PROXY") != "" {
-			proxyUrl, _ := url.Parse(os.Getenv("HTTP_PROXY"))
-			tr.Proxy = http.ProxyURL(proxyUrl)
-		}
-
-		client := &http.Client{
-			Transport: tr,
-			Jar:       cookies,
-			// Function to add auth on redirect.
-			CheckRedirect: j.Requester.redirectPolicyFunc,
-		}
-
-		j.Requester.Client = client
-	}
-
+	j.Requester.Client = http.DefaultClient
 	// Check Connection
-	j.Raw = new(ExecutorResponse)
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
-
-	if err != nil {
-		return nil, err
+	if err == nil {
+		j.Version = rsp.Header.Get("X-Jenkins")
 	}
+	return j, err
+}
 
-	j.Version = rsp.Header.Get("X-Jenkins")
-	if j.Raw == nil {
-		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
+// InitWithClient creates a Jenkins client instance with a given http.Client from the user.
+func (j *Jenkins) InitWithClient(client *http.Client) (*Jenkins, error) {
+	j.initLoggers()
+	j.Requester.Client = client
+	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+	if err == nil {
+		j.Version = rsp.Header.Get("X-Jenkins")
 	}
-
-	return j, nil
+	return j, err
 }
 
 func (j *Jenkins) initLoggers() {
@@ -482,8 +449,8 @@ func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 }
 
 func (j *Jenkins) GetView(name string) (*View, error) {
-	url := "/view/" + name
-	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
+	u := "/view/" + name
+	view := View{Jenkins: j, Raw: new(ViewResponse), Base: u}
 	_, err := view.Poll()
 	if err != nil {
 		return nil, err
@@ -545,18 +512,17 @@ func (j *Jenkins) Poll() (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Creates a new Jenkins Instance
-// Optional parameters are: username, password
+// New creates a new Jenkins Instance.
+// Optional parameters are: username, password.
 // After creating an instance call init method.
-func CreateJenkins(base string, auth ...interface{}) *Jenkins {
+func New(base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
-	if strings.HasSuffix(base, "/") {
-		base = base[:len(base)-1]
-	}
+	base = strings.TrimSuffix(base, "/")
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true}
+	j.Requester = &Requester{BaseURL: base}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
+	j.Raw = new(ExecutorResponse)
 	return j
 }

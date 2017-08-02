@@ -23,6 +23,7 @@ import (
 	"time"
 )
 
+// Build represents a specific build instance in Jenkins.
 type Build struct {
 	Raw     *BuildResponse
 	Job     *Job
@@ -206,9 +207,9 @@ func (b *Build) Stop() (bool, error) {
 }
 
 func (b *Build) GetConsoleOutput() string {
-	url := b.Base + "/consoleText"
+	u := b.Base + "/consoleText"
 	var content string
-	b.Jenkins.Requester.GetXML(url, &content, nil)
+	b.Jenkins.Requester.GetXML(u, &content, nil)
 	return content
 }
 
