@@ -50,9 +50,6 @@ var (
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	if j.Requester.Client == nil {
-		j.Requester.Client = http.DefaultClient
-	}
 
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
@@ -521,6 +518,9 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 	}
 	j.Server = base
 	j.Requester = &Requester{Base: base, SslVerify: true, Client: client}
+	if j.Requester.Client == nil {
+		j.Requester.Client = http.DefaultClient
+	}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
