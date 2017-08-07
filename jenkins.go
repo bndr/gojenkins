@@ -50,7 +50,9 @@ var (
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	j.Requester.Client = http.DefaultClient
+	if j.Requester.Client == nil {
+		j.Requester.Client = http.DefaultClient
+	}
 
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
@@ -510,15 +512,15 @@ func (j *Jenkins) Poll() (int, error) {
 }
 
 // Creates a new Jenkins Instance
-// Optional parameters are: username, password
+// Optional parameters are: client, username, password
 // After creating an instance call init method.
-func CreateJenkins(base string, auth ...interface{}) *Jenkins {
+func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true}
+	j.Requester = &Requester{Base: base, SslVerify: true, Client: client}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
