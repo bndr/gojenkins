@@ -9,7 +9,7 @@ import (
 )
 
 // Parse jenkins ajax response in order find the current jenkins build history
-func parseBuildHistory(d io.ReadCloser) []*History {
+func parseBuildHistory(d io.Reader) []*History {
 	z := html.NewTokenizer(d)
 	depth := 0
 	buildRowCellDepth := -1
@@ -29,7 +29,7 @@ func parseBuildHistory(d io.ReadCloser) []*History {
 				a := attr(z)
 				// <img src="/static/f2881562/images/16x16/red.png" alt="Failed &gt; Console Output" tooltip="Failed &gt; Console Output" style="width: 16px; height: 16px; " class="icon-red icon-sm" />
 				if string(tn) == "img" {
-					if hasCssClass(a, "icon-sm") && buildRowCellDepth > -1 {
+					if hasCSSClass(a, "icon-sm") && buildRowCellDepth > -1 {
 						if alt, found := a["alt"]; found {
 							curBuild.BuildStatus = strings.Fields(alt)[0]
 						}
@@ -44,7 +44,7 @@ func parseBuildHistory(d io.ReadCloser) []*History {
 				a := attr(z)
 				// <td class="build-row-cell">
 				if string(tn) == "td" {
-					if hasCssClass(a, "build-row-cell") {
+					if hasCSSClass(a, "build-row-cell") {
 						buildRowCellDepth = depth
 						curBuild = &History{}
 						builds = append(builds, curBuild)
@@ -52,7 +52,7 @@ func parseBuildHistory(d io.ReadCloser) []*History {
 				}
 				// <a update-parent-class=".build-row" href="/job/appscode/job/43/job/build-binary/227/" class="tip model-link inside build-link display-name">#227</a>
 				if string(tn) == "a" {
-					if hasCssClass(a, "build-link") && buildRowCellDepth > -1 {
+					if hasCSSClass(a, "build-link") && buildRowCellDepth > -1 {
 						if href, found := a["href"]; found {
 							parts := strings.Split(href, "/")
 							if num, err := strconv.Atoi(parts[len(parts)-2]); err == nil {
@@ -63,7 +63,7 @@ func parseBuildHistory(d io.ReadCloser) []*History {
 				}
 				// <div time="1469024602546" class="pane build-details"> ... </div>
 				if string(tn) == "div" {
-					if hasCssClass(a, "build-details") && buildRowCellDepth > -1 {
+					if hasCSSClass(a, "build-details") && buildRowCellDepth > -1 {
 						if t, found := a["time"]; found {
 							if msec, err := strconv.ParseInt(t, 10, 0); err == nil {
 								curBuild.BuildTimestamp = msec / 1000
@@ -97,7 +97,7 @@ func attr(z *html.Tokenizer) map[string]string {
 	return a
 }
 
-func hasCssClass(a map[string]string, className string) bool {
+func hasCSSClass(a map[string]string, className string) bool {
 	if classes, found := a["class"]; found {
 		for _, class := range strings.Fields(classes) {
 			if class == className {

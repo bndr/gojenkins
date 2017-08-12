@@ -119,7 +119,7 @@ type BuildResponse struct {
 				FullName    string `json:"fullName"`
 			} `json:"author"`
 			Comment  string `json:"comment"`
-			CommitId string `json:"commitId"`
+			CommitID string `json:"commitId"`
 			Date     string `json:"date"`
 			ID       string `json:"id"`
 			Msg      string `json:"msg"`
@@ -144,16 +144,16 @@ type BuildResponse struct {
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`
 	Number            int64       `json:"number"`
-	QueueId           int64       `json:"queueId"`
+	QueueID           int64       `json:"queueId"`
 	Result            string      `json:"result"`
 	Timestamp         int64       `json:"timestamp"`
 	URL               string      `json:"url"`
 	MavenArtifacts    interface{} `json:"mavenArtifacts"`
 	MavenVersionUsed  string      `json:"mavenVersionUsed"`
-	Fingerprint       []fingerPrintResponse
+	FingerPrint       []FingerPrintResponse
 	Runs              []struct {
 		Number int64
-		Url    string
+		URL    string
 	} `json:"runs"`
 }
 
@@ -253,12 +253,12 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 		return nil, err
 	}
 	for _, job := range downstreamJobs {
-		allBuildIds, err := job.GetAllBuildIds()
+		allBuildIDs, err := job.GetAllBuildIds()
 		if err != nil {
 			return nil, err
 		}
-		for _, buildId := range allBuildIds {
-			build, err := job.GetBuild(buildId.Number)
+		for _, buildID := range allBuildIDs {
+			build, err := job.GetBuild(buildID.Number)
 			if err != nil {
 				return nil, err
 			}
@@ -276,7 +276,7 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 func (b *Build) GetDownstreamJobNames() []string {
 	result := make([]string, 0)
 	downstreamJobs := b.Job.GetDownstreamJobsMetadata()
-	fingerprints := b.GetAllFingerprints()
+	fingerprints := b.GetAllFingerPrints()
 	for _, fingerprint := range fingerprints {
 		for _, usage := range fingerprint.Raw.Usage {
 			for _, job := range downstreamJobs {
@@ -289,11 +289,11 @@ func (b *Build) GetDownstreamJobNames() []string {
 	return result
 }
 
-func (b *Build) GetAllFingerprints() []*Fingerprint {
+func (b *Build) GetAllFingerPrints() []*FingerPrint {
 	b.Poll(3)
-	result := make([]*Fingerprint, len(b.Raw.Fingerprint))
-	for i, f := range b.Raw.Fingerprint {
-		result[i] = &Fingerprint{Jenkins: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
+	result := make([]*FingerPrint, len(b.Raw.FingerPrint))
+	for i, f := range b.Raw.FingerPrint {
+		result[i] = &FingerPrint{Jenkins: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
 	}
 	return result
 }
@@ -353,7 +353,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	r, _ := regexp.Compile("job/(.*?)/(.*?)/(\\d+)/")
 
 	for i, run := range runs {
-		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.Url)}
+		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
 		result[i].Poll()
 	}
 	return result, nil
