@@ -19,14 +19,14 @@ import (
 	"fmt"
 )
 
-type Fingerprint struct {
+type FingerPrint struct {
 	Jenkins *Jenkins
 	Base    string
 	Id      string
-	Raw     *fingerPrintResponse
+	Raw     *FingerPrintResponse
 }
 
-type fingerPrintResponse struct {
+type FingerPrintResponse struct {
 	FileName string `json:"fileName"`
 	Hash     string `json:"hash"`
 	Original struct {
@@ -45,7 +45,7 @@ type fingerPrintResponse struct {
 	} `json:"usage"`
 }
 
-func (f Fingerprint) Valid() (bool, error) {
+func (f FingerPrint) Valid() (bool, error) {
 	status, err := f.Poll()
 
 	if err != nil {
@@ -58,7 +58,7 @@ func (f Fingerprint) Valid() (bool, error) {
 	return true, nil
 }
 
-func (f Fingerprint) ValidateForBuild(filename string, build *Build) (bool, error) {
+func (f FingerPrint) ValidateForBuild(filename string, build *Build) (bool, error) {
 	valid, err := f.Valid()
 	if err != nil {
 		return false, err
@@ -78,7 +78,7 @@ func (f Fingerprint) ValidateForBuild(filename string, build *Build) (bool, erro
 	return false, nil
 }
 
-func (f Fingerprint) GetInfo() (*fingerPrintResponse, error) {
+func (f FingerPrint) GetInfo() (*FingerPrintResponse, error) {
 	_, err := f.Poll()
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (f Fingerprint) GetInfo() (*fingerPrintResponse, error) {
 	return f.Raw, nil
 }
 
-func (f Fingerprint) Poll() (int, error) {
+func (f FingerPrint) Poll() (int, error) {
 	response, err := f.Jenkins.Requester.GetJSON(f.Base+f.Id, f.Raw, nil)
 	if err != nil {
 		return 0, err

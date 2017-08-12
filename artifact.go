@@ -87,7 +87,7 @@ func (a Artifact) SaveToDir(dir string) (bool, error) {
 func (a Artifact) validateDownload(path string) (bool, error) {
 	localHash := a.getMD5local(path)
 
-	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(fingerPrintResponse)}
+	fp := FingerPrint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(FingerPrintResponse)}
 
 	valid, err := fp.ValidateForBuild(a.FileName, a.Build)
 
@@ -95,7 +95,7 @@ func (a Artifact) validateDownload(path string) (bool, error) {
 		return false, err
 	}
 	if !valid {
-		return false, errors.New("Fingerprint of the downloaded artifact could not be verified")
+		return false, errors.New("FingerPrint of the downloaded artifact could not be verified")
 	}
 	return true, nil
 }

@@ -109,18 +109,18 @@ func (r *Requester) PostXML(endpoint string, xml string, responseStruct interfac
 	return r.Do(ar, &responseStruct, querystring)
 }
 
-func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+func (r *Requester) GetJSON(endpoint string, responseStruct interface{}, query map[string]string) (*http.Response, error) {
 	ar := NewAPIRequest("GET", endpoint, nil)
 	ar.SetHeader("Content-Type", "application/json")
 	ar.Suffix = "api/json"
-	return r.Do(ar, &responseStruct, querystring)
+	return r.Do(ar, &responseStruct, query)
 }
 
-func (r *Requester) GetXML(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+func (r *Requester) GetXML(endpoint string, responseStruct interface{}, query map[string]string) (*http.Response, error) {
 	ar := NewAPIRequest("GET", endpoint, nil)
 	ar.SetHeader("Content-Type", "application/xml")
 	ar.Suffix = ""
-	return r.Do(ar, responseStruct, querystring)
+	return r.Do(ar, responseStruct, query)
 }
 
 func (r *Requester) Get(endpoint string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
