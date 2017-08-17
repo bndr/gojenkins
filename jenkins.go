@@ -16,14 +16,10 @@
 package gojenkins
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -54,43 +50,10 @@ var (
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
-	// Skip SSL Verification?
-	tlsCfg := &tls.Config{
-		InsecureSkipVerify: !j.Requester.SslVerify,
-	}
-	if j.Requester.CACert != nil {
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM(j.Requester.CACert)
-		tlsCfg.RootCAs = pool
-		// always verify certs if custom ca cert is used.
-		tlsCfg.InsecureSkipVerify = false
-	}
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	if j.Requester.Client == nil {
-		cookies, _ := cookiejar.New(nil)
-
-		if os.Getenv("HTTP_PROXY") != "" {
-			proxyUrl, _ := url.Parse(os.Getenv("HTTP_PROXY"))
-			tr.Proxy = http.ProxyURL(proxyUrl)
-		}
-
-		client := &http.Client{
-			Transport: tr,
-			Jar:       cookies,
-			// Function to add auth on redirect.
-			CheckRedirect: j.Requester.redirectPolicyFunc,
-		}
-
-		j.Requester.Client = client
-	}
 
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
 	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -546,15 +509,18 @@ func (j *Jenkins) Poll() (int, error) {
 }
 
 // Creates a new Jenkins Instance
-// Optional parameters are: username, password
+// Optional parameters are: client, username, password
 // After creating an instance call init method.
-func CreateJenkins(base string, auth ...interface{}) *Jenkins {
+func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true}
+	j.Requester = &Requester{Base: base, SslVerify: true, Client: client}
+	if j.Requester.Client == nil {
+		j.Requester.Client = http.DefaultClient
+	}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
