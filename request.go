@@ -134,16 +134,6 @@ func (r *Requester) SetClient(client *http.Client) *Requester {
 	return r
 }
 
-func (r *Requester) parseQueryString(queries map[string]string) string {
-	output := ""
-	delimiter := "?"
-	for k, v := range queries {
-		output += delimiter + k + "=" + v
-		delimiter = "&"
-	}
-	return output
-}
-
 //Add auth on redirect if required.
 func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
 	if r.BasicAuth != nil {
@@ -175,7 +165,6 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 			}
 
 			URL.RawQuery = querystring.Encode()
-			break
 		case []string:
 			fileUpload = true
 			files = v

@@ -350,7 +350,7 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	}
 	runs := b.Raw.Runs
 	result := make([]*Build, len(b.Raw.Runs))
-	r, _ := regexp.Compile("job/(.*?)/(.*?)/(\\d+)/")
+	r, _ := regexp.Compile(`job/(.*?)/(.*?)/(\d+)/`)
 
 	for i, run := range runs {
 		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
@@ -429,11 +429,8 @@ func (b *Build) IsRunning() bool {
 func (b *Build) SetDescription(description string) error {
 	data := url.Values{}
 	data.Set("description", description)
-	if _, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil)
+	return err
 }
 
 // Poll for current data. Optional parameter - depth.

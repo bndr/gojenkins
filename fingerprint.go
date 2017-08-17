@@ -53,7 +53,7 @@ func (f FingerPrint) Valid() (bool, error) {
 	}
 
 	if status != 200 || f.Raw.Hash != f.Id {
-		return false, errors.New(fmt.Sprintf("Jenkins says %s is Invalid or the Status is unknown", f.Id))
+		return false, fmt.Errorf("Jenkins says %s is Invalid or the Status is unknown", f.Id)
 	}
 	return true, nil
 }
