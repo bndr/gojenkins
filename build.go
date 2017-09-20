@@ -190,7 +190,7 @@ func (b *Build) GetArtifacts() []Artifact {
 	return artifacts
 }
 
-func (b *Build) GetCulprits() []culprit {
+func (b *Build) GetCulprits() []Culprit {
 	return b.Raw.Culprits
 }
 
