@@ -53,7 +53,7 @@ type Builds struct {
 	Revision    BuildRevision `json:"revision"`
 }
 
-type culprit struct {
+type Culprit struct {
 	AbsoluteUrl string
 	FullName    string
 }
@@ -135,7 +135,7 @@ type BuildResponse struct {
 			Revision int
 		} `json:"revision"`
 	} `json:"changeSet"`
-	Culprits          []culprit   `json:"culprits"`
+	Culprits          []Culprit   `json:"culprits"`
 	Description       interface{} `json:"description"`
 	Duration          int64       `json:"duration"`
 	EstimatedDuration int64       `json:"estimatedDuration"`
@@ -190,7 +190,7 @@ func (b *Build) GetArtifacts() []Artifact {
 	return artifacts
 }
 
-func (b *Build) GetCulprits() []culprit {
+func (b *Build) GetCulprits() []Culprit {
 	return b.Raw.Culprits
 }
 
