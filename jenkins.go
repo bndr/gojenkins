@@ -521,7 +521,7 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 	if j.Requester.Client == nil {
 		j.Requester.Client = http.DefaultClient
 	}
-	if len(auth) == 2 {
+	if len(auth) == 2 && auth[0] != "" {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
 	return j
