@@ -212,6 +212,37 @@ func (b *Build) GetConsoleOutput() string {
 	return content
 }
 
+// GetProgressiveText gets progressive text with response header `X-Text-Size` of previous request.
+func (b *Build) GetProgressiveText(start int64) (string, string, error) {
+	url := b.Base + "/logText/progressiveText"
+
+	return getProgressiveLog(start, url)
+}
+
+// GetProgressiveHTML gets progressive html with response header `X-Text-Size` of previous request.
+func (b *Build) GetProgressiveHTML(start int64) (string, string, error) {
+	url := b.Base + "/logText/progressiveHtml"
+
+	return getProgressiveLog(start, url)
+}
+
+func getProgressiveLog(start int64, url string) (string, string, error) {
+	startStr := strconv.FormatInt(start, 10)
+
+	var content string
+	queryMap := make(map[string]string)
+	queryMap["start"] = startStr
+
+	response, err := b.Jenkins.Requester.Get(url, &content, queryMap)
+	if err != nil {
+		return "", "", err
+	}
+	// The textSize is the length of the log we get,
+	// we can use it as next start so that we can get progressive log without repeat.
+	textSize := response.Header.Get("X-Text-Size")
+	return content, textSize, nil
+}
+
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
 	_, err := b.Poll()
 	if err != nil {
