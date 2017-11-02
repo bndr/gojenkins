@@ -59,7 +59,7 @@ func TestCreateNodes(t *testing.T) {
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
-		item.InvokeSimple(map[string]string{"param1": "param1"})
+		item.InvokeSimple(map[string]string{"param1": "param1"}, false)
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
