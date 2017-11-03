@@ -19,9 +19,7 @@ func parseBuildHistory(d io.Reader) []*History {
 		tt := z.Next()
 		switch tt {
 		case html.ErrorToken:
-			if z.Err() == io.EOF {
-				return builds
-			}
+			return builds
 		case html.SelfClosingTagToken:
 			tn, hasAttr := z.TagName()
 			// fmt.Println("START__", string(tn), hasAttr)
