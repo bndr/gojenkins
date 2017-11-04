@@ -55,6 +55,22 @@ func TestCreateNodes(t *testing.T) {
 	assert.Equal(t, id3, node3.GetName())
 }
 
+func TestDeleteNodes(t *testing.T) {
+
+	id1 := "node1_test"
+	id2 := "node2_test"
+	id3 := "node3_test"
+
+	node1, _ := jenkins.DeleteNode(id1)
+	assert.Nil(t, id1, node1)
+
+	node2, _ := jenkins.DeleteNode(id2)
+	assert.Nil(t, id2,node2)
+
+	node3, _ := jenkins.DeleteNode(id3)
+	assert.Nil(t, id3, node3)
+}
+
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
