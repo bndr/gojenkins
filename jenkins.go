@@ -168,19 +168,13 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 	}
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
-//delete node
-// deregister jenkins slave
-//example
-//node_del,_:=jenkins.DeleteNode(id1)
-//fmt.Sprintf("%s",node_del)
+
+// Delete a Jenkins slave node
 func (j *Jenkins) DeleteNode(name string) (bool, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
-	delete,err :=node.Delete()
-	if err != nil {
-		errors.New("Error Deleting node")
-	}
-	return delete,err
-	}
+	delete, err := node.Delete()
+	return delete, err
+}
 
 // Create a new folder
 // This folder can be nested in other parent folders
