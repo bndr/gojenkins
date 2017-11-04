@@ -14,7 +14,7 @@ var (
 )
 
 func TestInit(t *testing.T) {
-	jenkins = CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins = CreateJenkins(nil, "http://eprupetw6203.petersburg.epam.com:8080", "medvedev.yp@gmail.com", "zi0teeNga")
 	_, err := jenkins.Init()
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
@@ -36,24 +36,24 @@ func TestCreateJobs(t *testing.T) {
 	assert.Equal(t, job2ID, job2.GetName())
 }
 
-func TestCreateNodes(t *testing.T) {
-
-	id1 := "node1_test"
-	id2 := "node2_test"
-	id3 := "node3_test"
-
-	jnlp := map[string]string{"method": "JNLPLauncher"}
-	ssh := map[string]string{"method": "SSHLauncher"}
-
-	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
-	assert.Equal(t, id1, node1.GetName())
-
-	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
-	assert.Equal(t, id2, node2.GetName())
-
-	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
-	assert.Equal(t, id3, node3.GetName())
-}
+//func TestCreateNodes(t *testing.T) {
+//
+//	id1 := "node1_test"
+//	id2 := "node2_test"
+//	id3 := "node3_test"
+//
+//	jnlp := map[string]string{"method": "JNLPLauncher"}
+//	ssh := map[string]string{"method": "SSHLauncher"}
+//
+//	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
+//	assert.Equal(t, id1, node1.GetName())
+//
+//	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
+//	assert.Equal(t, id2, node2.GetName())
+//
+//	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
+//	assert.Equal(t, id3, node3.GetName())
+//}
 
 func TestDeleteNodes(t *testing.T) {
 
@@ -62,13 +62,13 @@ func TestDeleteNodes(t *testing.T) {
 	id3 := "node3_test"
 
 	node1, _ := jenkins.DeleteNode(id1)
-	assert.Nil(t, id1, node1)
+	assert.NotNil(t, node1)
 
 	node2, _ := jenkins.DeleteNode(id2)
-	assert.Nil(t, id2,node2)
+	assert.NotNil(t, node2)
 
 	node3, _ := jenkins.DeleteNode(id3)
-	assert.Nil(t, id3, node3)
+	assert.NotNil(t, node3)
 }
 
 func TestCreateBuilds(t *testing.T) {
