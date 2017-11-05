@@ -41,6 +41,7 @@ func TestCreateNodes(t *testing.T) {
 	id1 := "node1_test"
 	id2 := "node2_test"
 	id3 := "node3_test"
+	id4 := "node4_test"
 
 	jnlp := map[string]string{"method": "JNLPLauncher"}
 	ssh := map[string]string{"method": "SSHLauncher"}
@@ -53,6 +54,14 @@ func TestCreateNodes(t *testing.T) {
 
 	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
 	assert.Equal(t, id3, node3.GetName())
+	node4, _ := jenkins.CreateNode(id4, 1, "Node 4 Description", "/var/lib/jenkins", "jdk7")
+	assert.Equal(t, id4, node4.GetName())
+}
+
+func TestDeleteNodes(t *testing.T) {
+	id := "node4_test"
+	node, _ := jenkins.DeleteNode(id)
+	assert.NotNil(t, node)
 }
 
 func TestCreateBuilds(t *testing.T) {
@@ -255,20 +264,4 @@ func getFileAsString(path string) string {
 	}
 
 	return string(buf)
-}
-
-func TestDeleteNodes(t *testing.T) {
-
-	id1 := "node1_test"
-	id2 := "node2_test"
-	id3 := "node3_test"
-
-	node1, _ := jenkins.DeleteNode(id1)
-	assert.NotNil(t, node1)
-
-	node2, _ := jenkins.DeleteNode(id2)
-	assert.NotNil(t, node2)
-
-	node3, _ := jenkins.DeleteNode(id3)
-	assert.NotNil(t, node3)
 }
