@@ -172,8 +172,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 // Delete a Jenkins slave node
 func (j *Jenkins) DeleteNode(name string) (bool, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
-	delete, err := node.Delete()
-	return delete, err
+	return node.Delete()
 }
 
 // Create a new folder
