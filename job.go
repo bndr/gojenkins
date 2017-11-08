@@ -412,14 +412,16 @@ func (j *Job) HasQueuedBuild() {
 	panic("Not Implemented yet")
 }
 
-func (j *Job) InvokeSimple(params map[string]string) (int64, error) {
-	isQueued, err := j.IsQueued()
-	if err != nil {
-		return 0, err
-	}
-	if isQueued {
-		Error.Printf("%s is already running", j.GetName())
-		return 0, nil
+func (j *Job) InvokeSimple(params map[string]string, queueJob bool) (int64, error) {
+	if (!queueJob) {
+		isQueued, err := j.IsQueued()
+		if err != nil {
+			return 0, err
+		}
+		if isQueued {
+			Error.Printf("%s is already running", j.GetName())
+			return 0, nil
+		}
 	}
 
 	endpoint := "/build"
