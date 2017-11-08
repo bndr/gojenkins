@@ -41,6 +41,7 @@ func TestCreateNodes(t *testing.T) {
 	id1 := "node1_test"
 	id2 := "node2_test"
 	id3 := "node3_test"
+	id4 := "node4_test"
 
 	jnlp := map[string]string{"method": "JNLPLauncher"}
 	ssh := map[string]string{"method": "SSHLauncher"}
@@ -53,6 +54,14 @@ func TestCreateNodes(t *testing.T) {
 
 	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
 	assert.Equal(t, id3, node3.GetName())
+	node4, _ := jenkins.CreateNode(id4, 1, "Node 4 Description", "/var/lib/jenkins", "jdk7")
+	assert.Equal(t, id4, node4.GetName())
+}
+
+func TestDeleteNodes(t *testing.T) {
+	id := "node4_test"
+	node, _ := jenkins.DeleteNode(id)
+	assert.NotNil(t, node)
 }
 
 func TestCreateBuilds(t *testing.T) {
@@ -62,7 +71,6 @@ func TestCreateBuilds(t *testing.T) {
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
-
 		time.Sleep(10 * time.Second)
 		builds, _ := item.GetAllBuildIds()
 
