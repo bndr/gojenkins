@@ -63,6 +63,8 @@ type JobResponse struct {
 	DisplayNameOrNull  interface{} `json:"displayNameOrNull"`
 	DownstreamProjects []InnerJob  `json:"downstreamProjects"`
 	FirstBuild         JobBuild
+	FullName           string `json:"fullName"`
+	FullDisplayName    string `json:"fullDisplayName"`
 	HealthReport       []struct {
 		Description   string `json:"description"`
 		IconClassName string `json:"iconClassName"`
