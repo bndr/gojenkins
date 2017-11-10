@@ -205,11 +205,56 @@ func (b *Build) Stop() (bool, error) {
 	return true, nil
 }
 
+func (b *Build) Delete() (bool, error) {
+	resp, err := b.Jenkins.Requester.Post(b.Base+"/doDelete", nil, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
+}
+
 func (b *Build) GetConsoleOutput() string {
 	url := b.Base + "/consoleText"
 	var content string
 	b.Jenkins.Requester.GetXML(url, &content, nil)
 	return content
+}
+
+// GetProgressiveText gets progressive text with the param in previous response header.
+func (b *Build) GetProgressiveText(start int64) (string, string, error) {
+	startStr := strconv.FormatInt(start, 10)
+	url := b.Base + "/logText/progressiveText" // "/logText/progressiveHtml"
+
+	var content string
+	querymap := make(map[string]string)
+	querymap["start"] = startStr
+
+	responese, err := b.Jenkins.Requester.Get(url, &content, querymap)
+	if err != nil {
+		return "", "", err
+	}
+	textSize := responese.Header.Get("X-Text-Size")
+	return content, textSize, nil
+}
+
+// GetProgressiveHTML gets progressive html with the param in previous response header.
+func (b *Build) GetProgressiveHTML(start int64) (string, string, error) {
+	startStr := strconv.FormatInt(start, 10)
+	url := b.Base + "/logText/progressiveHtml"
+
+	var content string
+	querymap := make(map[string]string)
+	querymap["start"] = startStr
+
+	responese, err := b.Jenkins.Requester.Get(url, &content, querymap)
+	if err != nil {
+		return "", "", err
+	}
+	textSize := responese.Header.Get("X-Text-Size")
+	return content, textSize, nil
 }
 
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
