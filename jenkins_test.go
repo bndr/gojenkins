@@ -183,7 +183,7 @@ func TestCopyDeleteJob(t *testing.T) {
 
 func TestGetPlugins(t *testing.T) {
 	plugins, _ := jenkins.GetPlugins(3)
-	assert.Equal(t, 5, plugins.Count())
+	assert.Equal(t, 10, plugins.Count())
 }
 
 func TestGetViews(t *testing.T) {
