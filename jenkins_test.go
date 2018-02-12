@@ -246,6 +246,12 @@ func TestGetFolder(t *testing.T) {
 	assert.NotNil(t, folder2)
 	assert.Equal(t, folder2ID, folder2.GetName())
 }
+func TestInstallPlugin(t *testing.T) {
+
+	err := jenkins.InstallPlugin("packer", "1.4")
+
+	assert.Nil(t, err, "Could not install plugin")
+}
 
 func TestConcurrentRequests(t *testing.T) {
 	for i := 0; i <= 16; i++ {
@@ -255,13 +261,6 @@ func TestConcurrentRequests(t *testing.T) {
 			jenkins.GetAllNodes()
 		}()
 	}
-}
-
-func TestInstallPlugin(t *testing.T) {
-
-	err := jenkins.InstallPlugin("packer", "1.4")
-
-	assert.Nil(t, err, "Could not install plugin")
 }
 
 func getFileAsString(path string) string {
