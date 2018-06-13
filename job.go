@@ -79,7 +79,6 @@ type JobResponse struct {
 	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
 	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
 	Name                  string   `json:"name"`
-	SubJobs               []InnerJob    `json:"jobs"`
 	NextBuildNumber       int64    `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
@@ -194,28 +193,12 @@ func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	return buildsResp.Builds, nil
 }
 
-func (j *Job) GetSubJobsMetadata() []InnerJob {
-	return j.Raw.SubJobs
-}
-
 func (j *Job) GetUpstreamJobsMetadata() []InnerJob {
 	return j.Raw.UpstreamProjects
 }
 
 func (j *Job) GetDownstreamJobsMetadata() []InnerJob {
 	return j.Raw.DownstreamProjects
-}
-
-func (j *Job) GetSubJobs() ([]*Job, error) {
-	jobs := make([]*Job, len(j.Raw.SubJobs))
-	for i, job := range j.Raw.SubJobs {
-		ji, err := j.Jenkins.GetSubJob(j.GetName(), job.Name)
-		if err != nil {
-			return nil, err
-		}
-		jobs[i] = ji
-	}
-	return jobs, nil
 }
 
 func (j *Job) GetInnerJobsMetadata() []InnerJob {
