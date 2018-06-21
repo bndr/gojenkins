@@ -51,6 +51,7 @@ type ParameterDefinition struct {
 	Description string `json:"description"`
 	Name        string `json:"name"`
 	Type        string `json:"type"`
+	Choices     []string `json:"choices,omitempty"`
 }
 
 type JobResponse struct {
