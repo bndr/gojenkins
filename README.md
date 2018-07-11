@@ -44,7 +44,7 @@ if err != nil {
   panic("Job Does Not Exist")
 }
 
-lastSuccessBuild := build.GetLastSuccessfulBuild()
+lastSuccessBuild, err := build.GetLastSuccessfulBuild()
 if err != nil {
   panic("Last SuccessBuild does not exist")
 }
