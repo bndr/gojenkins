@@ -409,6 +409,20 @@ func (j *Jenkins) GetQueueUrl() string {
 	return "/queue"
 }
 
+// GetQueueItem returns a single queue Task
+func (j *Jenkins) GetQueueItem(id int64) (*Task, error) {
+	t := &Task{Raw: new(taskResponse), Jenkins: j, Base: j.getQueueItemURL(id)}
+	_, err := t.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func (j *Jenkins) getQueueItemURL(id int64) string {
+	return fmt.Sprintf("/queue/item/%d", id)
+}
+
 // Get Artifact data by Hash
 func (j *Jenkins) GetArtifactData(id string) (*FingerPrintResponse, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}

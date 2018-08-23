@@ -11,6 +11,7 @@ import (
 
 var (
 	jenkins *Jenkins
+	queueID int64
 )
 
 func TestInit(t *testing.T) {
@@ -67,7 +68,7 @@ func TestDeleteNodes(t *testing.T) {
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
-		item.InvokeSimple(map[string]string{"params1": "param1"})
+		queueID, _ = item.InvokeSimple(map[string]string{"params1": "param1"})
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
@@ -76,6 +77,16 @@ func TestCreateBuilds(t *testing.T) {
 
 		assert.True(t, (len(builds) > 0))
 
+	}
+}
+
+func TestGetQueueItem(t *testing.T) {
+	task, err := jenkins.GetQueueItem(queueID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.Raw == nil || task.Raw.ID != queueID {
+		t.Fatal()
 	}
 }
 
