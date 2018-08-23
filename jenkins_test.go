@@ -194,7 +194,7 @@ func TestCopyDeleteJob(t *testing.T) {
 
 func TestGetPlugins(t *testing.T) {
 	plugins, _ := jenkins.GetPlugins(3)
-	assert.Equal(t, 5, plugins.Count())
+	assert.Equal(t, 10, plugins.Count())
 }
 
 func TestGetViews(t *testing.T) {
@@ -256,6 +256,12 @@ func TestGetFolder(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, folder2)
 	assert.Equal(t, folder2ID, folder2.GetName())
+}
+func TestInstallPlugin(t *testing.T) {
+
+	err := jenkins.InstallPlugin("packer", "1.4")
+
+	assert.Nil(t, err, "Could not install plugin")
 }
 
 func TestConcurrentRequests(t *testing.T) {
