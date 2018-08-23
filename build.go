@@ -263,9 +263,10 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 			if err != nil {
 				return nil, err
 			}
-			upstreamBuild, _ := build.GetUpstreamBuild()
+			upstreamBuild, err := build.GetUpstreamBuild()
+			// older build may no longer exist, so simply ignore these
 			// cannot compare only id, it can be from different job
-			if b.GetUrl() == upstreamBuild.GetUrl() {
+			if err == nil && b.GetUrl() == upstreamBuild.GetUrl() {
 				result = append(result, build)
 				break
 			}
@@ -304,8 +305,9 @@ func (b *Build) GetUpstreamJob() (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(causes) > 0 {
-		if job, ok := causes[0]["upstreamProject"]; ok {
+
+	for _, cause := range causes {
+		if job, ok := cause["upstreamProject"]; ok {
 			return b.Jenkins.GetJob(job.(string))
 		}
 	}
@@ -317,8 +319,8 @@ func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if len(causes) > 0 {
-		if build, ok := causes[0]["upstreamBuild"]; ok {
+	for _, cause := range causes {
+		if build, ok := cause["upstreamBuild"]; ok {
 			switch t := build.(type) {
 			default:
 				return t.(int64), nil
@@ -337,7 +339,7 @@ func (b *Build) GetUpstreamBuild() (*Build, error) {
 	}
 	if job != nil {
 		buildNumber, err := b.GetUpstreamBuildNumber()
-		if err == nil {
+		if err == nil && buildNumber != 0 {
 			return job.GetBuild(buildNumber)
 		}
 	}

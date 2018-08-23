@@ -522,9 +522,11 @@ func (j *Job) Poll() (int, error) {
 }
 
 func (j *Job) History() ([]*History, error) {
-	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
+	var s string
+	_, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", &s, nil)
 	if err != nil {
 		return nil, err
 	}
-	return parseBuildHistory(resp.Body), nil
+
+	return parseBuildHistory(strings.NewReader(s)), nil
 }
