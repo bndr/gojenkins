@@ -140,6 +140,7 @@ type BuildResponse struct {
 	Duration          int64       `json:"duration"`
 	EstimatedDuration int64       `json:"estimatedDuration"`
 	Executor          interface{} `json:"executor"`
+	DisplayName       string      `json:"displayName"`
 	FullDisplayName   string      `json:"fullDisplayName"`
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`

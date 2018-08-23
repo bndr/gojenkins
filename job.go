@@ -65,6 +65,8 @@ type JobResponse struct {
 	DisplayNameOrNull  interface{} `json:"displayNameOrNull"`
 	DownstreamProjects []InnerJob  `json:"downstreamProjects"`
 	FirstBuild         JobBuild
+	FullName           string `json:"fullName"`
+	FullDisplayName    string `json:"fullDisplayName"`
 	HealthReport       []struct {
 		Description   string `json:"description"`
 		IconClassName string `json:"iconClassName"`
@@ -118,7 +120,9 @@ func (j *Job) GetDetails() *JobResponse {
 }
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: j.Base + "/" + strconv.FormatInt(id, 10)}
+	// use job embedded URL to properly handle jobs in folders
+	jobURL := strings.Replace(j.Raw.URL, j.Jenkins.Server, "", -1)
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: jobURL + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
