@@ -102,9 +102,10 @@ func (j *Job) parentBase() string {
 }
 
 type History struct {
-	BuildNumber    int
-	BuildStatus    string
-	BuildTimestamp int64
+	BuildDisplayName string
+	BuildNumber      int
+	BuildStatus      string
+	BuildTimestamp   int64
 }
 
 func (j *Job) GetName() string {
