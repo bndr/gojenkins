@@ -533,3 +533,40 @@ func (j *Job) History() ([]*History, error) {
 
 	return parseBuildHistory(strings.NewReader(s)), nil
 }
+
+func (pr *PipelineRun) ProceedInput() (bool, error) {
+	actions, _ := pr.GetPendingInputActions()
+	data := url.Values{}
+	data.Set("inputId", actions[0].ID)
+	params := make(map[string]string)
+	data.Set("json", makeJson(params))
+
+	href := pr.Base + "/wfapi/inputSubmit"
+
+	resp, err := pr.Job.Jenkins.Requester.Post(href, bytes.NewBufferString(data.Encode()), nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
+}
+
+func (pr *PipelineRun) AbortInput() (bool, error) {
+	actions, _ := pr.GetPendingInputActions()
+	data := url.Values{}
+	params := make(map[string]string)
+	data.Set("json", makeJson(params))
+
+	href := pr.Base + "/input/" + actions[0].ID + "/abort"
+
+	resp, err := pr.Job.Jenkins.Requester.Post(href, bytes.NewBufferString(data.Encode()), nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
+}
