@@ -18,6 +18,7 @@ package gojenkins
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -246,8 +247,8 @@ func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
 }
 
 // Delete a job.
-func (j *Jenkins) DeleteJob(name string) (bool, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+func (j *Jenkins) DeleteJob(name string, parentIDs ...string) (bool, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, name), "/")}
 	return job.Delete()
 }
 
@@ -309,6 +310,20 @@ func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
 		return &job, nil
 	}
 	return nil, errors.New(strconv.Itoa(status))
+}
+
+func (j *Jenkins) GetJobXML(id string, parentIDs ...string) (string, error) {
+	var job string
+	response, err := j.Requester.GetXML("/job/"+strings.Join(append(parentIDs, id), "/")+"/config.xml", &job, nil)
+	if err != nil {
+		return "", fmt.Errorf("error getting job XML: %v", err)
+	}
+	if response.StatusCode == http.StatusOK {
+		return job, nil
+	}
+
+	body, _ := ioutil.ReadAll(response.Body)
+	return "", fmt.Errorf("status code: %d, body: %s, headers: %#v", response.StatusCode, string(body), response.Header)
 }
 
 func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {

@@ -264,6 +264,20 @@ func TestInstallPlugin(t *testing.T) {
 	assert.Nil(t, err, "Could not install plugin")
 }
 
+func TestGetJobXML(t *testing.T) {
+	job1ID := "Job1_xml_test"
+	job_data := getFileAsString("job.xml")
+	job1, err := jenkins.CreateJob(job_data, job1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, job1)
+	assert.Equal(t, "Some Job Description", job1.GetDescription())
+	assert.Equal(t, job1ID, job1.GetName())
+
+	xml, err := jenkins.GetJobXML(job1ID)
+	assert.Nil(t, err)
+	assert.Contains(t, xml, `<description>Some Job Description</description>`)
+}
+
 func TestConcurrentRequests(t *testing.T) {
 	for i := 0; i <= 16; i++ {
 		go func() {

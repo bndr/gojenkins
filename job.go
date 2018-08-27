@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"path"
 	"strconv"
@@ -305,7 +306,8 @@ func (j *Job) Delete() (bool, error) {
 		return false, err
 	}
 	if resp.StatusCode != 200 {
-		return false, errors.New(strconv.Itoa(resp.StatusCode))
+		body, _ := ioutil.ReadAll(resp.Body)
+		return false, fmt.Errorf("status code: %d, body: %s, headers: %#v", resp.StatusCode, string(body), resp.Header)
 	}
 	return true, nil
 }
@@ -333,7 +335,9 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 		j.Poll()
 		return j, nil
 	}
-	return nil, errors.New(strconv.Itoa(resp.StatusCode))
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	return nil, fmt.Errorf("status code: %d, body: %s, headers: %#v", resp.StatusCode, string(body), resp.Header)
 }
 
 func (j *Job) Copy(destinationName string) (*Job, error) {
