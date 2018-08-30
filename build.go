@@ -32,8 +32,11 @@ type Build struct {
 }
 
 type parameter struct {
-	Name  string
-	Value string
+	Class   string `json:"_class"`
+	Name    string
+	Value   string
+	JobName string
+	Number  string
 }
 
 type branch struct {
