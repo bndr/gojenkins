@@ -16,7 +16,7 @@ type CredentialsManager struct {
 const baseFolderPrefix = "/job/%s"
 const baseCredentialsURL = "%s/credentials/store/%s/domain/%s/"
 const createCredentialsURL = baseCredentialsURL + "createCredentials"
-const deleteCredentialURL = baseCredentialsURL + "credential/%s/delete"
+const deleteCredentialURL = baseCredentialsURL + "credential/%s/doDelete"
 const configCredentialURL = baseCredentialsURL + "credential/%s/config.xml"
 const credentialsListURL = baseCredentialsURL + "api/json"
 
@@ -142,7 +142,7 @@ func (cm CredentialsManager) Add(domain string, creds interface{}) error {
 
 //Delete credential in given domain with given id
 func (cm CredentialsManager) Delete(domain string, id string) error {
-	return cm.handleResponse(cm.J.Requester.PostXML(cm.fillURL(deleteCredentialURL, domain, id), "", cm.J.Raw, map[string]string{}))
+	return cm.handleResponse(cm.J.Requester.Post(cm.fillURL(deleteCredentialURL, domain, id), nil, cm.J.Raw, map[string]string{}))
 }
 
 //Update credential in given domain with given id, creds must be pointer to struct which is parsable to xml
