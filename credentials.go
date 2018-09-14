@@ -103,7 +103,7 @@ func (cm CredentialsManager) fillURL(url string, params ...interface{}) string {
 	} else {
 		args = []interface{}{"", "system"}
 	}
-	return fmt.Sprintf(url, append(args, params)...)
+	return fmt.Sprintf(url, append(args, params...)...)
 }
 
 //List ids if credentials stored inside provided domain
