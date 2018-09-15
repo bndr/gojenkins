@@ -5,8 +5,8 @@ services:
   - docker
 
 go:
-  - 1.6
-  - 1.7
+  - 1.10
+  - 1.11
   - tip
 
 before_install:
