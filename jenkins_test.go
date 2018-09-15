@@ -123,7 +123,7 @@ func TestGetAllJobs(t *testing.T) {
 
 func TestGetAllNodes(t *testing.T) {
 	nodes, _ := jenkins.GetAllNodes()
-	assert.Equal(t, 4, len(nodes))
+	assert.Equal(t, 3, len(nodes))
 	assert.Equal(t, nodes[0].GetName(), "master")
 }
 
@@ -148,17 +148,17 @@ func TestGetLabel(t *testing.T) {
 	assert.Equal(t, 1, len(label.GetNodes()))
 	assert.Equal(t, "node3_test", label.GetNodes()[0].NodeName)
 
-	label, err = jenkins.GetLabel("jdk8")
-	assert.Nil(t, err)
-	assert.Equal(t, label.GetName(), "jdk8")
-	assert.Equal(t, 1, len(label.GetNodes()))
-	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
-
-	label, err = jenkins.GetLabel("docker")
-	assert.Nil(t, err)
-	assert.Equal(t, label.GetName(), "docker")
-	assert.Equal(t, 1, len(label.GetNodes()))
-	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+	//label, err = jenkins.GetLabel("jdk8")
+	//assert.Nil(t, err)
+	//assert.Equal(t, label.GetName(), "jdk8")
+	//assert.Equal(t, 1, len(label.GetNodes()))
+	//assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+	//
+	//label, err = jenkins.GetLabel("docker")
+	//assert.Nil(t, err)
+	//assert.Equal(t, label.GetName(), "docker")
+	//assert.Equal(t, 1, len(label.GetNodes()))
+	//assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
 }
 
 func TestBuildMethods(t *testing.T) {
