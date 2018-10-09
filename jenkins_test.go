@@ -37,21 +37,22 @@ func TestCreateJobs(t *testing.T) {
 	assert.Equal(t, job2ID, job2.GetName())
 }
 
+
 func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
-// 	id2 := "node2_test"
+	//id2 := "node2_test"
 	id3 := "node3_test"
 	id4 := "node4_test"
 
 	jnlp := map[string]string{"method": "JNLPLauncher"}
-// 	ssh := map[string]string{"method": "SSHLauncher"}
+	//ssh := map[string]string{"method": "SSHLauncher"}
 
 	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
 	assert.Equal(t, id1, node1.GetName())
 
-// 	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
-// 	assert.Equal(t, id2, node2.GetName())
+	//node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
+	//assert.Equal(t, id2, node2.GetName())
 
 	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
 	assert.Equal(t, id3, node3.GetName())
@@ -147,17 +148,17 @@ func TestGetLabel(t *testing.T) {
 	assert.Equal(t, 1, len(label.GetNodes()))
 	assert.Equal(t, "node3_test", label.GetNodes()[0].NodeName)
 
-// 	label, err = jenkins.GetLabel("jdk8")
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, label.GetName(), "jdk8")
-// 	assert.Equal(t, 1, len(label.GetNodes()))
-// 	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
-
-// 	label, err = jenkins.GetLabel("docker")
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, label.GetName(), "docker")
-// 	assert.Equal(t, 1, len(label.GetNodes()))
-// 	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+	//label, err = jenkins.GetLabel("jdk8")
+	//assert.Nil(t, err)
+	//assert.Equal(t, label.GetName(), "jdk8")
+	//assert.Equal(t, 1, len(label.GetNodes()))
+	//assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+	//
+	//label, err = jenkins.GetLabel("docker")
+	//assert.Nil(t, err)
+	//assert.Equal(t, label.GetName(), "docker")
+	//assert.Equal(t, 1, len(label.GetNodes()))
+	//assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
 }
 
 func TestBuildMethods(t *testing.T) {
