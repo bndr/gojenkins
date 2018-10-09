@@ -135,6 +135,30 @@ type BuildResponse struct {
 			Revision int
 		} `json:"revision"`
 	} `json:"changeSet"`
+	ChangeSets []struct {
+		Items []struct {
+			AffectedPaths []string `json:"affectedPaths"`
+			Author        struct {
+				AbsoluteUrl string `json:"absoluteUrl"`
+				FullName    string `json:"fullName"`
+			} `json:"author"`
+			Comment  string `json:"comment"`
+			CommitID string `json:"commitId"`
+			Date     string `json:"date"`
+			ID       string `json:"id"`
+			Msg      string `json:"msg"`
+			Paths    []struct {
+				EditType string `json:"editType"`
+				File     string `json:"file"`
+			} `json:"paths"`
+			Timestamp int64 `json:"timestamp"`
+		} `json:"items"`
+		Kind      string `json:"kind"`
+		Revisions []struct {
+			Module   string
+			Revision int
+		} `json:"revision"`
+	} `json:"changeSets"`
 	Culprits          []Culprit   `json:"culprits"`
 	Description       interface{} `json:"description"`
 	Duration          int64       `json:"duration"`
