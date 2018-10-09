@@ -126,7 +126,7 @@ func (job *Job) GetPipelineRun(id string) (pr *PipelineRun, err error) {
 func (pr *PipelineRun) GetPendingInputActions() (PIAs []PipelineInputAction, err error) {
 	PIAs = make([]PipelineInputAction, 0, 1)
 	href := pr.Base + "/wfapi/pendingInputActions"
-	_, err = pr.Job.Jenkins.Requester.GetJSON(href, PIAs, nil)
+	_, err = pr.Job.Jenkins.Requester.GetJSON(href, &PIAs, nil)
 	if err != nil {
 		return nil, err
 	}
