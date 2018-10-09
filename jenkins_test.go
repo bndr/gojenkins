@@ -50,8 +50,8 @@ func TestCreateNodes(t *testing.T) {
 	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
 	assert.Equal(t, id1, node1.GetName())
 
-	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
-	assert.Equal(t, id2, node2.GetName())
+// 	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
+// 	assert.Equal(t, id2, node2.GetName())
 
 	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
 	assert.Equal(t, id3, node3.GetName())
