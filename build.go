@@ -182,6 +182,12 @@ type BuildResponse struct {
 	} `json:"runs"`
 }
 
+type consoleResponse struct {
+	Content     string
+	Offset      int64
+	HasMoreText bool
+}
+
 // Builds
 func (b *Build) Info() *BuildResponse {
 	return b.Raw
@@ -235,6 +241,29 @@ func (b *Build) GetConsoleOutput() string {
 	var content string
 	b.Jenkins.Requester.GetXML(url, &content, nil)
 	return content
+}
+
+func (b *Build) GetConsoleOutputFromIndex(startID int64) (consoleResponse, error) {
+	strstart := strconv.FormatInt(startID, 10)
+	url := b.Base + "/logText/progressiveText"
+
+	var console consoleResponse
+
+	querymap := make(map[string]string)
+	querymap["start"] = strstart
+	rsp, err := b.Jenkins.Requester.Get(url, &console.Content, querymap)
+	if err != nil {
+		return console, err
+	}
+
+	textSize := rsp.Header.Get("X-Text-Size")
+	console.HasMoreText = len(rsp.Header.Get("X-More-Data")) != 0
+	console.Offset, err = strconv.ParseInt(textSize, 10, 64)
+	if err != nil {
+		return console, err
+	}
+
+	return console, err
 }
 
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
