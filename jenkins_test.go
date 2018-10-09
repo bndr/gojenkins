@@ -11,6 +11,7 @@ import (
 
 var (
 	jenkins *Jenkins
+	queueID int64
 )
 
 func TestInit(t *testing.T) {
@@ -67,7 +68,7 @@ func TestDeleteNodes(t *testing.T) {
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
-		item.InvokeSimple(map[string]string{"param1": "param1"})
+		queueID, _ = item.InvokeSimple(map[string]string{"params1": "param1"})
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
@@ -76,6 +77,16 @@ func TestCreateBuilds(t *testing.T) {
 
 		assert.True(t, (len(builds) > 0))
 
+	}
+}
+
+func TestGetQueueItem(t *testing.T) {
+	task, err := jenkins.GetQueueItem(queueID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.Raw == nil || task.Raw.ID != queueID {
+		t.Fatal()
 	}
 }
 
@@ -183,7 +194,7 @@ func TestCopyDeleteJob(t *testing.T) {
 
 func TestGetPlugins(t *testing.T) {
 	plugins, _ := jenkins.GetPlugins(3)
-	assert.Equal(t, 5, plugins.Count())
+	assert.Equal(t, 10, plugins.Count())
 }
 
 func TestGetViews(t *testing.T) {
@@ -245,6 +256,12 @@ func TestGetFolder(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, folder2)
 	assert.Equal(t, folder2ID, folder2.GetName())
+}
+func TestInstallPlugin(t *testing.T) {
+
+	err := jenkins.InstallPlugin("packer", "1.4")
+
+	assert.Nil(t, err, "Could not install plugin")
 }
 
 func TestConcurrentRequests(t *testing.T) {
