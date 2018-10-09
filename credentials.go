@@ -9,12 +9,14 @@ import (
 //CredentialsManager is utility to control credential plugin
 //Credentials declared by it can be used in jenkins jobs
 type CredentialsManager struct {
-	J *Jenkins
+	J      *Jenkins
+	Folder string
 }
 
-const baseCredentialsURL = "/credentials/store/system/domain/%s/"
+const baseFolderPrefix = "/job/%s"
+const baseCredentialsURL = "%s/credentials/store/%s/domain/%s/"
 const createCredentialsURL = baseCredentialsURL + "createCredentials"
-const deleteCredentialURL = baseCredentialsURL + "credential/%s/delete"
+const deleteCredentialURL = baseCredentialsURL + "credential/%s/doDelete"
 const configCredentialURL = baseCredentialsURL + "credential/%s/config.xml"
 const credentialsListURL = baseCredentialsURL + "api/json"
 
@@ -94,12 +96,22 @@ type PrivateKeyFile struct {
 	Class string `xml:"class,attr"`
 }
 
+func (cm CredentialsManager) fillURL(url string, params ...interface{}) string {
+	var args []interface{}
+	if cm.Folder != "" {
+		args = []interface{}{fmt.Sprintf(baseFolderPrefix, cm.Folder), "folder"}
+	} else {
+		args = []interface{}{"", "system"}
+	}
+	return fmt.Sprintf(url, append(args, params...)...)
+}
+
 //List ids if credentials stored inside provided domain
 func (cm CredentialsManager) List(domain string) ([]string, error) {
 
 	idsResponse := credentialIDs{}
 	ids := make([]string, 0)
-	err := cm.handleResponse(cm.J.Requester.Get(fmt.Sprintf(credentialsListURL, domain), &idsResponse, listQuery))
+	err := cm.handleResponse(cm.J.Requester.Get(cm.fillURL(credentialsListURL, domain), &idsResponse, listQuery))
 	if err != nil {
 		return ids, err
 	}
@@ -115,7 +127,7 @@ func (cm CredentialsManager) List(domain string) ([]string, error) {
 //it will be parsed as xml to creds parameter(creds must be pointer to struct)
 func (cm CredentialsManager) GetSingle(domain string, id string, creds interface{}) error {
 	str := ""
-	err := cm.handleResponse(cm.J.Requester.Get(fmt.Sprintf(configCredentialURL, domain, id), &str, map[string]string{}))
+	err := cm.handleResponse(cm.J.Requester.Get(cm.fillURL(configCredentialURL, domain, id), &str, map[string]string{}))
 	if err != nil {
 		return err
 	}
@@ -125,19 +137,17 @@ func (cm CredentialsManager) GetSingle(domain string, id string, creds interface
 
 //Add credential to given domain, creds must be struct which is parsable to xml
 func (cm CredentialsManager) Add(domain string, creds interface{}) error {
-
-	return cm.postCredsXML(fmt.Sprintf(createCredentialsURL, domain), creds)
+	return cm.postCredsXML(cm.fillURL(createCredentialsURL, domain), creds)
 }
 
 //Delete credential in given domain with given id
 func (cm CredentialsManager) Delete(domain string, id string) error {
-	return cm.handleResponse(cm.J.Requester.PostXML(fmt.Sprintf(deleteCredentialURL, domain, id), "", cm.J.Raw, map[string]string{}))
+	return cm.handleResponse(cm.J.Requester.Post(cm.fillURL(deleteCredentialURL, domain, id), nil, cm.J.Raw, map[string]string{}))
 }
 
 //Update credential in given domain with given id, creds must be pointer to struct which is parsable to xml
 func (cm CredentialsManager) Update(domain string, id string, creds interface{}) error {
-
-	return cm.postCredsXML(fmt.Sprintf(configCredentialURL, domain, id), creds)
+	return cm.postCredsXML(cm.fillURL(configCredentialURL, domain, id), creds)
 }
 
 func (cm CredentialsManager) postCredsXML(url string, creds interface{}) error {
