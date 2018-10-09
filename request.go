@@ -137,7 +137,7 @@ func (r *Requester) SetClient(client *http.Client) *Requester {
 //Add auth on redirect if required.
 func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
 	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
+		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.PasswordOrToken)
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 	}
 
 	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
+		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.PasswordOrToken)
 	}
 
 	for k := range ar.Headers {

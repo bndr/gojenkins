@@ -27,8 +27,8 @@ import (
 
 // Basic Authentication
 type BasicAuth struct {
-	Username string
-	Password string
+	Username        string
+	PasswordOrToken string
 }
 
 type Jenkins struct {
@@ -556,7 +556,7 @@ func (j *Jenkins) Poll() (int, error) {
 }
 
 // Creates a new Jenkins Instance
-// Optional parameters are: client, username, password
+// Optional parameters are: client, username, password/token
 // After creating an instance call init method.
 func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
@@ -569,7 +569,7 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 		j.Requester.Client = http.DefaultClient
 	}
 	if len(auth) == 2 {
-		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
+		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), PasswordOrToken: auth[1].(string)}
 	}
 	return j
 }
