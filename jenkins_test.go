@@ -40,12 +40,12 @@ func TestCreateJobs(t *testing.T) {
 func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
-	id2 := "node2_test"
+// 	id2 := "node2_test"
 	id3 := "node3_test"
 	id4 := "node4_test"
 
 	jnlp := map[string]string{"method": "JNLPLauncher"}
-	ssh := map[string]string{"method": "SSHLauncher"}
+// 	ssh := map[string]string{"method": "SSHLauncher"}
 
 	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
 	assert.Equal(t, id1, node1.GetName())
