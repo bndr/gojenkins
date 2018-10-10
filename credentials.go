@@ -14,7 +14,7 @@ type CredentialsManager struct {
 
 const baseCredentialsURL = "/credentials/store/system/domain/%s/"
 const createCredentialsURL = baseCredentialsURL + "createCredentials"
-const deleteCredentialURL = baseCredentialsURL + "credential/%s/delete"
+const deleteCredentialURL = baseCredentialsURL + "credential/%s/doDelete"
 const configCredentialURL = baseCredentialsURL + "credential/%s/config.xml"
 const credentialsListURL = baseCredentialsURL + "api/json"
 
