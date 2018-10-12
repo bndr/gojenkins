@@ -135,11 +135,36 @@ type BuildResponse struct {
 			Revision int
 		} `json:"revision"`
 	} `json:"changeSet"`
+	ChangeSets []struct {
+		Items []struct {
+			AffectedPaths []string `json:"affectedPaths"`
+			Author        struct {
+				AbsoluteUrl string `json:"absoluteUrl"`
+				FullName    string `json:"fullName"`
+			} `json:"author"`
+			Comment  string `json:"comment"`
+			CommitID string `json:"commitId"`
+			Date     string `json:"date"`
+			ID       string `json:"id"`
+			Msg      string `json:"msg"`
+			Paths    []struct {
+				EditType string `json:"editType"`
+				File     string `json:"file"`
+			} `json:"paths"`
+			Timestamp int64 `json:"timestamp"`
+		} `json:"items"`
+		Kind      string `json:"kind"`
+		Revisions []struct {
+			Module   string
+			Revision int
+		} `json:"revision"`
+	} `json:"changeSets"`
 	Culprits          []Culprit   `json:"culprits"`
 	Description       interface{} `json:"description"`
 	Duration          int64       `json:"duration"`
 	EstimatedDuration int64       `json:"estimatedDuration"`
 	Executor          interface{} `json:"executor"`
+	DisplayName       string      `json:"displayName"`
 	FullDisplayName   string      `json:"fullDisplayName"`
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`
@@ -155,6 +180,12 @@ type BuildResponse struct {
 		Number int64
 		URL    string
 	} `json:"runs"`
+}
+
+type consoleResponse struct {
+	Content     string
+	Offset      int64
+	HasMoreText bool
 }
 
 // Builds
@@ -212,6 +243,29 @@ func (b *Build) GetConsoleOutput() string {
 	return content
 }
 
+func (b *Build) GetConsoleOutputFromIndex(startID int64) (consoleResponse, error) {
+	strstart := strconv.FormatInt(startID, 10)
+	url := b.Base + "/logText/progressiveText"
+
+	var console consoleResponse
+
+	querymap := make(map[string]string)
+	querymap["start"] = strstart
+	rsp, err := b.Jenkins.Requester.Get(url, &console.Content, querymap)
+	if err != nil {
+		return console, err
+	}
+
+	textSize := rsp.Header.Get("X-Text-Size")
+	console.HasMoreText = len(rsp.Header.Get("X-More-Data")) != 0
+	console.Offset, err = strconv.ParseInt(textSize, 10, 64)
+	if err != nil {
+		return console, err
+	}
+
+	return console, err
+}
+
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
 	_, err := b.Poll()
 	if err != nil {
@@ -262,9 +316,10 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 			if err != nil {
 				return nil, err
 			}
-			upstreamBuild, _ := build.GetUpstreamBuild()
+			upstreamBuild, err := build.GetUpstreamBuild()
+			// older build may no longer exist, so simply ignore these
 			// cannot compare only id, it can be from different job
-			if b.GetUrl() == upstreamBuild.GetUrl() {
+			if err == nil && b.GetUrl() == upstreamBuild.GetUrl() {
 				result = append(result, build)
 				break
 			}
@@ -303,8 +358,9 @@ func (b *Build) GetUpstreamJob() (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(causes) > 0 {
-		if job, ok := causes[0]["upstreamProject"]; ok {
+
+	for _, cause := range causes {
+		if job, ok := cause["upstreamProject"]; ok {
 			return b.Jenkins.GetJob(job.(string))
 		}
 	}
@@ -316,8 +372,8 @@ func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if len(causes) > 0 {
-		if build, ok := causes[0]["upstreamBuild"]; ok {
+	for _, cause := range causes {
+		if build, ok := cause["upstreamBuild"]; ok {
 			switch t := build.(type) {
 			default:
 				return t.(int64), nil
@@ -336,7 +392,7 @@ func (b *Build) GetUpstreamBuild() (*Build, error) {
 	}
 	if job != nil {
 		buildNumber, err := b.GetUpstreamBuildNumber()
-		if err == nil {
+		if err == nil && buildNumber != 0 {
 			return job.GetBuild(buildNumber)
 		}
 	}

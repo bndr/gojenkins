@@ -14,6 +14,7 @@ func parseBuildHistory(d io.Reader) []*History {
 	depth := 0
 	buildRowCellDepth := -1
 	builds := make([]*History, 0)
+	isInsideDisplayName := false
 	var curBuild *History
 	for {
 		tt := z.Next()
@@ -52,11 +53,12 @@ func parseBuildHistory(d io.Reader) []*History {
 				}
 				// <a update-parent-class=".build-row" href="/job/appscode/job/43/job/build-binary/227/" class="tip model-link inside build-link display-name">#227</a>
 				if string(tn) == "a" {
-					if hasCSSClass(a, "build-link") && buildRowCellDepth > -1 {
+					if hasCSSClass(a, "display-name") && buildRowCellDepth > -1 {
 						if href, found := a["href"]; found {
 							parts := strings.Split(href, "/")
 							if num, err := strconv.Atoi(parts[len(parts)-2]); err == nil {
 								curBuild.BuildNumber = num
+								isInsideDisplayName = true
 							}
 						}
 					}
@@ -71,6 +73,11 @@ func parseBuildHistory(d io.Reader) []*History {
 						}
 					}
 				}
+			}
+		case html.TextToken:
+			if isInsideDisplayName {
+				curBuild.BuildDisplayName = z.Token().Data
+				isInsideDisplayName = false
 			}
 		case html.EndTagToken:
 			tn, _ := z.TagName()
