@@ -46,7 +46,7 @@ var (
 )
 
 // Init Method. Should be called after creating a Jenkins Instance.
-// e.g jenkins := CreateJenkins("url").Init()
+// e.g jenkins,err := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
