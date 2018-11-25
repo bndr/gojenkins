@@ -430,7 +430,7 @@ func (j *Job) InvokeSimple(params map[string]string) (int64, error) {
 	}
 
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		return 0, errors.New("Could not invoke job " + j.GetName())
+		return 0, fmt.Errorf("Could not invoke job %q: %s", j.GetName(), resp.Status)
 	}
 
 	location := resp.Header.Get("Location")
