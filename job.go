@@ -23,6 +23,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type Job struct {
@@ -43,14 +45,18 @@ type InnerJob struct {
 	Color string `json:"color"`
 }
 
+type ParameterDefinitionClass struct {
+	ParameterDefinitions []ParameterDefinition `mapstructure:"parameterDefinitions"`
+}
+
 type ParameterDefinition struct {
 	DefaultParameterValue struct {
-		Name  string      `json:"name"`
-		Value interface{} `json:"value"`
-	} `json:"defaultParameterValue"`
-	Description string `json:"description"`
-	Name        string `json:"name"`
-	Type        string `json:"type"`
+		Name  string      `mapstructure:"name"`
+		Value interface{} `mapstructure:"value"`
+	} `mapstructure:"defaultParameterValue"`
+	Description string `mapstructure:"description"`
+	Name        string `mapstructure:"name"`
+	Type        string `mapstructure:"type"`
 }
 
 type JobResponse struct {
@@ -73,27 +79,26 @@ type JobResponse struct {
 		IconUrl       string `json:"iconUrl"`
 		Score         int64  `json:"score"`
 	} `json:"healthReport"`
-	InQueue               bool       `json:"inQueue"`
-	KeepDependencies      bool       `json:"keepDependencies"`
-	LastBuild             JobBuild   `json:"lastBuild"`
-	LastCompletedBuild    JobBuild   `json:"lastCompletedBuild"`
-	LastFailedBuild       JobBuild   `json:"lastFailedBuild"`
-	LastStableBuild       JobBuild   `json:"lastStableBuild"`
-	LastSuccessfulBuild   JobBuild   `json:"lastSuccessfulBuild"`
-	LastUnstableBuild     JobBuild   `json:"lastUnstableBuild"`
-	LastUnsuccessfulBuild JobBuild   `json:"lastUnsuccessfulBuild"`
-	Name                  string     `json:"name"`
-	NextBuildNumber       int64      `json:"nextBuildNumber"`
-	Property              []struct {
-		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
-	} `json:"property"`
-	QueueItem        interface{} `json:"queueItem"`
-	Scm              struct{}    `json:"scm"`
-	UpstreamProjects []InnerJob  `json:"upstreamProjects"`
-	URL              string      `json:"url"`
-	Jobs             []InnerJob  `json:"jobs"`
-	PrimaryView      *ViewData   `json:"primaryView"`
-	Views            []ViewData  `json:"views"`
+	InQueue               bool                       `json:"inQueue"`
+	KeepDependencies      bool                       `json:"keepDependencies"`
+	LastBuild             JobBuild                   `json:"lastBuild"`
+	LastCompletedBuild    JobBuild                   `json:"lastCompletedBuild"`
+	LastFailedBuild       JobBuild                   `json:"lastFailedBuild"`
+	LastStableBuild       JobBuild                   `json:"lastStableBuild"`
+	LastSuccessfulBuild   JobBuild                   `json:"lastSuccessfulBuild"`
+	LastUnstableBuild     JobBuild                   `json:"lastUnstableBuild"`
+	LastUnsuccessfulBuild JobBuild                   `json:"lastUnsuccessfulBuild"`
+	Name                  string                     `json:"name"`
+	NextBuildNumber       int64                      `json:"nextBuildNumber"`
+	RawProperty           []map[string]interface{}   `json:"property"`
+	Property              []ParameterDefinitionClass `json:"-"`
+	QueueItem             interface{}                `json:"queueItem"`
+	Scm                   struct{}                   `json:"scm"`
+	UpstreamProjects      []InnerJob                 `json:"upstreamProjects"`
+	URL                   string                     `json:"url"`
+	Jobs                  []InnerJob                 `json:"jobs"`
+	PrimaryView           *ViewData                  `json:"primaryView"`
+	Views                 []ViewData                 `json:"views"`
 }
 
 func (j *Job) parentBase() string {
@@ -373,6 +378,16 @@ func (j *Job) GetParameters() ([]ParameterDefinition, error) {
 	return parameters, nil
 }
 
+func (j *Job) GetRawProperty(class string) []map[string]interface{} {
+	props := make([]map[string]interface{}, 0)
+	for _, prop := range j.Raw.RawProperty {
+		if cls, ok := prop["_class"]; ok && cls == class {
+			props = append(props, prop)
+		}
+	}
+	return props
+}
+
 func (j *Job) IsQueued() (bool, error) {
 	if _, err := j.Poll(); err != nil {
 		return false, err
@@ -503,6 +518,15 @@ func (j *Job) Poll() (int, error) {
 	response, err := j.Jenkins.Requester.GetJSON(j.Base, j.Raw, nil)
 	if err != nil {
 		return 0, err
+	}
+	for _, prop := range j.Raw.RawProperty {
+		if cls, ok := prop["_class"]; ok && cls == "hudson.model.ParametersDefinitionProperty" {
+			paramDef := ParameterDefinitionClass{}
+			if err := mapstructure.Decode(prop, &paramDef); err != nil {
+				return 0, err
+			}
+			j.Raw.Property = append(j.Raw.Property, paramDef)
+		}
 	}
 	return response.StatusCode, nil
 }
