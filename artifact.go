@@ -32,7 +32,7 @@ type Artifact struct {
 	Path     string
 }
 
-// Get raw byte data of Artifact
+// GetData gets raw byte data of Artifact
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
 	response, err := a.Jenkins.Requester.Get(a.Path, &data, nil)

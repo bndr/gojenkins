@@ -41,7 +41,7 @@ var (
 	PIPELINE_VIEW  = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
 )
 
-// Returns True if successfully added Job, otherwise false
+// AddJob returns True if successfully added Job, otherwise false
 func (v *View) AddJob(name string) (bool, error) {
 	url := "/addJobToView"
 	qr := map[string]string{"name": name}
@@ -55,7 +55,7 @@ func (v *View) AddJob(name string) (bool, error) {
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-// Returns True if successfully deleted Job, otherwise false
+// DeleteJob returns True if successfully deleted Job, otherwise false
 func (v *View) DeleteJob(name string) (bool, error) {
 	url := "/removeJobFromView"
 	qr := map[string]string{"name": name}
