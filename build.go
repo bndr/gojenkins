@@ -205,11 +205,11 @@ func (b *Build) Stop() (bool, error) {
 	return true, nil
 }
 
-func (b *Build) GetConsoleOutput() string {
+func (b *Build) GetConsoleOutput() (string, error) {
 	url := b.Base + "/consoleText"
 	var content string
-	b.Jenkins.Requester.GetXML(url, &content, nil)
-	return content
+	_, err := b.Jenkins.Requester.GetXML(url, &content, nil)
+	return content, err
 }
 
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
