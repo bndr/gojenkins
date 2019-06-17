@@ -33,29 +33,33 @@ func init() {
 }
 
 type PipelineRun struct {
-	Job       *Job
-	Base      string
-	URLs      map[string]map[string]string `json:"_links"`
-	ID        string
-	Name      string
-	Status    string
-	StartTime int64 `json:"startTimeMillis"`
-	EndTime   int64 `json:"endTimeMillis"`
-	Duration  int64 `json:"durationMillis"`
-	Stages    []PipelineNode
+	Job                 *Job
+	Base                string
+	URLs                map[string]map[string]string `json:"_links"`
+	ID                  string
+	Name                string
+	Status              string
+	StartTime           int64 `json:"startTimeMillis"`
+	EndTime             int64 `json:"endTimeMillis"`
+	Duration            int64 `json:"durationMillis"`
+	QueueDurationMillis int64 `json:"queueDurationMillis"`
+	PauseDurationMillis int64 `json:"pauseDurationMillis"`
+	Stages              []PipelineNode
 }
 
 type PipelineNode struct {
-	Run            *PipelineRun
-	Base           string
-	URLs           map[string]map[string]string `json:"_links"`
-	ID             string
-	Name           string
-	Status         string
-	StartTime      int64 `json:"startTimeMillis"`
-	Duration       int64 `json:"durationMillis"`
-	StageFlowNodes []PipelineNode
-	ParentNodes    []int64
+	Run                  *PipelineRun
+	Base                 string
+	URLs                 map[string]map[string]string `json:"_links"`
+	ID                   string
+	Name                 string
+	ParameterDescription string `json:"parameterDescription"`
+	Status               string
+	StartTime            int64          `json:"startTimeMillis"`
+	Duration             int64          `json:"durationMillis"`
+	PauseDurationMillis  int64          `json:"pauseDurationMillis"`
+	StageFlowNodes       []PipelineNode `json:"stageFlowNodes"`
+	ParentNodes          []int64
 }
 
 type PipelineInputAction struct {
@@ -95,6 +99,19 @@ func (run *PipelineRun) update() {
 			run.Stages[i].Base = matches[1]
 		}
 	}
+}
+
+func (job *Job) GetPipelineRunsWithFullStages() (pr []PipelineRun, err error) {
+	_, err = job.Jenkins.Requester.GetJSON(job.Base+"/wfapi/runs", &pr, map[string]string{"fullStages": "true"})
+	if err != nil {
+		return nil, err
+	}
+	for i := range pr {
+		pr[i].update()
+		pr[i].Job = job
+	}
+
+	return pr, nil
 }
 
 func (job *Job) GetPipelineRuns() (pr []PipelineRun, err error) {
