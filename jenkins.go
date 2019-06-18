@@ -38,6 +38,13 @@ type Jenkins struct {
 	Requester *Requester
 }
 
+type JenkinsOptions struct {
+	Client    *http.Client
+	SslVerify *bool
+	Username  *string
+	Password  *string
+}
+
 // Loggers
 var (
 	Info    *log.Logger
@@ -555,21 +562,34 @@ func (j *Jenkins) Poll() (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Creates a new Jenkins Instance
+// CreateJenkins createss a new Jenkins Instance
 // Optional parameters are: client, username, password or token
 // After creating an instance call init method.
 func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
+	sslVerify := true
+	var username, password string
+	if len(auth) == 2 {
+		username = auth[0].(string)
+		password = auth[1].(string)
+	}
+	return CreateJenkinsWithOptions(base, &JenkinsOptions{SslVerify: &sslVerify, Username: &username, Password: &password, Client: client})
+}
+
+// CreateJenkinsWithOptions creates a new Jenkins Instance
+// After creating an instance call init method.
+func CreateJenkinsWithOptions(base string, options *JenkinsOptions) *Jenkins {
 	j := &Jenkins{}
 	if strings.HasSuffix(base, "/") {
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true, Client: client}
+	sslVerify := options.SslVerify == nil || *options.SslVerify
+	j.Requester = &Requester{Base: base, SslVerify: sslVerify, Client: options.Client}
 	if j.Requester.Client == nil {
 		j.Requester.Client = http.DefaultClient
 	}
-	if len(auth) == 2 {
-		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
+	if options.Username != nil && options.Password != nil {
+		j.Requester.BasicAuth = &BasicAuth{Username: *options.Username, Password: *options.Password}
 	}
 	return j
 }
