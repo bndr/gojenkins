@@ -73,17 +73,17 @@ type JobResponse struct {
 		IconUrl       string `json:"iconUrl"`
 		Score         int64  `json:"score"`
 	} `json:"healthReport"`
-	InQueue               bool       `json:"inQueue"`
-	KeepDependencies      bool       `json:"keepDependencies"`
-	LastBuild             JobBuild   `json:"lastBuild"`
-	LastCompletedBuild    JobBuild   `json:"lastCompletedBuild"`
-	LastFailedBuild       JobBuild   `json:"lastFailedBuild"`
-	LastStableBuild       JobBuild   `json:"lastStableBuild"`
-	LastSuccessfulBuild   JobBuild   `json:"lastSuccessfulBuild"`
-	LastUnstableBuild     JobBuild   `json:"lastUnstableBuild"`
-	LastUnsuccessfulBuild JobBuild   `json:"lastUnsuccessfulBuild"`
-	Name                  string     `json:"name"`
-	NextBuildNumber       int64      `json:"nextBuildNumber"`
+	InQueue               bool     `json:"inQueue"`
+	KeepDependencies      bool     `json:"keepDependencies"`
+	LastBuild             JobBuild `json:"lastBuild"`
+	LastCompletedBuild    JobBuild `json:"lastCompletedBuild"`
+	LastFailedBuild       JobBuild `json:"lastFailedBuild"`
+	LastStableBuild       JobBuild `json:"lastStableBuild"`
+	LastSuccessfulBuild   JobBuild `json:"lastSuccessfulBuild"`
+	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
+	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
+	Name                  string   `json:"name"`
+	NextBuildNumber       int64    `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
@@ -515,6 +515,20 @@ func (j *Job) History() ([]*History, error) {
 	}
 
 	return parseBuildHistory(strings.NewReader(s)), nil
+}
+
+// get view of all jobs
+func (j *Job) GetViewJobs(view string) ([]*Job, error) {
+	url := "/view/" + view
+	jobs := Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: j.Base + url}
+	status, err := jobs.Poll()
+	if err != nil {
+		return nil, err
+	}
+	if status == 200 {
+		return jobs.GetInnerJobs()
+	}
+	return nil, errors.New(strconv.Itoa(status))
 }
 
 func (pr *PipelineRun) ProceedInput() (bool, error) {
