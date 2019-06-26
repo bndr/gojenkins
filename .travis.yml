@@ -19,7 +19,6 @@ before_install:
   - docker inspect -f {{.State.Running}} jenkins | grep -q true
 
 install:
-  - go get github.com/stretchr/testify/assert
-  - go get golang.org/x/net/html
+  - go get ./...
 
 script: go test --race -v ./...
