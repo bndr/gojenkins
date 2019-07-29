@@ -112,6 +112,10 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		params["method"] = "JNLPLauncher"
 	}
 
+	if _, ok := params["mode"]; !ok {
+		params["mode"] = "NORMAL"
+	}
+
 	method := params["method"]
 	var launcher map[string]string
 	switch method {
@@ -141,7 +145,7 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 
 	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
-	MODE := "NORMAL"
+	MODE := params["mode"]
 	qr := map[string]string{
 		"name": name,
 		"type": NODE_TYPE,
