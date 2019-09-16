@@ -107,7 +107,7 @@ func (a Artifact) getMD5local(path string) string {
 	if err != nil {
 		return ""
 	}
-	buffer := make([]byte, 2^20)
+	buffer := make([]byte, 1<<20)
 	n, err := localFile.Read(buffer)
 	defer localFile.Close()
 	for err == nil {
