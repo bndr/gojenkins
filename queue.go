@@ -32,6 +32,7 @@ type Task struct {
 	Raw     *taskResponse
 	Jenkins *Jenkins
 	Queue   *Queue
+	Base    string
 }
 
 type taskResponse struct {
@@ -49,8 +50,12 @@ type taskResponse struct {
 		Name  string `json:"name"`
 		URL   string `json:"url"`
 	} `json:"task"`
-	URL string `json:"url"`
-	Why string `json:"why"`
+	URL        string `json:"url"`
+	Why        string `json:"why"`
+	Executable struct {
+		Number int64  `json:"number"`
+		URL    string `json:"url"`
+	} `json:"executable"`
 }
 
 type generalAction struct {
@@ -129,6 +134,14 @@ func (t *Task) GetCauses() []map[string]interface{} {
 
 func (q *Queue) Poll() (int, error) {
 	response, err := q.Jenkins.Requester.GetJSON(q.Base, q.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return response.StatusCode, nil
+}
+
+func (t *Task) Poll() (int, error) {
+	response, err := t.Jenkins.Requester.GetJSON(t.Base, t.Raw, nil)
 	if err != nil {
 		return 0, err
 	}

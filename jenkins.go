@@ -46,7 +46,7 @@ var (
 )
 
 // Init Method. Should be called after creating a Jenkins Instance.
-// e.g jenkins := CreateJenkins("url").Init()
+// e.g jenkins,err := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init() (*Jenkins, error) {
 	j.initLoggers()
@@ -88,6 +88,12 @@ func (j *Jenkins) Info() (*ExecutorResponse, error) {
 		return nil, err
 	}
 	return j.Raw, nil
+}
+
+// SafeRestart jenkins, restart will be done when there are no jobs running
+func (j *Jenkins) SafeRestart() error {
+	_, err := j.Requester.Post("/safeRestart", strings.NewReader(""), struct{}{}, map[string]string{})
+	return err
 }
 
 // Create a new Node
@@ -409,6 +415,20 @@ func (j *Jenkins) GetQueueUrl() string {
 	return "/queue"
 }
 
+// GetQueueItem returns a single queue Task
+func (j *Jenkins) GetQueueItem(id int64) (*Task, error) {
+	t := &Task{Raw: new(taskResponse), Jenkins: j, Base: j.getQueueItemURL(id)}
+	_, err := t.Poll()
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func (j *Jenkins) getQueueItemURL(id int64) string {
+	return fmt.Sprintf("/queue/item/%d", id)
+}
+
 // Get Artifact data by Hash
 func (j *Jenkins) GetArtifactData(id string) (*FingerPrintResponse, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
@@ -426,6 +446,16 @@ func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 	return &p, nil
 }
 
+// UninstallPlugin plugin otherwise returns error
+func (j *Jenkins) UninstallPlugin(name string) error {
+	url := fmt.Sprintf("/pluginManager/plugin/%s/doUninstall", name)
+	resp, err := j.Requester.Post(url, strings.NewReader(""), struct{}{}, map[string]string{})
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
+	}
+	return err
+}
+
 // Check if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
 func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
@@ -435,6 +465,17 @@ func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
 		return nil, err
 	}
 	return p.Contains(name), nil
+}
+
+//InstallPlugin with given version and name
+func (j *Jenkins) InstallPlugin(name string, version string) error {
+	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
+	resp, err := j.Requester.PostXML("/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
+	}
+	return err
 }
 
 // Verify FingerPrint
@@ -515,7 +556,7 @@ func (j *Jenkins) Poll() (int, error) {
 }
 
 // Creates a new Jenkins Instance
-// Optional parameters are: client, username, password
+// Optional parameters are: client, username, password or token
 // After creating an instance call init method.
 func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}

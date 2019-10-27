@@ -37,6 +37,7 @@ type JobBuild struct {
 }
 
 type InnerJob struct {
+	Class string `json:"_class"`
 	Name  string `json:"name"`
 	Url   string `json:"url"`
 	Color string `json:"color"`
@@ -53,6 +54,7 @@ type ParameterDefinition struct {
 }
 
 type JobResponse struct {
+	Class              string `json:"_class"`
 	Actions            []generalObj
 	Buildable          bool `json:"buildable"`
 	Builds             []JobBuild
@@ -63,24 +65,25 @@ type JobResponse struct {
 	DisplayNameOrNull  interface{} `json:"displayNameOrNull"`
 	DownstreamProjects []InnerJob  `json:"downstreamProjects"`
 	FirstBuild         JobBuild
+	FullName           string `json:"fullName"`
+	FullDisplayName    string `json:"fullDisplayName"`
 	HealthReport       []struct {
 		Description   string `json:"description"`
 		IconClassName string `json:"iconClassName"`
 		IconUrl       string `json:"iconUrl"`
 		Score         int64  `json:"score"`
 	} `json:"healthReport"`
-	InQueue               bool     `json:"inQueue"`
-	KeepDependencies      bool     `json:"keepDependencies"`
-	LastBuild             JobBuild `json:"lastBuild"`
-	LastCompletedBuild    JobBuild `json:"lastCompletedBuild"`
-	LastFailedBuild       JobBuild `json:"lastFailedBuild"`
-	LastStableBuild       JobBuild `json:"lastStableBuild"`
-	LastSuccessfulBuild   JobBuild `json:"lastSuccessfulBuild"`
-	LastUnstableBuild     JobBuild `json:"lastUnstableBuild"`
-	LastUnsuccessfulBuild JobBuild `json:"lastUnsuccessfulBuild"`
-	Name                  string   `json:"name"`
-	SubJobs               []InnerJob    `json:"jobs"`
-	NextBuildNumber       int64    `json:"nextBuildNumber"`
+	InQueue               bool       `json:"inQueue"`
+	KeepDependencies      bool       `json:"keepDependencies"`
+	LastBuild             JobBuild   `json:"lastBuild"`
+	LastCompletedBuild    JobBuild   `json:"lastCompletedBuild"`
+	LastFailedBuild       JobBuild   `json:"lastFailedBuild"`
+	LastStableBuild       JobBuild   `json:"lastStableBuild"`
+	LastSuccessfulBuild   JobBuild   `json:"lastSuccessfulBuild"`
+	LastUnstableBuild     JobBuild   `json:"lastUnstableBuild"`
+	LastUnsuccessfulBuild JobBuild   `json:"lastUnsuccessfulBuild"`
+	Name                  string     `json:"name"`
+	NextBuildNumber       int64      `json:"nextBuildNumber"`
 	Property              []struct {
 		ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
 	} `json:"property"`
@@ -98,9 +101,10 @@ func (j *Job) parentBase() string {
 }
 
 type History struct {
-	BuildNumber    int
-	BuildStatus    string
-	BuildTimestamp int64
+	BuildDisplayName string
+	BuildNumber      int
+	BuildStatus      string
+	BuildTimestamp   int64
 }
 
 func (j *Job) GetName() string {
@@ -116,7 +120,9 @@ func (j *Job) GetDetails() *JobResponse {
 }
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: "/job/" + j.GetName() + "/" + strconv.FormatInt(id, 10)}
+	// use job embedded URL to properly handle jobs in folders
+	jobURL := strings.Replace(j.Raw.URL, j.Jenkins.Server, "", -1)
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: jobURL + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
@@ -194,28 +200,12 @@ func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	return buildsResp.Builds, nil
 }
 
-func (j *Job) GetSubJobsMetadata() []InnerJob {
-	return j.Raw.SubJobs
-}
-
 func (j *Job) GetUpstreamJobsMetadata() []InnerJob {
 	return j.Raw.UpstreamProjects
 }
 
 func (j *Job) GetDownstreamJobsMetadata() []InnerJob {
 	return j.Raw.DownstreamProjects
-}
-
-func (j *Job) GetSubJobs() ([]*Job, error) {
-	jobs := make([]*Job, len(j.Raw.SubJobs))
-	for i, job := range j.Raw.SubJobs {
-		ji, err := j.Jenkins.GetSubJob(j.GetName(), job.Name)
-		if err != nil {
-			return nil, err
-		}
-		jobs[i] = ji
-	}
-	return jobs, nil
 }
 
 func (j *Job) GetInnerJobsMetadata() []InnerJob {
@@ -440,7 +430,7 @@ func (j *Job) InvokeSimple(params map[string]string) (int64, error) {
 	}
 
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		return 0, errors.New("Could not invoke job " + j.GetName())
+		return 0, fmt.Errorf("Could not invoke job %q: %s", j.GetName(), resp.Status)
 	}
 
 	location := resp.Header.Get("Location")
@@ -518,9 +508,48 @@ func (j *Job) Poll() (int, error) {
 }
 
 func (j *Job) History() ([]*History, error) {
-	resp, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", nil, nil)
+	var s string
+	_, err := j.Jenkins.Requester.Get(j.Base+"/buildHistory/ajax", &s, nil)
 	if err != nil {
 		return nil, err
 	}
-	return parseBuildHistory(resp.Body), nil
+
+	return parseBuildHistory(strings.NewReader(s)), nil
+}
+
+func (pr *PipelineRun) ProceedInput() (bool, error) {
+	actions, _ := pr.GetPendingInputActions()
+	data := url.Values{}
+	data.Set("inputId", actions[0].ID)
+	params := make(map[string]string)
+	data.Set("json", makeJson(params))
+
+	href := pr.Base + "/wfapi/inputSubmit"
+
+	resp, err := pr.Job.Jenkins.Requester.Post(href, bytes.NewBufferString(data.Encode()), nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
+}
+
+func (pr *PipelineRun) AbortInput() (bool, error) {
+	actions, _ := pr.GetPendingInputActions()
+	data := url.Values{}
+	params := make(map[string]string)
+	data.Set("json", makeJson(params))
+
+	href := pr.Base + "/input/" + actions[0].ID + "/abort"
+
+	resp, err := pr.Job.Jenkins.Requester.Post(href, bytes.NewBufferString(data.Encode()), nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
 }
