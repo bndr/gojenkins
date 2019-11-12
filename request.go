@@ -65,6 +65,7 @@ func (r *Requester) SetCrumb(ar *APIRequest) error {
 
 	if response.StatusCode == 200 && crumbData["crumbRequestField"] != "" {
 		ar.SetHeader(crumbData["crumbRequestField"], crumbData["crumb"])
+		ar.SetHeader("Cookie", response.Header.Get("set-cookie"))
 	}
 
 	return nil
