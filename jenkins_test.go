@@ -20,6 +20,11 @@ func TestInit(t *testing.T) {
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
 
+func TestInitWithDefaultJenkinsInstance(t *testing.T){
+	_, err:= DefaultJenkins ("http://localhost:8080",WithBasicAuth("admin","admin"))
+	assert.Nil(t, err, "Jenkins Initialization should not fail")
+}
+
 func TestCreateJobs(t *testing.T) {
 	job1ID := "Job1_test"
 	job2ID := "job2_test"
