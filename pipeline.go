@@ -83,16 +83,16 @@ type PipelineNodeLog struct {
 }
 
 // utility function to fill in the Base fields under PipelineRun
-func (run *PipelineRun) update() {
-	href := run.URLs["self"]["href"]
+func (pr *PipelineRun) update() {
+	href := pr.URLs["self"]["href"]
 	if matches := baseURLRegex.FindStringSubmatch(href); len(matches) > 1 {
-		run.Base = matches[1]
+		pr.Base = matches[1]
 	}
-	for i := range run.Stages {
-		run.Stages[i].Run = run
-		href := run.Stages[i].URLs["self"]["href"]
+	for i := range pr.Stages {
+		pr.Stages[i].Run = pr
+		href := pr.Stages[i].URLs["self"]["href"]
 		if matches := baseURLRegex.FindStringSubmatch(href); len(matches) > 1 {
-			run.Stages[i].Base = matches[1]
+			pr.Stages[i].Base = matches[1]
 		}
 	}
 }
