@@ -59,10 +59,19 @@ type PipelineNode struct {
 }
 
 type PipelineInputAction struct {
-	ID         string
-	Message    string
-	ProceedURL string
-	AbortURL   string
+	ID                  string                     `json:"id"`
+	Message             string                     `json:"message"`
+	ProceedText         string                     `json:"proceedText"`
+	Inputs              []PipelineInputActionInput `json:"inputs"`
+	ProceedURL          string                     `json:"proceedUrl"`
+	AbortURL            string                     `json:"abortUrl"`
+	RedirectApprovalUrl string                     `json:"redirectApprovalUrl"`
+}
+
+type PipelineInputActionInput struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type PipelineArtifact struct {
