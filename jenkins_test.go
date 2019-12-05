@@ -37,7 +37,6 @@ func TestCreateJobs(t *testing.T) {
 	assert.Equal(t, job2ID, job2.GetName())
 }
 
-
 func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
