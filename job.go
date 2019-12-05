@@ -520,16 +520,16 @@ func (j *Job) History() ([]*History, error) {
 
 // ProceedInput approves the first input action in a pipeline run.
 func (pr *PipelineRun) ProceedInput() (bool, error) {
-	params := make(map[string]string)
+	params := make(map[string]interface{})
 	return pr.approveInput(params)
 }
 
 // ProceedInputWithValue approves the first input action with a value in a pipeline run.
-func (pr *PipelineRun) ProceedInputWithValue(params map[string]string) (bool, error) {
+func (pr *PipelineRun) ProceedInputWithValue(params map[string]interface{}) (bool, error) {
 	return pr.approveInput(params)
 }
 
-func (pr *PipelineRun) approveInput(params map[string]string) (bool, error) {
+func (pr *PipelineRun) approveInput(params map[string]interface{}) (bool, error) {
 	actions, _ := pr.GetPendingInputActions()
 	data := url.Values{}
 	data.Set("inputId", actions[0].ID)
