@@ -121,8 +121,13 @@ func (j *Job) GetDetails() *JobResponse {
 
 func (j *Job) GetBuild(id int64) (*Build, error) {
 	// use job embedded URL to properly handle jobs in folders
-	jobURL := strings.Replace(j.Raw.URL, j.Jenkins.Server, "", -1)
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: jobURL + "/" + strconv.FormatInt(id, 10)}
+	jobURL, err := url.Parse(j.Raw.URL)
+	if err != nil {
+		return nil, err
+	}
+	queryString := jobURL.RequestURI()
+
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: queryString + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll()
 	if err != nil {
 		return nil, err
