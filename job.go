@@ -188,7 +188,7 @@ func (j *Job) GetLastCompletedBuild() (*Build, error) {
 	return j.getBuildByType("lastCompletedBuild")
 }
 
-// Returns All Builds with Number and URL
+// GetAllBuildIds returns All Builds with Number and URL
 func (j *Job) GetAllBuildIds() ([]JobBuild, error) {
 	var buildsResp struct {
 		Builds []JobBuild `json:"allBuilds"`

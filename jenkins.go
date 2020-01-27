@@ -80,7 +80,7 @@ func (j *Jenkins) initLoggers() {
 		log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-// Get Basic Information About Jenkins
+// Info gets Basic Information About Jenkins
 func (j *Jenkins) Info() (*ExecutorResponse, error) {
 	_, err := j.Requester.Get("/", j.Raw, nil)
 
@@ -355,7 +355,7 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 	return nodes, nil
 }
 
-// Get all builds Numbers and URLS for a specific job.
+// GetAllBuildIds gets all builds Numbers and URLS for a specific job.
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
@@ -367,7 +367,7 @@ func (j *Jenkins) GetAllBuildIds(job string) ([]JobBuild, error) {
 	return jobObj.GetAllBuildIds()
 }
 
-// Get Only Array of Job Names, Color, URL
+// GetAllJobNames gets Only Array of Job Names, Color, URL
 // Does not query each single Job.
 func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
@@ -380,7 +380,7 @@ func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
 	return exec.Raw.Jobs, nil
 }
 
-// Get All Possible Job Objects.
+// GetAllJobs gets All Possible Job Objects.
 // Each job will be queried.
 func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
@@ -401,7 +401,7 @@ func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 	return jobs, nil
 }
 
-// Returns a Queue
+// GetQueue returns a Queue
 func (j *Jenkins) GetQueue() (*Queue, error) {
 	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
 	_, err := q.Poll()
@@ -429,13 +429,13 @@ func (j *Jenkins) getQueueItemURL(id int64) string {
 	return fmt.Sprintf("/queue/item/%d", id)
 }
 
-// Get Artifact data by Hash
+// GetArtifactData gets Artifact data by Hash
 func (j *Jenkins) GetArtifactData(id string) (*FingerPrintResponse, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
 	return fp.GetInfo()
 }
 
-// Returns the list of all plugins installed on the Jenkins server.
+// GetPlugins returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
 func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
@@ -456,7 +456,7 @@ func (j *Jenkins) UninstallPlugin(name string) error {
 	return err
 }
 
-// Check if the plugin is installed on the server.
+// HasPlugin checks if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
 func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
 	p, err := j.GetPlugins(1)
