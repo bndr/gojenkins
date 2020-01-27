@@ -37,7 +37,6 @@ func TestCreateJobs(t *testing.T) {
 	assert.Equal(t, job2ID, job2.GetName())
 }
 
-
 func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
@@ -69,7 +68,7 @@ func TestDeleteNodes(t *testing.T) {
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
-		queueID, _ = item.InvokeSimple(map[string]string{"params1": "param1"})
+		queueID, _ = item.InvokeSimple(map[string]string{"param1": "param1"}, false)
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
