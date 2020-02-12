@@ -23,14 +23,14 @@ type ViewData struct {
 	URL  string `json:"url"`
 }
 type ExecutorResponse struct {
-	AssignedLabels  []struct{}  `json:"assignedLabels"`
-	Description     interface{} `json:"description"`
-	Jobs            []InnerJob  `json:"jobs"`
-	Mode            string      `json:"mode"`
-	NodeDescription string      `json:"nodeDescription"`
-	NodeName        string      `json:"nodeName"`
-	NumExecutors    int64       `json:"numExecutors"`
-	OverallLoad     struct{}    `json:"overallLoad"`
+	AssignedLabels  []map[string]string `json:"assignedLabels"`
+	Description     interface{}         `json:"description"`
+	Jobs            []InnerJob          `json:"jobs"`
+	Mode            string              `json:"mode"`
+	NodeDescription string              `json:"nodeDescription"`
+	NodeName        string              `json:"nodeName"`
+	NumExecutors    int64               `json:"numExecutors"`
+	OverallLoad     struct{}            `json:"overallLoad"`
 	PrimaryView     struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
