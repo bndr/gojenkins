@@ -82,7 +82,7 @@ func (j *Jenkins) initLoggers() {
 
 // Get Basic Information About Jenkins
 func (j *Jenkins) Info() (*ExecutorResponse, error) {
-	_, err := j.Requester.Get("/", j.Raw, nil)
+	_, err := j.Requester.GetJSON("/", j.Raw, nil)
 
 	if err != nil {
 		return nil, err
