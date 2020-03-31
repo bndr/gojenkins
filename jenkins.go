@@ -227,7 +227,7 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 }
 
 // Update a job.
-// If a job is exist, update it's config
+// If a job is exist, update its config
 func (j *Jenkins) UpdateJob(job string, config string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
 	jobObj.UpdateConfig(config)
