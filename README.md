@@ -278,6 +278,9 @@ Although the basic features are implemented there are many optional features tha
 * CLI Tool
 * Rewrite some (all?) iterators with channels
 
+## Related projects
+* [Jenkins CLI written by Go](https://github.com/jenkins-zh/jenkins-cli)
+
 ## LICENSE
 
 Apache License 2.0
