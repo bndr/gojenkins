@@ -226,6 +226,14 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 	return job, nil
 }
 
+// Update a job.
+// If a job is exist, update it's config
+func (j *Jenkins) UpdateJob(job string, config string) *Job {
+	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
+	jobObj.UpdateConfig(config)
+	return &jobObj
+}
+
 // Rename a job.
 // First parameter job old name, Second parameter job new name.
 func (j *Jenkins) RenameJob(job string, name string) *Job {
