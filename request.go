@@ -98,8 +98,17 @@ func (r *Requester) PostFiles(endpoint string, payload io.Reader, responseStruct
 	}
 	return r.Do(ar, &responseStruct, querystring, files)
 }
-
 func (r *Requester) PostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+	payload := bytes.NewBuffer([]byte(xml))
+	ar := NewAPIRequest("POST", endpoint, payload)
+	if err := r.SetCrumb(ar); err != nil {
+		return nil, err
+	}
+	ar.SetHeader("Content-Type", "application/xml")
+	ar.Suffix = ""
+	return r.Do(ar, &responseStruct, querystring)
+}
+func (r *Requester) UpdatePostXML(endpoint string, xml string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
 	payload := bytes.NewBuffer([]byte(xml))
 	ar := NewAPIRequest("POST", endpoint, payload)
 	if err := r.SetCrumb(ar); err != nil {
