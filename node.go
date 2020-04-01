@@ -32,6 +32,7 @@ type Node struct {
 }
 
 type NodeResponse struct {
+	Class       string        `json:"_class"`
 	Actions     []interface{} `json:"actions"`
 	DisplayName string        `json:"displayName"`
 	Executors   []struct {

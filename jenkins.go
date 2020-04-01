@@ -82,11 +82,14 @@ func (j *Jenkins) initLoggers() {
 
 // Get Basic Information About Jenkins
 func (j *Jenkins) Info() (*ExecutorResponse, error) {
-	_, err := j.Requester.Get("/", j.Raw, nil)
-
+	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// The cached version which is set in Init(), might get staled, update
+	j.Version = rsp.Header.Get("X-Jenkins")
+
 	return j.Raw, nil
 }
 
