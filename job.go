@@ -336,13 +336,38 @@ func (j *Job) Create(config string, qr ...interface{}) (*Job, error) {
 }
 
 func (j *Job) Copy(destinationName string) (*Job, error) {
-	qr := map[string]string{"name": destinationName, "from": j.GetName(), "mode": "copy"}
-	resp, err := j.Jenkins.Requester.Post(j.parentBase()+"/createItem", nil, nil, qr)
+
+	// sourceNameFull :  source project with folder, eg '/group1/subgroup2/job3'
+	sourceNameFull := j.GetName()
+	if strings.ContainsAny(j.parentBase(), "/job/") {
+		sourceNameFull = strings.Replace(j.parentBase(), "/job/", "/", -1) + "/" + j.GetName()
+	}
+
+	//destinationNameShort dest job short name, without folder
+	destinationNameShort := destinationName
+
+	//destinationBase  job with folder in url format, eg  '/group1/job/subgroup2/job/job3'
+	destinationBase := strings.Replace(destinationName, "/", "/job/", -1)
+
+	//destinationParent job's parent path, eg  '/group1/subgroup2'
+	destinationParent := ""
+
+	//destinationParentBase  job's parent path in url format, eg '/job/group1/job/subgroup2' or ''
+	destinationParentBase := ""
+	
+	if strings.ContainsAny(destinationName, "/") {
+		destinationParent = destinationName[:strings.LastIndex(destinationName, "/")]
+		destinationParentBase = "/job/" + strings.Replace(destinationParent, "/", "/job/", -1)
+		destinationNameShort = destinationName[(strings.LastIndex(destinationName, "/") + 1):]
+	}
+
+	qr := map[string]string{"name": destinationNameShort, "from": sourceNameFull, "mode": "copy"}
+	resp, err := j.Jenkins.Requester.Post( destinationParentBase + "/createItem", nil, nil, qr)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		newJob := &Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: "/job/" + destinationName}
+		newJob := &Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: "/job/" + destinationBase}
 		_, err := newJob.Poll()
 		if err != nil {
 			return nil, err
