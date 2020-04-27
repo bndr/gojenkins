@@ -265,6 +265,9 @@ func (j *Jenkins) DeleteJob(name string) (bool, error) {
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
 func (j *Jenkins) BuildJob(name string, options ...interface{}) (int64, error) {
+	// support with folder
+	name = strings.Replace(name, "/", "/job/", -1)
+
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
