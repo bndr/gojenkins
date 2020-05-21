@@ -73,16 +73,16 @@ type generalObj struct {
 }
 
 type TestResult struct {
-	Duration  int64 `json:"duration"`
-	Empty     bool  `json:"empty"`
-	FailCount int64 `json:"failCount"`
-	PassCount int64 `json:"passCount"`
-	SkipCount int64 `json:"skipCount"`
+	Duration  float64 `json:"duration"`
+	Empty     bool    `json:"empty"`
+	FailCount int64   `json:"failCount"`
+	PassCount int64   `json:"passCount"`
+	SkipCount int64   `json:"skipCount"`
 	Suites    []struct {
 		Cases []struct {
 			Age             int64       `json:"age"`
 			ClassName       string      `json:"className"`
-			Duration        int64       `json:"duration"`
+			Duration        float64     `json:"duration"`
 			ErrorDetails    interface{} `json:"errorDetails"`
 			ErrorStackTrace interface{} `json:"errorStackTrace"`
 			FailedSince     int64       `json:"failedSince"`
@@ -93,7 +93,7 @@ type TestResult struct {
 			Stderr          interface{} `json:"stderr"`
 			Stdout          interface{} `json:"stdout"`
 		} `json:"cases"`
-		Duration  int64       `json:"duration"`
+		Duration  float64     `json:"duration"`
 		ID        interface{} `json:"id"`
 		Name      string      `json:"name"`
 		Stderr    interface{} `json:"stderr"`
@@ -161,8 +161,8 @@ type BuildResponse struct {
 	} `json:"changeSets"`
 	Culprits          []Culprit   `json:"culprits"`
 	Description       interface{} `json:"description"`
-	Duration          int64       `json:"duration"`
-	EstimatedDuration int64       `json:"estimatedDuration"`
+	Duration          float64     `json:"duration"`
+	EstimatedDuration float64     `json:"estimatedDuration"`
 	Executor          interface{} `json:"executor"`
 	DisplayName       string      `json:"displayName"`
 	FullDisplayName   string      `json:"fullDisplayName"`
@@ -434,7 +434,7 @@ func (b *Build) GetTimestamp() time.Time {
 	return time.Unix(0, msInt*int64(time.Millisecond))
 }
 
-func (b *Build) GetDuration() int64 {
+func (b *Build) GetDuration() float64 {
 	return b.Raw.Duration
 }
 
