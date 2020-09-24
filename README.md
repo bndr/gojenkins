@@ -112,7 +112,10 @@ function.
 ### Check Status of all nodes
 
 ```go
-nodes := jenkins.GetAllNodes()
+nodes, err := jenkins.GetAllNodes()
+if err != nil {
+  fmt.Println("Got error while getting all the node: " + err.Error())
+}
 
 for _, node := range nodes {
 
