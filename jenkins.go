@@ -24,6 +24,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Basic Authentication
@@ -265,6 +266,7 @@ func (j *Jenkins) DeleteJob(ctx context.Context, name string) (bool, error) {
 
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
+// Returns queue id
 func (j *Jenkins) BuildJob(ctx context.Context, name string, options ...interface{}) (int64, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
 	var params map[string]string
@@ -272,6 +274,34 @@ func (j *Jenkins) BuildJob(ctx context.Context, name string, options ...interfac
 		params, _ = options[0].(map[string]string)
 	}
 	return job.InvokeSimple(ctx, params)
+}
+
+// A task in queue will be assigned a build number in a job after a few seconds.
+// this function will return the build object.
+func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, queueid int64) (*Build, error) {
+	task, err := j.GetQueueItem(ctx, queueid)
+	if err != nil {
+		return nil, err
+	}
+	// Jenkins queue API has about 4.7second quiet period
+	for task.Raw.Executable.Number == 0 {
+		time.Sleep(1000 * time.Millisecond)
+		_, err = task.Poll(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	buildid := task.Raw.Executable.Number
+	job, err := task.GetJob(ctx)
+	if err != nil {
+		return nil, err
+	}
+	build, err := job.GetBuild(ctx, buildid)
+	if err != nil {
+		return nil, err
+	}
+	return build, nil
 }
 
 func (j *Jenkins) GetNode(ctx context.Context, name string) (*Node, error) {
