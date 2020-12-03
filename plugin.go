@@ -15,6 +15,7 @@
 package gojenkins
 
 import (
+	"context"
 	"strconv"
 )
 
@@ -63,11 +64,11 @@ func (p *Plugins) Contains(name string) *Plugin {
 	return nil
 }
 
-func (p *Plugins) Poll() (int, error) {
+func (p *Plugins) Poll(ctx context.Context) (int, error) {
 	qr := map[string]string{
 		"depth": strconv.Itoa(p.Depth),
 	}
-	response, err := p.Jenkins.Requester.GetJSON(p.Base, p.Raw, qr)
+	response, err := p.Jenkins.Requester.GetJSON(ctx, p.Base, p.Raw, qr)
 	if err != nil {
 		return 0, err
 	}

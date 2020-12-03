@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/url"
 	"regexp"
@@ -225,9 +226,9 @@ func (b *Build) GetCulprits() []Culprit {
 	return b.Raw.Culprits
 }
 
-func (b *Build) Stop() (bool, error) {
-	if b.IsRunning() {
-		response, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
+func (b *Build) Stop(ctx context.Context) (bool, error) {
+	if b.IsRunning(ctx) {
+		response, err := b.Jenkins.Requester.Post(ctx, b.Base+"/stop", nil, nil, nil)
 		if err != nil {
 			return false, err
 		}
@@ -236,14 +237,14 @@ func (b *Build) Stop() (bool, error) {
 	return true, nil
 }
 
-func (b *Build) GetConsoleOutput() string {
+func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	url := b.Base + "/consoleText"
 	var content string
-	b.Jenkins.Requester.GetXML(url, &content, nil)
+	b.Jenkins.Requester.GetXML(ctx, url, &content, nil)
 	return content
 }
 
-func (b *Build) GetConsoleOutputFromIndex(startID int64) (consoleResponse, error) {
+func (b *Build) GetConsoleOutputFromIndex(ctx context.Context, startID int64) (consoleResponse, error) {
 	strstart := strconv.FormatInt(startID, 10)
 	url := b.Base + "/logText/progressiveText"
 
@@ -251,7 +252,7 @@ func (b *Build) GetConsoleOutputFromIndex(startID int64) (consoleResponse, error
 
 	querymap := make(map[string]string)
 	querymap["start"] = strstart
-	rsp, err := b.Jenkins.Requester.Get(url, &console.Content, querymap)
+	rsp, err := b.Jenkins.Requester.Get(ctx, url, &console.Content, querymap)
 	if err != nil {
 		return console, err
 	}
@@ -266,8 +267,8 @@ func (b *Build) GetConsoleOutputFromIndex(startID int64) (consoleResponse, error
 	return console, err
 }
 
-func (b *Build) GetCauses() ([]map[string]interface{}, error) {
-	_, err := b.Poll()
+func (b *Build) GetCauses(ctx context.Context) ([]map[string]interface{}, error) {
+	_, err := b.Poll(ctx, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -288,35 +289,35 @@ func (b *Build) GetParameters() []parameter {
 	return nil
 }
 
-func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
+func (b *Build) GetInjectedEnvVars(ctx context.Context) (map[string]string, error) {
 	var envVars struct {
 		EnvMap map[string]string `json:"envMap"`
 	}
 	endpoint := b.Base + "/injectedEnvVars"
-	_, err := b.Jenkins.Requester.GetJSON(endpoint, &envVars, nil)
+	_, err := b.Jenkins.Requester.GetJSON(ctx, endpoint, &envVars, nil)
 	if err != nil {
 		return envVars.EnvMap, err
 	}
 	return envVars.EnvMap, nil
 }
 
-func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
+func (b *Build) GetDownstreamBuilds(ctx context.Context) ([]*Build, error) {
 	result := make([]*Build, 0)
-	downstreamJobs, err := b.Job.GetDownstreamJobs()
+	downstreamJobs, err := b.Job.GetDownstreamJobs(ctx)
 	if err != nil {
 		return nil, err
 	}
 	for _, job := range downstreamJobs {
-		allBuildIDs, err := job.GetAllBuildIds()
+		allBuildIDs, err := job.GetAllBuildIds(ctx)
 		if err != nil {
 			return nil, err
 		}
 		for _, buildID := range allBuildIDs {
-			build, err := job.GetBuild(buildID.Number)
+			build, err := job.GetBuild(ctx, buildID.Number)
 			if err != nil {
 				return nil, err
 			}
-			upstreamBuild, err := build.GetUpstreamBuild()
+			upstreamBuild, err := build.GetUpstreamBuild(ctx)
 			// older build may no longer exist, so simply ignore these
 			// cannot compare only id, it can be from different job
 			if err == nil && b.GetUrl() == upstreamBuild.GetUrl() {
@@ -328,10 +329,10 @@ func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
 	return result, nil
 }
 
-func (b *Build) GetDownstreamJobNames() []string {
+func (b *Build) GetDownstreamJobNames(ctx context.Context) []string {
 	result := make([]string, 0)
 	downstreamJobs := b.Job.GetDownstreamJobsMetadata()
-	fingerprints := b.GetAllFingerPrints()
+	fingerprints := b.GetAllFingerPrints(ctx)
 	for _, fingerprint := range fingerprints {
 		for _, usage := range fingerprint.Raw.Usage {
 			for _, job := range downstreamJobs {
@@ -344,8 +345,8 @@ func (b *Build) GetDownstreamJobNames() []string {
 	return result
 }
 
-func (b *Build) GetAllFingerPrints() []*FingerPrint {
-	b.Poll(3)
+func (b *Build) GetAllFingerPrints(ctx context.Context) []*FingerPrint {
+	b.Poll(ctx)
 	result := make([]*FingerPrint, len(b.Raw.FingerPrint))
 	for i, f := range b.Raw.FingerPrint {
 		result[i] = &FingerPrint{Jenkins: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
@@ -353,22 +354,22 @@ func (b *Build) GetAllFingerPrints() []*FingerPrint {
 	return result
 }
 
-func (b *Build) GetUpstreamJob() (*Job, error) {
-	causes, err := b.GetCauses()
+func (b *Build) GetUpstreamJob(ctx context.Context) (*Job, error) {
+	causes, err := b.GetCauses(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, cause := range causes {
 		if job, ok := cause["upstreamProject"]; ok {
-			return b.Jenkins.GetJob(job.(string))
+			return b.Jenkins.GetJob(ctx, job.(string))
 		}
 	}
 	return nil, errors.New("Unable to get Upstream Job")
 }
 
-func (b *Build) GetUpstreamBuildNumber() (int64, error) {
-	causes, err := b.GetCauses()
+func (b *Build) GetUpstreamBuildNumber(ctx context.Context) (int64, error) {
+	causes, err := b.GetCauses(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -385,22 +386,22 @@ func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	return 0, nil
 }
 
-func (b *Build) GetUpstreamBuild() (*Build, error) {
-	job, err := b.GetUpstreamJob()
+func (b *Build) GetUpstreamBuild(ctx context.Context) (*Build, error) {
+	job, err := b.GetUpstreamJob(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if job != nil {
-		buildNumber, err := b.GetUpstreamBuildNumber()
+		buildNumber, err := b.GetUpstreamBuildNumber(ctx)
 		if err == nil && buildNumber != 0 {
-			return job.GetBuild(buildNumber)
+			return job.GetBuild(ctx, buildNumber)
 		}
 	}
 	return nil, errors.New("Build not found")
 }
 
-func (b *Build) GetMatrixRuns() ([]*Build, error) {
-	_, err := b.Poll(0)
+func (b *Build) GetMatrixRuns(ctx context.Context) ([]*Build, error) {
+	_, err := b.Poll(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -410,17 +411,17 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 
 	for i, run := range runs {
 		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
-		result[i].Poll()
+		result[i].Poll(ctx)
 	}
 	return result, nil
 }
 
-func (b *Build) GetResultSet() (*TestResult, error) {
+func (b *Build) GetResultSet(ctx context.Context) (*TestResult, error) {
 
 	url := b.Base + "/testReport"
 	var report TestResult
 
-	_, err := b.Jenkins.Requester.GetJSON(url, &report, nil)
+	_, err := b.Jenkins.Requester.GetJSON(ctx, url, &report, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -470,28 +471,28 @@ func (b *Build) GetRevisionBranch() string {
 	return ""
 }
 
-func (b *Build) IsGood() bool {
-	return (!b.IsRunning() && b.Raw.Result == STATUS_SUCCESS)
+func (b *Build) IsGood(ctx context.Context) bool {
+	return (!b.IsRunning(ctx) && b.Raw.Result == STATUS_SUCCESS)
 }
 
-func (b *Build) IsRunning() bool {
-	_, err := b.Poll()
+func (b *Build) IsRunning(ctx context.Context) bool {
+	_, err := b.Poll(ctx)
 	if err != nil {
 		return false
 	}
 	return b.Raw.Building
 }
 
-func (b *Build) SetDescription(description string) error {
+func (b *Build) SetDescription(ctx context.Context, description string) error {
 	data := url.Values{}
 	data.Set("description", description)
-	_, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil)
+	_, err := b.Jenkins.Requester.Post(ctx, b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil)
 	return err
 }
 
 // Poll for current data. Optional parameter - depth.
 // More about depth here: https://wiki.jenkins-ci.org/display/JENKINS/Remote+access+API
-func (b *Build) Poll(options ...interface{}) (int, error) {
+func (b *Build) Poll(ctx context.Context, options ...interface{}) (int, error) {
 	depth := "-1"
 
 	for _, o := range options {
@@ -511,7 +512,7 @@ func (b *Build) Poll(options ...interface{}) (int, error) {
 	qr := map[string]string{
 		"depth": depth,
 	}
-	response, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
+	response, err := b.Jenkins.Requester.GetJSON(ctx, b.Base, b.Raw, qr)
 	if err != nil {
 		return 0, err
 	}

@@ -15,6 +15,7 @@
 package gojenkins
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -45,7 +46,7 @@ func (f *Folder) GetName() string {
 	return f.Raw.Name
 }
 
-func (f *Folder) Create(name string) (*Folder, error) {
+func (f *Folder) Create(ctx context.Context, name string) (*Folder, error) {
 	mode := "com.cloudbees.hudson.plugins.folder.Folder"
 	data := map[string]string{
 		"name":   name,
@@ -56,19 +57,19 @@ func (f *Folder) Create(name string) (*Folder, error) {
 			"mode": mode,
 		}),
 	}
-	r, err := f.Jenkins.Requester.Post(f.parentBase()+"/createItem", nil, f.Raw, data)
+	r, err := f.Jenkins.Requester.Post(ctx, f.parentBase()+"/createItem", nil, f.Raw, data)
 	if err != nil {
 		return nil, err
 	}
 	if r.StatusCode == 200 {
-		f.Poll()
+		f.Poll(ctx)
 		return f, nil
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
-func (f *Folder) Poll() (int, error) {
-	response, err := f.Jenkins.Requester.GetJSON(f.Base, f.Raw, nil)
+func (f *Folder) Poll(ctx context.Context) (int, error) {
+	response, err := f.Jenkins.Requester.GetJSON(ctx, f.Base, f.Raw, nil)
 	if err != nil {
 		return 0, err
 	}

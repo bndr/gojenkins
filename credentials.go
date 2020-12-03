@@ -1,6 +1,7 @@
 package gojenkins
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -107,11 +108,11 @@ func (cm CredentialsManager) fillURL(url string, params ...interface{}) string {
 }
 
 //List ids if credentials stored inside provided domain
-func (cm CredentialsManager) List(domain string) ([]string, error) {
+func (cm CredentialsManager) List(ctx context.Context, domain string) ([]string, error) {
 
 	idsResponse := credentialIDs{}
 	ids := make([]string, 0)
-	err := cm.handleResponse(cm.J.Requester.Get(cm.fillURL(credentialsListURL, domain), &idsResponse, listQuery))
+	err := cm.handleResponse(cm.J.Requester.Get(ctx, cm.fillURL(credentialsListURL, domain), &idsResponse, listQuery))
 	if err != nil {
 		return ids, err
 	}
@@ -125,9 +126,9 @@ func (cm CredentialsManager) List(domain string) ([]string, error) {
 
 //GetSingle searches for credential in given domain with given id, if credential is found
 //it will be parsed as xml to creds parameter(creds must be pointer to struct)
-func (cm CredentialsManager) GetSingle(domain string, id string, creds interface{}) error {
+func (cm CredentialsManager) GetSingle(ctx context.Context, domain string, id string, creds interface{}) error {
 	str := ""
-	err := cm.handleResponse(cm.J.Requester.Get(cm.fillURL(configCredentialURL, domain, id), &str, map[string]string{}))
+	err := cm.handleResponse(cm.J.Requester.Get(ctx, cm.fillURL(configCredentialURL, domain, id), &str, map[string]string{}))
 	if err != nil {
 		return err
 	}
@@ -136,27 +137,27 @@ func (cm CredentialsManager) GetSingle(domain string, id string, creds interface
 }
 
 //Add credential to given domain, creds must be struct which is parsable to xml
-func (cm CredentialsManager) Add(domain string, creds interface{}) error {
-	return cm.postCredsXML(cm.fillURL(createCredentialsURL, domain), creds)
+func (cm CredentialsManager) Add(ctx context.Context, domain string, creds interface{}) error {
+	return cm.postCredsXML(ctx, cm.fillURL(createCredentialsURL, domain), creds)
 }
 
 //Delete credential in given domain with given id
-func (cm CredentialsManager) Delete(domain string, id string) error {
-	return cm.handleResponse(cm.J.Requester.Post(cm.fillURL(deleteCredentialURL, domain, id), nil, cm.J.Raw, map[string]string{}))
+func (cm CredentialsManager) Delete(ctx context.Context, domain string, id string) error {
+	return cm.handleResponse(cm.J.Requester.Post(ctx, cm.fillURL(deleteCredentialURL, domain, id), nil, cm.J.Raw, map[string]string{}))
 }
 
 //Update credential in given domain with given id, creds must be pointer to struct which is parsable to xml
-func (cm CredentialsManager) Update(domain string, id string, creds interface{}) error {
-	return cm.postCredsXML(cm.fillURL(configCredentialURL, domain, id), creds)
+func (cm CredentialsManager) Update(ctx context.Context, domain string, id string, creds interface{}) error {
+	return cm.postCredsXML(ctx, cm.fillURL(configCredentialURL, domain, id), creds)
 }
 
-func (cm CredentialsManager) postCredsXML(url string, creds interface{}) error {
+func (cm CredentialsManager) postCredsXML(ctx context.Context, url string, creds interface{}) error {
 	payload, err := xml.Marshal(creds)
 	if err != nil {
 		return err
 	}
 
-	return cm.handleResponse(cm.J.Requester.PostXML(url, string(payload), cm.J.Raw, map[string]string{}))
+	return cm.handleResponse(cm.J.Requester.PostXML(ctx, url, string(payload), cm.J.Raw, map[string]string{}))
 }
 
 func (cm CredentialsManager) handleResponse(resp *http.Response, err error) error {

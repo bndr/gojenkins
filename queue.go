@@ -15,6 +15,7 @@
 package gojenkins
 
 import (
+	"context"
 	"strconv"
 )
 
@@ -90,24 +91,24 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 	return tasks
 }
 
-func (q *Queue) CancelTask(id int64) (bool, error) {
+func (q *Queue) CancelTask(ctx context.Context, id int64) (bool, error) {
 	task := q.GetTaskById(id)
-	return task.Cancel()
+	return task.Cancel(ctx)
 }
 
-func (t *Task) Cancel() (bool, error) {
+func (t *Task) Cancel(ctx context.Context) (bool, error) {
 	qr := map[string]string{
 		"id": strconv.FormatInt(t.Raw.ID, 10),
 	}
-	response, err := t.Jenkins.Requester.Post(t.Jenkins.GetQueueUrl()+"/cancelItem", nil, t.Raw, qr)
+	response, err := t.Jenkins.Requester.Post(ctx, t.Jenkins.GetQueueUrl()+"/cancelItem", nil, t.Raw, qr)
 	if err != nil {
 		return false, err
 	}
 	return response.StatusCode == 200, nil
 }
 
-func (t *Task) GetJob() (*Job, error) {
-	return t.Jenkins.GetJob(t.Raw.Task.Name)
+func (t *Task) GetJob(ctx context.Context) (*Job, error) {
+	return t.Jenkins.GetJob(ctx, t.Raw.Task.Name)
 }
 
 func (t *Task) GetWhy() string {
@@ -132,16 +133,16 @@ func (t *Task) GetCauses() []map[string]interface{} {
 	return nil
 }
 
-func (q *Queue) Poll() (int, error) {
-	response, err := q.Jenkins.Requester.GetJSON(q.Base, q.Raw, nil)
+func (q *Queue) Poll(ctx context.Context) (int, error) {
+	response, err := q.Jenkins.Requester.GetJSON(ctx, q.Base, q.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
 	return response.StatusCode, nil
 }
 
-func (t *Task) Poll() (int, error) {
-	response, err := t.Jenkins.Requester.GetJSON(t.Base, t.Raw, nil)
+func (t *Task) Poll(ctx context.Context) (int, error) {
+	response, err := t.Jenkins.Requester.GetJSON(ctx, t.Base, t.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
