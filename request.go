@@ -37,6 +37,7 @@ type APIRequest struct {
 	Payload  io.Reader
 	Headers  http.Header
 	Suffix   string
+	Form     map[string]string
 }
 
 func (ar *APIRequest) SetHeader(key string, value string) *APIRequest {
@@ -47,7 +48,14 @@ func (ar *APIRequest) SetHeader(key string, value string) *APIRequest {
 func NewAPIRequest(method string, endpoint string, payload io.Reader) *APIRequest {
 	var headers = http.Header{}
 	var suffix string
-	ar := &APIRequest{method, endpoint, payload, headers, suffix}
+	ar := &APIRequest{Method: method, Endpoint: endpoint, Payload: payload, Headers: headers, Suffix: suffix}
+	return ar
+}
+
+func NewAPIRequestWithForm(method string, endpoint string, payload io.Reader, form map[string]string) *APIRequest {
+	var headers = http.Header{}
+	var suffix string
+	ar := &APIRequest{Method: method, Endpoint: endpoint, Payload: payload, Headers: headers, Suffix: suffix, Form: form}
 	return ar
 }
 
@@ -224,6 +232,13 @@ func (r *Requester) Do(ar *APIRequest, responseStruct interface{}, options ...in
 		req.Header.Add(k, ar.Headers.Get(k))
 	}
 
+	//FORM
+	if ar.Form != nil && len(ar.Form) > 0 {
+		req.Form = make(url.Values)
+		for k, v := range ar.Form {
+			req.Form[k] = []string{v}
+		}
+	}
 	if response, err := r.Client.Do(req); err != nil {
 		return nil, err
 	} else {

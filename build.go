@@ -17,6 +17,7 @@ package gojenkins
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -241,6 +242,57 @@ func (b *Build) GetConsoleOutput() string {
 	var content string
 	b.Jenkins.Requester.GetXML(url, &content, nil)
 	return content
+}
+
+func (b *Build) ContinuouslyGetConsoleOutput() (<-chan string, <-chan bool) {
+	channel := make(chan string)
+	done := make(chan bool)
+	go func() {
+		var (
+			httpTag  string
+			textSize string = "0"
+		)
+		for {
+			u := b.Base + "/logText/progressiveHtml"
+			var content string
+			ar := NewAPIRequest("POST", u, nil)
+			if err := b.Jenkins.Requester.SetCrumb(ar); err != nil {
+				channel <- fmt.Sprintf("[FAILED got progressive HTML information] %s", err.Error())
+				close(channel)
+				close(done)
+				return
+			}
+			ar.Suffix = ""
+			ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+			ar.SetHeader("X-Requested-With", "1.7")
+			ar.SetHeader("X-Prototype-Versio", "XMLHttpRequest")
+			if httpTag != "" {
+				ar.SetHeader("X-ConsoleAnnotator", httpTag)
+			}
+			data := url.Values{}
+			data.Set("start", textSize)
+			ar.Payload = bytes.NewBufferString(data.Encode())
+			rsp, err := b.Jenkins.Requester.Do(ar, &content, nil)
+			if err != nil {
+				channel <- fmt.Sprintf("[FAILED got progressive HTML information] %s", err.Error())
+				close(channel)
+				close(done)
+				return
+			}
+			httpTag = rsp.Header.Get("X-ConsoleAnnotator")
+			textSize = rsp.Header.Get("X-Text-Size")
+			moreData := rsp.Header.Get("X-More-Data")
+			if moreData == "" || moreData == "false" {
+				channel <- content
+				channel <- "[Has completely read all messages]"
+				close(channel)
+				close(done)
+				return
+			}
+			channel <- content
+		}
+	}()
+	return channel, done
 }
 
 func (b *Build) GetConsoleOutputFromIndex(startID int64) (consoleResponse, error) {
