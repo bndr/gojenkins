@@ -268,7 +268,7 @@ func (b *Build) GetConsoleOutputFromIndex(ctx context.Context, startID int64) (c
 }
 
 func (b *Build) GetCauses(ctx context.Context) ([]map[string]interface{}, error) {
-	_, err := b.Poll(ctx, 3)
+	_, err := b.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}

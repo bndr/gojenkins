@@ -55,7 +55,7 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 	data, err := a.GetData(ctx)
 
 	if err != nil {
-		return false, errors.New("no Data received, not saving file")
+		return false, errors.New("No data received, not saving file")
 	}
 
 	if _, err = os.Stat(path); err == nil {
