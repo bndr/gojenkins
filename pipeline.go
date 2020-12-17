@@ -18,6 +18,7 @@
 package gojenkins
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 )
@@ -97,8 +98,8 @@ func (run *PipelineRun) update() {
 	}
 }
 
-func (job *Job) GetPipelineRuns() (pr []PipelineRun, err error) {
-	_, err = job.Jenkins.Requester.GetJSON(job.Base+"/wfapi/runs", &pr, nil)
+func (job *Job) GetPipelineRuns(ctx context.Context) (pr []PipelineRun, err error) {
+	_, err = job.Jenkins.Requester.GetJSON(ctx, job.Base+"/wfapi/runs", &pr, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +111,10 @@ func (job *Job) GetPipelineRuns() (pr []PipelineRun, err error) {
 	return pr, nil
 }
 
-func (job *Job) GetPipelineRun(id string) (pr *PipelineRun, err error) {
+func (job *Job) GetPipelineRun(ctx context.Context, id string) (pr *PipelineRun, err error) {
 	pr = new(PipelineRun)
 	href := job.Base + "/" + id + "/wfapi/describe"
-	_, err = job.Jenkins.Requester.GetJSON(href, pr, nil)
+	_, err = job.Jenkins.Requester.GetJSON(ctx, href, pr, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,10 +124,10 @@ func (job *Job) GetPipelineRun(id string) (pr *PipelineRun, err error) {
 	return pr, nil
 }
 
-func (pr *PipelineRun) GetPendingInputActions() (PIAs []PipelineInputAction, err error) {
+func (pr *PipelineRun) GetPendingInputActions(ctx context.Context) (PIAs []PipelineInputAction, err error) {
 	PIAs = make([]PipelineInputAction, 0, 1)
 	href := pr.Base + "/wfapi/pendingInputActions"
-	_, err = pr.Job.Jenkins.Requester.GetJSON(href, &PIAs, nil)
+	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, &PIAs, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -134,10 +135,10 @@ func (pr *PipelineRun) GetPendingInputActions() (PIAs []PipelineInputAction, err
 	return PIAs, nil
 }
 
-func (pr *PipelineRun) GetArtifacts() (artifacts []PipelineArtifact, err error) {
+func (pr *PipelineRun) GetArtifacts(ctx context.Context) (artifacts []PipelineArtifact, err error) {
 	artifacts = make([]PipelineArtifact, 0, 0)
 	href := pr.Base + "/wfapi/artifacts"
-	_, err = pr.Job.Jenkins.Requester.GetJSON(href, artifacts, nil)
+	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, artifacts, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -145,10 +146,10 @@ func (pr *PipelineRun) GetArtifacts() (artifacts []PipelineArtifact, err error) 
 	return artifacts, nil
 }
 
-func (pr *PipelineRun) GetNode(id string) (node *PipelineNode, err error) {
+func (pr *PipelineRun) GetNode(ctx context.Context, id string) (node *PipelineNode, err error) {
 	node = new(PipelineNode)
 	href := pr.Base + "/execution/node/" + id + "/wfapi/describe"
-	_, err = pr.Job.Jenkins.Requester.GetJSON(href, node, nil)
+	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, node, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +157,11 @@ func (pr *PipelineRun) GetNode(id string) (node *PipelineNode, err error) {
 	return node, nil
 }
 
-func (node *PipelineNode) GetLog() (log *PipelineNodeLog, err error) {
+func (node *PipelineNode) GetLog(ctx context.Context) (log *PipelineNodeLog, err error) {
 	log = new(PipelineNodeLog)
 	href := node.Base + "/wfapi/log"
 	fmt.Println(href)
-	_, err = node.Run.Job.Jenkins.Requester.GetJSON(href, log, nil)
+	_, err = node.Run.Job.Jenkins.Requester.GetJSON(ctx, href, log, nil)
 	if err != nil {
 		return nil, err
 	}

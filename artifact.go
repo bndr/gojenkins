@@ -15,6 +15,7 @@
 package gojenkins
 
 import (
+	"context"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -33,9 +34,9 @@ type Artifact struct {
 }
 
 // Get raw byte data of Artifact
-func (a Artifact) GetData() ([]byte, error) {
+func (a Artifact) GetData(ctx context.Context) ([]byte, error) {
 	var data string
-	response, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
+	response, err := a.Jenkins.Requester.Get(ctx, a.Path, &data, nil)
 
 	if err != nil {
 		return nil, err
@@ -50,11 +51,11 @@ func (a Artifact) GetData() ([]byte, error) {
 }
 
 // Save artifact to a specific path, using your own filename.
-func (a Artifact) Save(path string) (bool, error) {
-	data, err := a.GetData()
+func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
+	data, err := a.GetData(ctx)
 
 	if err != nil {
-		return false, errors.New("No Data received, not saving file.")
+		return false, errors.New("No data received, not saving file")
 	}
 
 	if _, err = os.Stat(path); err == nil {
@@ -62,7 +63,7 @@ func (a Artifact) Save(path string) (bool, error) {
 	}
 
 	err = ioutil.WriteFile(path, data, 0644)
-	a.validateDownload(path)
+	a.validateDownload(ctx, path)
 
 	if err != nil {
 		return false, err
@@ -71,12 +72,12 @@ func (a Artifact) Save(path string) (bool, error) {
 }
 
 // Save Artifact to directory using Artifact filename.
-func (a Artifact) SaveToDir(dir string) (bool, error) {
+func (a Artifact) SaveToDir(ctx context.Context, dir string) (bool, error) {
 	if _, err := os.Stat(dir); err != nil {
 		Error.Printf("can't save artifact: directory %s does not exist", dir)
 		return false, fmt.Errorf("can't save artifact: directory %s does not exist", dir)
 	}
-	saved, err := a.Save(path.Join(dir, a.FileName))
+	saved, err := a.Save(ctx, path.Join(dir, a.FileName))
 	if err != nil {
 		return saved, nil
 	}
@@ -84,12 +85,12 @@ func (a Artifact) SaveToDir(dir string) (bool, error) {
 }
 
 // Compare Remote and local MD5
-func (a Artifact) validateDownload(path string) (bool, error) {
+func (a Artifact) validateDownload(ctx context.Context, path string) (bool, error) {
 	localHash := a.getMD5local(path)
 
 	fp := FingerPrint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(FingerPrintResponse)}
 
-	valid, err := fp.ValidateForBuild(a.FileName, a.Build)
+	valid, err := fp.ValidateForBuild(ctx, a.FileName, a.Build)
 
 	if err != nil {
 		return false, err

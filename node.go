@@ -14,7 +14,10 @@
 
 package gojenkins
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 // Nodes
 
@@ -80,8 +83,8 @@ type NodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
-func (n *Node) Info() (*NodeResponse, error) {
-	_, err := n.Poll()
+func (n *Node) Info(ctx context.Context) (*NodeResponse, error) {
+	_, err := n.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -92,48 +95,48 @@ func (n *Node) GetName() string {
 	return n.Raw.DisplayName
 }
 
-func (n *Node) Delete() (bool, error) {
-	resp, err := n.Jenkins.Requester.Post(n.Base+"/doDelete", nil, nil, nil)
+func (n *Node) Delete(ctx context.Context) (bool, error) {
+	resp, err := n.Jenkins.Requester.Post(ctx, n.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
 	return resp.StatusCode == 200, nil
 }
 
-func (n *Node) IsOnline() (bool, error) {
-	_, err := n.Poll()
+func (n *Node) IsOnline(ctx context.Context) (bool, error) {
+	_, err := n.Poll(ctx)
 	if err != nil {
 		return false, err
 	}
 	return !n.Raw.Offline, nil
 }
 
-func (n *Node) IsTemporarilyOffline() (bool, error) {
-	_, err := n.Poll()
+func (n *Node) IsTemporarilyOffline(ctx context.Context) (bool, error) {
+	_, err := n.Poll(ctx)
 	if err != nil {
 		return false, err
 	}
 	return n.Raw.TemporarilyOffline, nil
 }
 
-func (n *Node) IsIdle() (bool, error) {
-	_, err := n.Poll()
+func (n *Node) IsIdle(ctx context.Context) (bool, error) {
+	_, err := n.Poll(ctx)
 	if err != nil {
 		return false, err
 	}
 	return n.Raw.Idle, nil
 }
 
-func (n *Node) IsJnlpAgent() (bool, error) {
-	_, err := n.Poll()
+func (n *Node) IsJnlpAgent(ctx context.Context) (bool, error) {
+	_, err := n.Poll(ctx)
 	if err != nil {
 		return false, err
 	}
 	return n.Raw.JnlpAgent, nil
 }
 
-func (n *Node) SetOnline() (bool, error) {
-	_, err := n.Poll()
+func (n *Node) SetOnline(ctx context.Context) (bool, error) {
+	_, err := n.Poll(ctx)
 
 	if err != nil {
 		return false, err
@@ -144,21 +147,21 @@ func (n *Node) SetOnline() (bool, error) {
 	}
 
 	if n.Raw.Offline && n.Raw.TemporarilyOffline {
-		return n.ToggleTemporarilyOffline()
+		return n.ToggleTemporarilyOffline(ctx)
 	}
 
 	return true, nil
 }
 
-func (n *Node) SetOffline(options ...interface{}) (bool, error) {
+func (n *Node) SetOffline(ctx context.Context, options ...interface{}) (bool, error) {
 	if !n.Raw.Offline {
-		return n.ToggleTemporarilyOffline(options...)
+		return n.ToggleTemporarilyOffline(ctx, options...)
 	}
 	return false, errors.New("Node already Offline")
 }
 
-func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
-	state_before, err := n.IsTemporarilyOffline()
+func (n *Node) ToggleTemporarilyOffline(ctx context.Context, options ...interface{}) (bool, error) {
+	state_before, err := n.IsTemporarilyOffline(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -166,11 +169,11 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	if len(options) > 0 {
 		qr["offlineMessage"] = options[0].(string)
 	}
-	_, err = n.Jenkins.Requester.Post(n.Base+"/toggleOffline", nil, nil, qr)
+	_, err = n.Jenkins.Requester.Post(ctx, n.Base+"/toggleOffline", nil, nil, qr)
 	if err != nil {
 		return false, err
 	}
-	new_state, err := n.IsTemporarilyOffline()
+	new_state, err := n.IsTemporarilyOffline(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -180,49 +183,49 @@ func (n *Node) ToggleTemporarilyOffline(options ...interface{}) (bool, error) {
 	return true, nil
 }
 
-func (n *Node) Poll() (int, error) {
-	response, err := n.Jenkins.Requester.GetJSON(n.Base, n.Raw, nil)
+func (n *Node) Poll(ctx context.Context) (int, error) {
+	response, err := n.Jenkins.Requester.GetJSON(ctx, n.Base, n.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
 	return response.StatusCode, nil
 }
 
-func (n *Node) LaunchNodeBySSH() (int, error) {
+func (n *Node) LaunchNodeBySSH(ctx context.Context) (int, error) {
 	qr := map[string]string{
 		"json":   "",
 		"Submit": "Launch slave agent",
 	}
-	response, err := n.Jenkins.Requester.Post(n.Base+"/launchSlaveAgent", nil, nil, qr)
+	response, err := n.Jenkins.Requester.Post(ctx, n.Base+"/launchSlaveAgent", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
 	return response.StatusCode, nil
 }
 
-func (n *Node) Disconnect() (int, error) {
+func (n *Node) Disconnect(ctx context.Context) (int, error) {
 	qr := map[string]string{
 		"offlineMessage": "",
 		"json":           makeJson(map[string]string{"offlineMessage": ""}),
 		"Submit":         "Yes",
 	}
-	response, err := n.Jenkins.Requester.Post(n.Base+"/doDisconnect", nil, nil, qr)
+	response, err := n.Jenkins.Requester.Post(ctx, n.Base+"/doDisconnect", nil, nil, qr)
 	if err != nil {
 		return 0, err
 	}
 	return response.StatusCode, nil
 }
 
-func (n *Node) GetLogText() (string, error) {
+func (n *Node) GetLogText(ctx context.Context) (string, error) {
 	var log string
 
-	_, err := n.Jenkins.Requester.Post(n.Base+"/log", nil, nil, nil)
+	_, err := n.Jenkins.Requester.Post(ctx, n.Base+"/log", nil, nil, nil)
 	if err != nil {
 		return "", err
 	}
 
 	qr := map[string]string{"start": "0"}
-	_, err = n.Jenkins.Requester.GetJSON(n.Base+"/logText/progressiveHtml/", &log, qr)
+	_, err = n.Jenkins.Requester.GetJSON(ctx, n.Base+"/logText/progressiveHtml/", &log, qr)
 	if err != nil {
 		return "", nil
 	}

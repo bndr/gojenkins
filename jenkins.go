@@ -16,6 +16,7 @@
 package gojenkins
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -23,6 +24,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Basic Authentication
@@ -48,12 +50,12 @@ var (
 // Init Method. Should be called after creating a Jenkins Instance.
 // e.g jenkins,err := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
-func (j *Jenkins) Init() (*Jenkins, error) {
+func (j *Jenkins) Init(ctx context.Context) (*Jenkins, error) {
 	j.initLoggers()
 
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
-	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+	rsp, err := j.Requester.GetJSON(ctx, "/", j.Raw, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +83,8 @@ func (j *Jenkins) initLoggers() {
 }
 
 // Get Basic Information About Jenkins
-func (j *Jenkins) Info() (*ExecutorResponse, error) {
-	rsp, err := j.Requester.GetJSON("/", j.Raw, nil)
+func (j *Jenkins) Info(ctx context.Context) (*ExecutorResponse, error) {
+	rsp, err := j.Requester.GetJSON(ctx, "/", j.Raw, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +96,8 @@ func (j *Jenkins) Info() (*ExecutorResponse, error) {
 }
 
 // SafeRestart jenkins, restart will be done when there are no jobs running
-func (j *Jenkins) SafeRestart() error {
-	_, err := j.Requester.Post("/safeRestart", strings.NewReader(""), struct{}{}, map[string]string{})
+func (j *Jenkins) SafeRestart(ctx context.Context) error {
+	_, err := j.Requester.Post(ctx, "/safeRestart", strings.NewReader(""), struct{}{}, map[string]string{})
 	return err
 }
 
@@ -104,7 +106,7 @@ func (j *Jenkins) SafeRestart() error {
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
 // Multiple labels should be separated by blanks
-func (j *Jenkins) CreateNode(name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
+func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
 	params := map[string]string{"method": "JNLPLauncher"}
 
 	if len(options) > 0 {
@@ -162,14 +164,14 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 		}),
 	}
 
-	resp, err := j.Requester.Post("/computer/doCreateItem", nil, nil, qr)
+	resp, err := j.Requester.Post(ctx, "/computer/doCreateItem", nil, nil, qr)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if resp.StatusCode < 400 {
-		_, err := node.Poll()
+		_, err := node.Poll(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -179,17 +181,17 @@ func (j *Jenkins) CreateNode(name string, numExecutors int, description string, 
 }
 
 // Delete a Jenkins slave node
-func (j *Jenkins) DeleteNode(name string) (bool, error) {
+func (j *Jenkins) DeleteNode(ctx context.Context, name string) (bool, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
-	return node.Delete()
+	return node.Delete(ctx)
 }
 
 // Create a new folder
 // This folder can be nested in other parent folders
 // Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
-func (j *Jenkins) CreateFolder(name string, parents ...string) (*Folder, error) {
+func (j *Jenkins) CreateFolder(ctx context.Context, name string, parents ...string) (*Folder, error) {
 	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
-	folder, err := folderObj.Create(name)
+	folder, err := folderObj.Create(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -198,12 +200,12 @@ func (j *Jenkins) CreateFolder(name string, parents ...string) (*Folder, error) 
 
 // Create a new job in the folder
 // Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
-func (j *Jenkins) CreateJobInFolder(config string, jobName string, parentIDs ...string) (*Job, error) {
+func (j *Jenkins) CreateJobInFolder(ctx context.Context, config string, jobName string, parentIDs ...string) (*Job, error) {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
 	qr := map[string]string{
 		"name": jobName,
 	}
-	job, err := jobObj.Create(config, qr)
+	job, err := jobObj.Create(ctx, config, qr)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +216,7 @@ func (j *Jenkins) CreateJobInFolder(config string, jobName string, parentIDs ...
 // Method takes XML string as first parameter, and if the name is not specified in the config file
 // takes name as string as second parameter
 // e.g jenkins.CreateJob("<config></config>","newJobName")
-func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error) {
+func (j *Jenkins) CreateJob(ctx context.Context, config string, options ...interface{}) (*Job, error) {
 	qr := make(map[string]string)
 	if len(options) > 0 {
 		qr["name"] = options[0].(string)
@@ -222,7 +224,7 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 		return nil, errors.New("Error Creating Job, job name is missing")
 	}
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + qr["name"]}
-	job, err := jobObj.Create(config, qr)
+	job, err := jobObj.Create(ctx, config, qr)
 	if err != nil {
 		return nil, err
 	}
@@ -231,51 +233,80 @@ func (j *Jenkins) CreateJob(config string, options ...interface{}) (*Job, error)
 
 // Update a job.
 // If a job is exist, update its config
-func (j *Jenkins) UpdateJob(job string, config string) *Job {
+func (j *Jenkins) UpdateJob(ctx context.Context, job string, config string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
-	jobObj.UpdateConfig(config)
+	jobObj.UpdateConfig(ctx, config)
 	return &jobObj
 }
 
 // Rename a job.
 // First parameter job old name, Second parameter job new name.
-func (j *Jenkins) RenameJob(job string, name string) *Job {
+func (j *Jenkins) RenameJob(ctx context.Context, job string, name string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
-	jobObj.Rename(name)
+	jobObj.Rename(ctx, name)
 	return &jobObj
 }
 
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
-func (j *Jenkins) CopyJob(copyFrom string, newName string) (*Job, error) {
+func (j *Jenkins) CopyJob(ctx context.Context, copyFrom string, newName string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
-	_, err := job.Poll()
+	_, err := job.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return job.Copy(newName)
+	return job.Copy(ctx, newName)
 }
 
 // Delete a job.
-func (j *Jenkins) DeleteJob(name string) (bool, error) {
+func (j *Jenkins) DeleteJob(ctx context.Context, name string) (bool, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
-	return job.Delete()
+	return job.Delete(ctx)
 }
 
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
-func (j *Jenkins) BuildJob(name string, options ...interface{}) (int64, error) {
+// Returns queue id
+func (j *Jenkins) BuildJob(ctx context.Context, name string, options ...interface{}) (int64, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
 	var params map[string]string
 	if len(options) > 0 {
 		params, _ = options[0].(map[string]string)
 	}
-	return job.InvokeSimple(params)
+	return job.InvokeSimple(ctx, params)
 }
 
-func (j *Jenkins) GetNode(name string) (*Node, error) {
+// A task in queue will be assigned a build number in a job after a few seconds.
+// this function will return the build object.
+func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, queueid int64) (*Build, error) {
+	task, err := j.GetQueueItem(ctx, queueid)
+	if err != nil {
+		return nil, err
+	}
+	// Jenkins queue API has about 4.7second quiet period
+	for task.Raw.Executable.Number == 0 {
+		time.Sleep(1000 * time.Millisecond)
+		_, err = task.Poll(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	buildid := task.Raw.Executable.Number
+	job, err := task.GetJob(ctx)
+	if err != nil {
+		return nil, err
+	}
+	build, err := job.GetBuild(ctx, buildid)
+	if err != nil {
+		return nil, err
+	}
+	return build, nil
+}
+
+func (j *Jenkins) GetNode(ctx context.Context, name string) (*Node, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
-	status, err := node.Poll()
+	status, err := node.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -285,9 +316,9 @@ func (j *Jenkins) GetNode(name string) (*Node, error) {
 	return nil, errors.New("No node found")
 }
 
-func (j *Jenkins) GetLabel(name string) (*Label, error) {
+func (j *Jenkins) GetLabel(ctx context.Context, name string) (*Label, error) {
 	label := Label{Jenkins: j, Raw: new(LabelResponse), Base: "/label/" + name}
-	status, err := label.Poll()
+	status, err := label.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -297,12 +328,12 @@ func (j *Jenkins) GetLabel(name string) (*Label, error) {
 	return nil, errors.New("No label found")
 }
 
-func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
-	job, err := j.GetJob(jobName)
+func (j *Jenkins) GetBuild(ctx context.Context, jobName string, number int64) (*Build, error) {
+	job, err := j.GetJob(ctx, jobName)
 	if err != nil {
 		return nil, err
 	}
-	build, err := job.GetBuild(number)
+	build, err := job.GetBuild(ctx, number)
 
 	if err != nil {
 		return nil, err
@@ -310,9 +341,9 @@ func (j *Jenkins) GetBuild(jobName string, number int64) (*Build, error) {
 	return build, nil
 }
 
-func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
+func (j *Jenkins) GetJob(ctx context.Context, id string, parentIDs ...string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
-	status, err := job.Poll()
+	status, err := job.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -322,9 +353,9 @@ func (j *Jenkins) GetJob(id string, parentIDs ...string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
+func (j *Jenkins) GetSubJob(ctx context.Context, parentId string, childId string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
-	status, err := job.Poll()
+	status, err := job.Poll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling job: %v", err)
 	}
@@ -334,9 +365,9 @@ func (j *Jenkins) GetSubJob(parentId string, childId string) (*Job, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
+func (j *Jenkins) GetFolder(ctx context.Context, id string, parents ...string) (*Folder, error) {
 	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
-	status, err := folder.Poll()
+	status, err := folder.Poll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling folder: %v", err)
 	}
@@ -346,14 +377,14 @@ func (j *Jenkins) GetFolder(id string, parents ...string) (*Folder, error) {
 	return nil, errors.New(strconv.Itoa(status))
 }
 
-func (j *Jenkins) GetAllNodes() ([]*Node, error) {
+func (j *Jenkins) GetAllNodes(ctx context.Context) ([]*Node, error) {
 	computers := new(Computers)
 
 	qr := map[string]string{
 		"depth": "1",
 	}
 
-	_, err := j.Requester.GetJSON("/computer", computers, qr)
+	_, err := j.Requester.GetJSON(ctx, "/computer", computers, qr)
 	if err != nil {
 		return nil, err
 	}
@@ -370,19 +401,19 @@ func (j *Jenkins) GetAllNodes() ([]*Node, error) {
 // There are only build IDs here,
 // To get all the other info of the build use jenkins.GetBuild(job,buildNumber)
 // or job.GetBuild(buildNumber)
-func (j *Jenkins) GetAllBuildIds(job string) ([]JobBuild, error) {
-	jobObj, err := j.GetJob(job)
+func (j *Jenkins) GetAllBuildIds(ctx context.Context, job string) ([]JobBuild, error) {
+	jobObj, err := j.GetJob(ctx, job)
 	if err != nil {
 		return nil, err
 	}
-	return jobObj.GetAllBuildIds()
+	return jobObj.GetAllBuildIds(ctx)
 }
 
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
-func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
+func (j *Jenkins) GetAllJobNames(ctx context.Context) ([]InnerJob, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
-	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
+	_, err := j.Requester.GetJSON(ctx, "/", exec.Raw, nil)
 
 	if err != nil {
 		return nil, err
@@ -393,9 +424,9 @@ func (j *Jenkins) GetAllJobNames() ([]InnerJob, error) {
 
 // Get All Possible Job Objects.
 // Each job will be queried.
-func (j *Jenkins) GetAllJobs() ([]*Job, error) {
+func (j *Jenkins) GetAllJobs(ctx context.Context) ([]*Job, error) {
 	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
-	_, err := j.Requester.GetJSON("/", exec.Raw, nil)
+	_, err := j.Requester.GetJSON(ctx, "/", exec.Raw, nil)
 
 	if err != nil {
 		return nil, err
@@ -403,7 +434,7 @@ func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 
 	jobs := make([]*Job, len(exec.Raw.Jobs))
 	for i, job := range exec.Raw.Jobs {
-		ji, err := j.GetJob(job.Name)
+		ji, err := j.GetJob(ctx, job.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -413,9 +444,9 @@ func (j *Jenkins) GetAllJobs() ([]*Job, error) {
 }
 
 // Returns a Queue
-func (j *Jenkins) GetQueue() (*Queue, error) {
+func (j *Jenkins) GetQueue(ctx context.Context) (*Queue, error) {
 	q := &Queue{Jenkins: j, Raw: new(queueResponse), Base: j.GetQueueUrl()}
-	_, err := q.Poll()
+	_, err := q.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -427,9 +458,9 @@ func (j *Jenkins) GetQueueUrl() string {
 }
 
 // GetQueueItem returns a single queue Task
-func (j *Jenkins) GetQueueItem(id int64) (*Task, error) {
+func (j *Jenkins) GetQueueItem(ctx context.Context, id int64) (*Task, error) {
 	t := &Task{Raw: new(taskResponse), Jenkins: j, Base: j.getQueueItemURL(id)}
-	_, err := t.Poll()
+	_, err := t.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -441,16 +472,16 @@ func (j *Jenkins) getQueueItemURL(id int64) string {
 }
 
 // Get Artifact data by Hash
-func (j *Jenkins) GetArtifactData(id string) (*FingerPrintResponse, error) {
+func (j *Jenkins) GetArtifactData(ctx context.Context, id string) (*FingerPrintResponse, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
-	return fp.GetInfo()
+	return fp.GetInfo(ctx)
 }
 
 // Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
-func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
+func (j *Jenkins) GetPlugins(ctx context.Context, depth int) (*Plugins, error) {
 	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
-	_, err := p.Poll()
+	_, err := p.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -458,9 +489,9 @@ func (j *Jenkins) GetPlugins(depth int) (*Plugins, error) {
 }
 
 // UninstallPlugin plugin otherwise returns error
-func (j *Jenkins) UninstallPlugin(name string) error {
+func (j *Jenkins) UninstallPlugin(ctx context.Context, name string) error {
 	url := fmt.Sprintf("/pluginManager/plugin/%s/doUninstall", name)
-	resp, err := j.Requester.Post(url, strings.NewReader(""), struct{}{}, map[string]string{})
+	resp, err := j.Requester.Post(ctx, url, strings.NewReader(""), struct{}{}, map[string]string{})
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
 	}
@@ -469,8 +500,8 @@ func (j *Jenkins) UninstallPlugin(name string) error {
 
 // Check if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
-func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
-	p, err := j.GetPlugins(1)
+func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
+	p, err := j.GetPlugins(ctx, 1)
 
 	if err != nil {
 		return nil, err
@@ -479,9 +510,9 @@ func (j *Jenkins) HasPlugin(name string) (*Plugin, error) {
 }
 
 //InstallPlugin with given version and name
-func (j *Jenkins) InstallPlugin(name string, version string) error {
+func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
-	resp, err := j.Requester.PostXML("/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
+	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
@@ -490,9 +521,9 @@ func (j *Jenkins) InstallPlugin(name string, version string) error {
 }
 
 // Verify FingerPrint
-func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
+func (j *Jenkins) ValidateFingerPrint(ctx context.Context, id string) (bool, error) {
 	fp := FingerPrint{Jenkins: j, Base: "/fingerprint/", Id: id, Raw: new(FingerPrintResponse)}
-	valid, err := fp.Valid()
+	valid, err := fp.Valid(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -502,24 +533,24 @@ func (j *Jenkins) ValidateFingerPrint(id string) (bool, error) {
 	return false, nil
 }
 
-func (j *Jenkins) GetView(name string) (*View, error) {
+func (j *Jenkins) GetView(ctx context.Context, name string) (*View, error) {
 	url := "/view/" + name
 	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
-	_, err := view.Poll()
+	_, err := view.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &view, nil
 }
 
-func (j *Jenkins) GetAllViews() ([]*View, error) {
-	_, err := j.Poll()
+func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
+	_, err := j.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
 	views := make([]*View, len(j.Raw.Views))
 	for i, v := range j.Raw.Views {
-		views[i], _ = j.GetView(v.Name)
+		views[i], _ = j.GetView(ctx, v.Name)
 	}
 	return views, nil
 }
@@ -534,7 +565,7 @@ func (j *Jenkins) GetAllViews() ([]*View, error) {
 // 		gojenkins.DASHBOARD_VIEW
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
-func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
+func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
@@ -546,20 +577,20 @@ func (j *Jenkins) CreateView(name string, viewType string) (*View, error) {
 			"mode": viewType,
 		}),
 	}
-	r, err := j.Requester.Post(endpoint, nil, view.Raw, data)
+	r, err := j.Requester.Post(ctx, endpoint, nil, view.Raw, data)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if r.StatusCode == 200 {
-		return j.GetView(name)
+		return j.GetView(ctx, name)
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
-func (j *Jenkins) Poll() (int, error) {
-	resp, err := j.Requester.GetJSON("/", j.Raw, nil)
+func (j *Jenkins) Poll(ctx context.Context) (int, error) {
+	resp, err := j.Requester.GetJSON(ctx, "/", j.Raw, nil)
 	if err != nil {
 		return 0, err
 	}
