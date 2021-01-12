@@ -45,7 +45,7 @@ if err != nil {
   panic("Something Went Wrong")
 }
 
-queueid, err := jenkins.BuildJob(ctx, "#jobname")
+queueid, err := jenkins.BuildJob(ctx, "#jobname", nil)
 if err != nil {
   panic(err)
 }
