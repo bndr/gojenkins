@@ -14,6 +14,7 @@ var (
 	dockerID   = "dockerIDCred"
 	sshID      = "sshIdCred"
 	usernameID = "usernameIDcred"
+	fileID     = "fileIDcred"
 	scope      = "GLOBAL"
 )
 
@@ -37,6 +38,28 @@ func TestCreateUsernameCredentials(t *testing.T) {
 	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
 	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
 	assert.Equal(t, cred.Username, cred.Username, "Username is not equal")
+}
+
+func TestCreateFileCredentials(t *testing.T) {
+
+	cred := FileCredentials{
+		ID:          fileID,
+		Scope:       scope,
+		Filename:    "testFile.json",
+		SecretBytes: "VGhpcyBpcyBhIHRlc3Qu\n",
+	}
+
+	ctx := context.Background()
+	err := cm.Add(ctx, domain, cred)
+	assert.Nil(t, err, "Could not create credential")
+
+	getCred := FileCredentials{}
+	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
+	assert.Nil(t, err, "Could not get credential")
+
+	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
+	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
+	assert.Equal(t, cred.Filename, cred.Filename, "Filename is not equal")
 }
 
 func TestCreateDockerCredentials(t *testing.T) {
