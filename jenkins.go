@@ -33,6 +33,10 @@ type BasicAuth struct {
 	Password string
 }
 
+type BearerAuth struct {
+	Token string
+}
+
 type Jenkins struct {
 	Server    string
 	Version   string
@@ -593,8 +597,11 @@ func (j *Jenkins) Poll(ctx context.Context) (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Creates a new Jenkins Instance
-// Optional parameters are: client, username, password or token
+// Creates a new Jenkins Instance using client and base
+// Optional parameters are either
+//  - username & password for basic auth
+// or
+//  - token for bearer auth
 // After creating an instance call init method.
 func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
@@ -608,6 +615,9 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 	}
 	if len(auth) == 2 {
 		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
+	}
+	if len(auth) == 1 {
+		j.Requester.BearerAuth = &BearerAuth{Token: auth[0].(string)}
 	}
 	return j
 }

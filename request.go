@@ -55,11 +55,12 @@ func NewAPIRequest(method string, endpoint string, payload io.Reader) *APIReques
 }
 
 type Requester struct {
-	Base      string
-	BasicAuth *BasicAuth
-	Client    *http.Client
-	CACert    []byte
-	SslVerify bool
+	Base       string
+	BasicAuth  *BasicAuth
+	BearerAuth *BearerAuth
+	Client     *http.Client
+	CACert     []byte
+	SslVerify  bool
 }
 
 func (r *Requester) SetCrumb(ctx context.Context, ar *APIRequest) error {
@@ -143,6 +144,9 @@ func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) e
 	if r.BasicAuth != nil {
 		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
 	}
+	if r.BearerAuth != nil {
+		req.Header.Add("Authorization", "Bearer "+r.BearerAuth.Token)
+	}
 	return nil
 }
 
@@ -221,6 +225,10 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 
 	if r.BasicAuth != nil {
 		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
+	}
+
+	if r.BearerAuth != nil {
+		req.Header.Add("Authorization", "Bearer "+r.BearerAuth.Token)
 	}
 
 	for k := range ar.Headers {
