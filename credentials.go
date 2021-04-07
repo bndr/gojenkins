@@ -55,6 +55,17 @@ type StringCredentials struct {
 	Secret      string   `xml:"secret"`
 }
 
+//FileCredentials store a file
+//"SecretBytes" is a base64 encoded file content
+type FileCredentials struct {
+	XMLName     xml.Name `xml:"org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl"`
+	ID          string   `xml:"id"`
+	Scope       string   `xml:"scope"`
+	Description string   `xml:"description"`
+	Filename    string   `xml:"fileName"`
+	SecretBytes string   `xml:"secretBytes"`
+}
+
 //SSHCredentials store credentials for ssh keys.
 type SSHCredentials struct {
 	XMLName          xml.Name    `xml:"com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey"`
