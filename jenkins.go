@@ -264,17 +264,22 @@ func (j *Jenkins) DeleteJob(ctx context.Context, name string) (bool, error) {
 	return job.Delete(ctx)
 }
 
+// Get a job object
+func (j *Jenkins) GetJobObj(ctx context.Context, name string) *Job {
+	return &Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+}
+
 // Invoke a job.
 // First parameter job name, second parameter is optional Build parameters.
 // Returns queue id
 func (j *Jenkins) BuildJob(ctx context.Context, name string, params map[string]string) (int64, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+	job := j.GetJobObj(ctx, name)
 	return job.InvokeSimple(ctx, params)
 }
 
 // A task in queue will be assigned a build number in a job after a few seconds.
 // this function will return the build object.
-func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, queueid int64) (*Build, error) {
+func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int64) (*Build, error) {
 	task, err := j.GetQueueItem(ctx, queueid)
 	if err != nil {
 		return nil, err
@@ -288,12 +293,7 @@ func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, queueid int64) (*Buil
 		}
 	}
 
-	buildid := task.Raw.Executable.Number
-	job, err := task.GetJob(ctx)
-	if err != nil {
-		return nil, err
-	}
-	build, err := job.GetBuild(ctx, buildid)
+	build, err := job.GetBuild(ctx, task.Raw.Executable.Number)
 	if err != nil {
 		return nil, err
 	}

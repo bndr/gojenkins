@@ -45,11 +45,12 @@ if err != nil {
   panic("Something Went Wrong")
 }
 
-queueid, err := jenkins.BuildJob(ctx, "#jobname", nil)
+job := jenkins.GetJobObj(ctx, "#jobname")
+queueid, err := jenkins.InvokeSimple(ctx, params)
 if err != nil {
   panic(err)
 }
-build, err := jenkins.GetBuildFromQueueID(ctx, queueid)
+build, err := jenkins.GetBuildFromQueueID(ctx, job, queueid)
 if err != nil {
   panic(err)
 }
