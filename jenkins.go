@@ -611,3 +611,20 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 	}
 	return j
 }
+
+// Executes the groovy script and returns the result
+func (j *Jenkins) ExecuteScript(ctx context.Context, script string) (string, error) {
+	endpoint := "/scriptText"
+	data := map[string]string{
+		"script": script,
+	}
+
+	var scriptResponse string
+	_, err := j.Requester.PostSimple(ctx, endpoint, nil, &scriptResponse, data)
+
+	if err != nil {
+		return "", err
+	}
+
+	return scriptResponse, nil
+}

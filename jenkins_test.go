@@ -376,6 +376,12 @@ func TestConcurrentRequests(t *testing.T) {
 	}
 }
 
+func TestExecuteScript(t *testing.T) {
+	ctx := context.Background()
+	response, _ := jenkins.ExecuteScript(ctx, "println(\"Hello World!\")")
+	assert.Equal(t, "Hello World!", response)
+}
+
 func getFileAsString(path string) string {
 	buf, err := ioutil.ReadFile("_tests/" + path)
 	if err != nil {
