@@ -34,7 +34,7 @@ type Build struct {
 
 type parameter struct {
 	Name  string
-	Value string
+	Value interface{}
 }
 
 type branch struct {
