@@ -16,7 +16,9 @@ package gojenkins
 
 import (
 	"context"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 type Queue struct {
@@ -108,7 +110,12 @@ func (t *Task) Cancel(ctx context.Context) (bool, error) {
 }
 
 func (t *Task) GetJob(ctx context.Context) (*Job, error) {
-	return t.Jenkins.GetJob(ctx, t.Raw.Task.Name)
+	u, err := url.Parse(t.Raw.Task.URL)
+	if err != nil {
+		return nil, err
+	}
+	jobFullName := strings.TrimLeft(u.Path, "/job")
+	return t.Jenkins.GetJob(ctx, jobFullName)
 }
 
 func (t *Task) GetWhy() string {
