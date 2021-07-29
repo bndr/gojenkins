@@ -183,7 +183,7 @@ type BuildResponse struct {
 	} `json:"runs"`
 }
 
-type consoleResponse struct {
+type ConsoleResponse struct {
 	Content     string
 	Offset      int64
 	HasMoreText bool
@@ -244,11 +244,11 @@ func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	return content
 }
 
-func (b *Build) GetConsoleOutputFromIndex(ctx context.Context, startID int64) (consoleResponse, error) {
+func (b *Build) GetConsoleOutputFromIndex(ctx context.Context, startID int64) (ConsoleResponse, error) {
 	strstart := strconv.FormatInt(startID, 10)
 	url := b.Base + "/logText/progressiveText"
 
-	var console consoleResponse
+	var console ConsoleResponse
 
 	querymap := make(map[string]string)
 	querymap["start"] = strstart

@@ -212,7 +212,7 @@ func TestCopyDeleteJob(t *testing.T) {
 func TestGetPlugins(t *testing.T) {
 	ctx := context.Background()
 	plugins, _ := jenkins.GetPlugins(ctx, 3)
-	assert.Equal(t, 10, plugins.Count())
+	assert.Greater(t, plugins.Count(), 5)
 }
 
 func TestGetViews(t *testing.T) {
@@ -286,6 +286,19 @@ func TestInstallPlugin(t *testing.T) {
 	err := jenkins.InstallPlugin(ctx, "packer", "1.4")
 
 	assert.Nil(t, err, "Could not install plugin")
+}
+
+func TestGetConsoleOutputFromIndex(t *testing.T) {
+	ctx := context.Background()
+	build, err := jenkins.GetBuild(ctx, "job2_test", 1)
+	assert.NoError(t, err)
+	r, err := build.GetConsoleOutputFromIndex(ctx, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, ConsoleResponse{
+		Content:     "Started by user unknown or anonymous\r\nRunning as SYSTEM\r\nBuilding on master in workspace /var/jenkins_home/workspace/job2_test\r\nFinished: SUCCESS\r\n",
+		Offset:      143,
+		HasMoreText: false,
+	}, r)
 }
 
 func TestConcurrentRequests(t *testing.T) {
