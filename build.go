@@ -237,6 +237,28 @@ func (b *Build) Stop(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+func (b *Build) Term(ctx context.Context) (bool, error) {
+	if b.IsRunning(ctx) {
+		response, err := b.Jenkins.Requester.Post(ctx, b.Base+"/term", nil, nil, nil)
+		if err != nil {
+			return false, err
+		}
+		return response.StatusCode == 200, nil
+	}
+	return true, nil
+}
+
+func (b *Build) Kill(ctx context.Context) (bool, error) {
+	if b.IsRunning(ctx) {
+		response, err := b.Jenkins.Requester.Post(ctx, b.Base+"/kill", nil, nil, nil)
+		if err != nil {
+			return false, err
+		}
+		return response.StatusCode == 200, nil
+	}
+	return true, nil
+}
+
 func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	url := b.Base + "/consoleText"
 	var content string
