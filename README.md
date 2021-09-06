@@ -54,7 +54,7 @@ if err != nil {
 }
 
 job := jenkins.GetJobObj(ctx, "#jobname")
-queueid, err := jenkins.InvokeSimple(ctx, params)
+queueid, err := job.InvokeSimple(ctx, params)
 if err != nil {
   panic(err)
 }
