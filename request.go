@@ -122,7 +122,7 @@ func (r *Requester) GetJSON(ctx context.Context, endpoint string, responseStruct
 
 func (r *Requester) GetXML(ctx context.Context, endpoint string, responseStruct interface{}, query map[string]string) (*http.Response, error) {
 	ar := NewAPIRequest("GET", endpoint, nil)
-	ar.SetHeader("Content-Type", "application/xml")
+	ar.SetHeader("Content-Type", "application/xml;charset=utf-8")
 	ar.Suffix = ""
 	return r.Do(ctx, ar, responseStruct, query)
 }
