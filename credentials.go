@@ -25,9 +25,6 @@ var listQuery = map[string]string{
 	"tree": "credentials[id]",
 }
 
-//ClassUsernameCredentials is name if java class which implements credentials that store username-password pair
-const ClassUsernameCredentials = "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl"
-
 type credentialID struct {
 	ID string `json:"id"`
 }
@@ -44,6 +41,17 @@ type UsernameCredentials struct {
 	Description string   `xml:"description"`
 	Username    string   `xml:"username"`
 	Password    string   `xml:"password"`
+}
+
+// VaultAppRoleCredentials struct representing credential for storing Vault AppRole role id and secret id
+type VaultAppRoleCredentials struct {
+	XMLName     xml.Name `xml:"com.datapipe.jenkins.vault.credentials.VaultAppRoleCredential"`
+	ID          string   `xml:"id"`
+	Scope       string   `xml:"scope"`
+	Description string   `xml:"description"`
+	Path        string   `xml:"path"`
+	RoleID      string   `xml:"roleId"`
+	SecretID    string   `xml:"secretId"`
 }
 
 //StringCredentials store only secret text
