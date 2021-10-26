@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bndr/gojenkins"
+	"github.com/HamzaZo/gojenkins"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
