@@ -101,7 +101,7 @@ func (j *Jenkins) SafeRestart(ctx context.Context) error {
 	return err
 }
 
-// Create a new Node
+// CreateNode Create a new Node
 // Can be JNLPLauncher or SSHLauncher
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
@@ -180,13 +180,13 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
-// Delete a Jenkins slave node
+//DeleteNode Delete a Jenkins slave node
 func (j *Jenkins) DeleteNode(ctx context.Context, name string) (bool, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	return node.Delete(ctx)
 }
 
-// Create a new folder
+//CreateFolder Create a new folder
 // This folder can be nested in other parent folders
 // Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
 func (j *Jenkins) CreateFolder(ctx context.Context, name string, parents ...string) (*Folder, error) {
@@ -198,7 +198,7 @@ func (j *Jenkins) CreateFolder(ctx context.Context, name string, parents ...stri
 	return folder, nil
 }
 
-// Create a new job in the folder
+//CreateJobInFolder Create a new job in the folder
 // Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
 func (j *Jenkins) CreateJobInFolder(ctx context.Context, config string, jobName string, parentIDs ...string) (*Job, error) {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, jobName), "/job/")}
@@ -212,7 +212,7 @@ func (j *Jenkins) CreateJobInFolder(ctx context.Context, config string, jobName 
 	return job, nil
 }
 
-// Create a new job from config File
+//CreateJob Create a new job from config File
 // Method takes XML string as first parameter, and if the name is not specified in the config file
 // takes name as string as second parameter
 // e.g jenkins.CreateJob("<config></config>","newJobName")
@@ -231,7 +231,7 @@ func (j *Jenkins) CreateJob(ctx context.Context, config string, options ...inter
 	return job, nil
 }
 
-// Update a job.
+//UpdateJob Update a job.
 // If a job is exist, update its config
 func (j *Jenkins) UpdateJob(ctx context.Context, job string, config string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
@@ -239,8 +239,8 @@ func (j *Jenkins) UpdateJob(ctx context.Context, job string, config string) *Job
 	return &jobObj
 }
 
-// Rename a job.
-// First parameter job old name, Second parameter job new name.
+
+//RenameJob First parameter job old name, Second parameter job new name.
 func (j *Jenkins) RenameJob(ctx context.Context, job string, name string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
 	jobObj.Rename(ctx, name)
@@ -473,7 +473,7 @@ func (j *Jenkins) GetArtifactData(ctx context.Context, id string) (*FingerPrintR
 	return fp.GetInfo(ctx)
 }
 
-// Returns the list of all plugins installed on the Jenkins server.
+//GetPlugins Returns the list of all plugins installed on the Jenkins server.
 // You can supply depth parameter, to limit how much data is returned.
 func (j *Jenkins) GetPlugins(ctx context.Context, depth int) (*Plugins, error) {
 	p := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: depth}
@@ -494,7 +494,7 @@ func (j *Jenkins) UninstallPlugin(ctx context.Context, name string) error {
 	return err
 }
 
-// Check if the plugin is installed on the server.
+//HasPlugin Check if the plugin is installed on the server.
 // Depth level 1 is used. If you need to go deeper, you can use GetPlugins, and iterate through them.
 func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 	p, err := j.GetPlugins(ctx, 1)
@@ -508,7 +508,7 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 //InstallPlugin with given version and name
 func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
-	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
+	resp, err := j.Requester.PostXML(ctx, "/pluginManager/install", xml, j.Raw, map[string]string{})
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
