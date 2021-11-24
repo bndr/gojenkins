@@ -16,6 +16,8 @@ package gojenkins
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -73,4 +75,22 @@ func (p *Plugins) Poll(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return response.StatusCode, nil
+}
+
+func (p *Plugins) Install(ctx context.Context, name string) (*Plugins, error) {
+	pluginName := fmt.Sprintf("plugin.%s.default", name)
+	data := map[string]string{
+		"dynamicLoad": "Install without restart",
+		pluginName: "on",
+	}
+	resp, err := p.Jenkins.Requester.Post(ctx, p.Base+"/install", nil, nil, data)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == 200 {
+		p.Poll(ctx)
+		return p, nil
+	}
+
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }

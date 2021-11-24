@@ -505,15 +505,14 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 	return p.Contains(name), nil
 }
 
-//InstallPlugin with given version and name
-func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
-	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
-	resp, err := j.Requester.PostXML(ctx, "/pluginManager/install", xml, j.Raw, map[string]string{})
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
+//InstallPlugin with given name
+func (j *Jenkins) InstallPlugin(ctx context.Context, name string) (*Plugins, error) {
+	pluginObj := Plugins{Jenkins: j, Raw: new(PluginResponse), Base: "/pluginManager", Depth: 1}
+	plugins, err := pluginObj.Install(ctx, name)
+	if err != nil {
+		return nil, err
 	}
-	return err
+	return plugins, nil
 }
 
 // Verify FingerPrint
