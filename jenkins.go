@@ -279,7 +279,7 @@ func (j *Jenkins) BuildJob(ctx context.Context, name string, params map[string]s
 
 // A task in queue will be assigned a build number in a job after a few seconds.
 // this function will return the build object.
-func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int64) (*Build, error) {
+func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, queueid int64) (*Build, error) {
 	task, err := j.GetQueueItem(ctx, queueid)
 	if err != nil {
 		return nil, err
@@ -292,8 +292,10 @@ func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int
 			return nil, err
 		}
 	}
-
-	build, err := job.GetBuild(ctx, task.Raw.Executable.Number)
+	buildid := task.Raw.Executable.Number
+	job := &Job{Jenkins: j, Raw: new(JobResponse)}
+	job.Raw.URL = strings.TrimSuffix(task.Raw.Task.URL, "/")
+	build, err := job.GetBuild(ctx, buildid)
 	if err != nil {
 		return nil, err
 	}

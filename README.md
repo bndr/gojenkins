@@ -33,7 +33,6 @@ For users that would like CLI based on gojenkins, follow the steps below:
 ## Usage
 
 ```go
-
 import (
   "github.com/bndr/gojenkins"
   "context"
@@ -53,12 +52,11 @@ if err != nil {
   panic("Something Went Wrong")
 }
 
-job := jenkins.GetJobObj(ctx, "#jobname")
-queueid, err := jenkins.InvokeSimple(ctx, params)
+queueid, err := jenkins.BuildJob(ctx, "#jobname", nil)
 if err != nil {
   panic(err)
 }
-build, err := jenkins.GetBuildFromQueueID(ctx, job, queueid)
+build, err := jenkins.GetBuildFromQueueID(ctx, queueid)
 if err != nil {
   panic(err)
 }
