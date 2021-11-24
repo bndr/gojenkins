@@ -357,7 +357,7 @@ func TestInstallPlugin(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	err := jenkins.InstallPlugin(ctx, "packer", "1.4")
+	_, err := jenkins.InstallPlugin(ctx, "packer")
 
 	assert.Nil(t, err, "Could not install plugin")
 }
