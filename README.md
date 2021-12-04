@@ -16,6 +16,7 @@ These are some of the features that are currently implemented:
 * Get Plugins, Builds, Artifacts, Fingerprints
 * Validate Fingerprints of Artifacts
 * Get Current Queue, Cancel Tasks
+* Create and Revoke API Tokens
 * etc. For all methods go to GoDoc Reference.
 
 ## Installation
@@ -251,6 +252,28 @@ job.Poll()
 build, _ := job.getBuild(ctx, 1)
 build.Poll()
 
+```
+
+## Create and Revoke API Tokens
+
+```go
+// Create a token for admin user
+token, err := jenkins.GenerateAPIToken(ctx, "TestToken")
+if err != nil {
+  log.Fatal(err)
+}
+
+// Set Jenkins client to use new API token
+jenkins.Requester.BasicAuth.Password = token.Value
+
+// Revoke token that was just created
+token.Revoke()
+
+// Revoke all tokens for admin user
+err = jenkins.RevokeAllAPITokens(ctx)
+if err != nil {
+  log.Fatal(err)
+}
 ```
 
 ## Testing
