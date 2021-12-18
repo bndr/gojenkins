@@ -212,7 +212,7 @@ func TestCopyDeleteJob(t *testing.T) {
 func TestGetPlugins(t *testing.T) {
 	ctx := context.Background()
 	plugins, _ := jenkins.GetPlugins(ctx, 3)
-	assert.Greater(t, plugins.Count(), 5)
+	assert.Greater(t, plugins.Count(), 1)
 }
 
 func TestGetViews(t *testing.T) {
