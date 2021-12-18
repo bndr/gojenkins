@@ -22,6 +22,14 @@ These are some of the features that are currently implemented:
 
     go get github.com/bndr/gojenkins
 
+## CLI
+
+For users that would like CLI based on gojenkins, follow the steps below:
+
+   ```
+   $ cd cli/jenkinsctl
+   $ make
+   ```
 ## Usage
 
 ```go
@@ -258,7 +266,6 @@ All Contributions are welcome. The todo list is on the bottom of this README. Fe
 Although the basic features are implemented there are many optional features that are on the todo list.
 
 * Kerberos Authentication
-* CLI Tool
 * Rewrite some (all?) iterators with channels
 
 ## LICENSE
