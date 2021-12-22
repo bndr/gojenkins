@@ -17,6 +17,7 @@ These are some of the features that are currently implemented:
 * Validate Fingerprints of Artifacts
 * Create and Delete Users
 * Get Current Queue, Cancel Tasks
+* Create and Revoke API Tokens
 * etc. For all methods go to GoDoc Reference.
 
 ## Installation
@@ -269,6 +270,25 @@ if err != nil {
 }
 // Delete user not created by gojenkins
 err = jenkins.DeleteUser("username")
+```
+
+## Create and Revoke API Tokens
+
+```go
+// Create a token for admin user
+token, err := jenkins.GenerateAPIToken(ctx, "TestToken")
+if err != nil {
+  log.Fatal(err)
+}
+
+// Set Jenkins client to use new API token
+jenkins.Requester.BasicAuth.Password = token.Value
+
+// Revoke token that was just created
+token.Revoke()
+
+// Revoke all tokens for admin user
+err = jenkins.RevokeAllAPITokens(ctx)
 if err != nil {
   log.Fatal(err)
 }
