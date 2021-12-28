@@ -15,7 +15,9 @@ These are some of the features that are currently implemented:
 * Ability to query Jobs, and manipulate them.
 * Get Plugins, Builds, Artifacts, Fingerprints
 * Validate Fingerprints of Artifacts
+* Create and Delete Users
 * Get Current Queue, Cancel Tasks
+* Create and Revoke API Tokens
 * etc. For all methods go to GoDoc Reference.
 
 ## Installation
@@ -249,6 +251,45 @@ job.Poll()
 build, _ := job.getBuild(ctx, 1)
 build.Poll()
 
+```
+
+### Create and Delete Users
+
+```go
+// Create user
+user, err := jenkins.CreateUser(ctx, "username", "password", "fullname", "user@email.com")
+if err != nil {
+  log.Fatal(err)
+}
+// Delete User
+err = user.Delete()
+if err != nil {
+  log.Fatal(err)
+}
+// Delete user not created by gojenkins
+err = jenkins.DeleteUser("username")
+```
+
+## Create and Revoke API Tokens
+
+```go
+// Create a token for admin user
+token, err := jenkins.GenerateAPIToken(ctx, "TestToken")
+if err != nil {
+  log.Fatal(err)
+}
+
+// Set Jenkins client to use new API token
+jenkins.Requester.BasicAuth.Password = token.Value
+
+// Revoke token that was just created
+token.Revoke()
+
+// Revoke all tokens for admin user
+err = jenkins.RevokeAllAPITokens(ctx)
+if err != nil {
+  log.Fatal(err)
+}
 ```
 
 ## Testing
