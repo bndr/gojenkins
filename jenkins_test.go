@@ -2,6 +2,7 @@ package gojenkins
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -373,6 +374,28 @@ func TestConcurrentRequests(t *testing.T) {
 			jenkins.GetAllViews(ctx)
 			jenkins.GetAllNodes(ctx)
 		}()
+	}
+}
+
+func TestJenkins_GetBuildFromQueueID(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+	jobs := []string{
+		"multi-branch-project/job/master", // workflow multi branch project
+		"workflow-job",                    // workflow job
+		"free style-project",              // free style-project
+	}
+	ctx := context.Background()
+	for _, jobName := range jobs {
+		queueID, err := jenkins.BuildJob(ctx, jobName, nil)
+		assert.Nil(t, err)
+		assert.Greater(t, queueID, int64(0))
+		build, err := jenkins.GetBuildFromQueueID(ctx, queueID)
+		assert.Nil(t, err)
+		assert.NotNil(t, build)
+		assert.Equal(t, queueID, build.Raw.QueueID)
+		fmt.Printf("queue id: %d,\tbuild id: %d\n", queueID, build.Raw.Number)
 	}
 }
 

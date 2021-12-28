@@ -137,7 +137,7 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 func TestMain(m *testing.M) {
 	//setup
 	ctx := context.Background()
-	jenkins := CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins = CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
 	jenkins.Init(ctx)
 
 	cm = &CredentialsManager{J: jenkins}
