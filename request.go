@@ -241,6 +241,9 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		if errorText != "" {
 			return nil, errors.New(errorText)
 		}
+		if responseStruct == nil {
+			return response, nil
+		}
 		switch responseStruct.(type) {
 		case *string:
 			return r.ReadRawResponse(response, responseStruct)

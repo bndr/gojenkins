@@ -50,6 +50,23 @@ func (a Artifact) GetData(ctx context.Context) ([]byte, error) {
 	return []byte(data), nil
 }
 
+// GetReader Get stream of Artifact
+func (a Artifact) GetReader(ctx context.Context) (io.ReadCloser, error) {
+	response, err := a.Jenkins.Requester.Get(ctx, a.Path, nil, nil)
+	if err != nil {
+		response.Body.Close()
+		return nil, err
+	}
+
+	code := response.StatusCode
+	if code != 200 {
+		response.Body.Close()
+		Error.Printf("Jenkins responded with StatusCode: %d", code)
+		return nil, errors.New("Could not get File Contents")
+	}
+	return response.Body, nil
+}
+
 // Save artifact to a specific path, using your own filename.
 func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 	data, err := a.GetData(ctx)
