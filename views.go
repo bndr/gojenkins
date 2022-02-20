@@ -17,6 +17,7 @@ package gojenkins
 import (
 	"context"
 	"errors"
+	"path"
 	"strconv"
 )
 
@@ -41,6 +42,32 @@ var (
 	DASHBOARD_VIEW = "hudson.plugins.view.dashboard.Dashboard"
 	PIPELINE_VIEW  = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
 )
+
+func (v *View) Create(ctx context.Context, name string, viewType string) (*View, error) {
+	data := map[string]string{
+		"name":   name,
+		"mode":   viewType,
+		"Submit": "OK",
+		"json": makeJson(map[string]string{
+			"name": name,
+			"mode": viewType,
+		}),
+	}
+
+	endpoint := path.Join(v.Base, "/createView")
+	v.Base = path.Join(v.Base, "/view/", name)
+
+	r, err := v.Jenkins.Requester.Post(ctx, endpoint, nil, v.Raw, data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if r.StatusCode == 200 {
+		return v, nil
+	}
+	return nil, errors.New(strconv.Itoa(r.StatusCode))
+}
 
 // Returns True if successfully added Job, otherwise false
 func (v *View) AddJob(ctx context.Context, name string) (bool, error) {
