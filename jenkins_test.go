@@ -384,3 +384,21 @@ func getFileAsString(path string) string {
 
 	return string(buf)
 }
+
+func TestWipeOutWorkspace(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+
+	ctx := context.Background()
+	job, _ := jenkins.GetJob(ctx, "Job1_test")
+	succ, err := job.WipeOut(ctx)
+	assert.Nil(t, err, "Failed to call wipe out")
+	assert.Equal(t, true, succ, "Unexpected wipe out result")
+
+	// attempts to wipe out job in folder
+	job, _ = jenkins.GetJob(ctx, "folder1_test/job/Job_test")
+	succ, err = job.WipeOut(ctx)
+	assert.Nil(t, err, "Failed to call wipe out")
+	assert.Equal(t, true, succ, "Unexpected wipe out result")
+}

@@ -310,6 +310,17 @@ func (j *Job) Delete(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+func (j *Job) WipeOut(ctx context.Context) (bool, error) {
+	resp, err := j.Jenkins.Requester.Post(ctx, j.Base+"/doWipeOutWorkspace", nil, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+	return true, nil
+}
+
 func (j *Job) Rename(ctx context.Context, name string) (bool, error) {
 	data := url.Values{}
 	data.Set("newName", name)
