@@ -264,6 +264,12 @@ func (j *Jenkins) DeleteJob(ctx context.Context, name string) (bool, error) {
 	return job.Delete(ctx)
 }
 
+// Wipe out workspace of a job.
+func (j *Jenkins) WipeOutJob(ctx context.Context, name string) (bool, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
+	return job.WipeOut(ctx)
+}
+
 // Get a job object
 func (j *Jenkins) GetJobObj(ctx context.Context, name string) *Job {
 	return &Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + name}
