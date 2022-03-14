@@ -271,6 +271,16 @@ func (r *Requester) ReadRawResponse(response *http.Response, responseStruct inte
 func (r *Requester) ReadJSONResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
 	defer response.Body.Close()
 
-	json.NewDecoder(response.Body).Decode(responseStruct)
+	content, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	if bytes.Contains(content, []byte("Result:")) {
+		output := fmt.Sprintf("%v", string(content))
+		substring := output[8:]
+		content = []byte(substring)
+	}
+	_ = json.Unmarshal(content, &responseStruct)
+
 	return response, nil
 }

@@ -212,6 +212,16 @@ func (j *Jenkins) CreateJobInFolder(ctx context.Context, config string, jobName 
 	return job, nil
 }
 
+//ManageClouds Manage Jenkins Clouds
+func (j *Jenkins) ManageClouds(ctx context.Context, cg CloudConfig) (*KubernetesCloud, error) {
+	objK8s := &KubernetesCloud{Jenkins: j, Raw: new([]CloudResponse), K8sCloud: cg, Base: "/scriptText"}
+	k8s, err := objK8s.CloudConfigure(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return k8s, nil
+}
+
 //CreateJob Create a new job from config File
 // Method takes XML string as first parameter, and if the name is not specified in the config file
 // takes name as string as second parameter
@@ -238,7 +248,6 @@ func (j *Jenkins) UpdateJob(ctx context.Context, job string, config string) *Job
 	jobObj.UpdateConfig(ctx, config)
 	return &jobObj
 }
-
 
 //RenameJob First parameter job old name, Second parameter job new name.
 func (j *Jenkins) RenameJob(ctx context.Context, job string, name string) *Job {
