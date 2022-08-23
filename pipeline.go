@@ -47,16 +47,17 @@ type PipelineRun struct {
 }
 
 type PipelineNode struct {
-	Run            *PipelineRun
-	Base           string
-	URLs           map[string]map[string]string `json:"_links"`
-	ID             string
-	Name           string
-	Status         string
-	StartTime      int64 `json:"startTimeMillis"`
-	Duration       int64 `json:"durationMillis"`
-	StageFlowNodes []PipelineNode
-	ParentNodes    []int64
+	Run                  *PipelineRun
+	Base                 string
+	URLs                 map[string]map[string]string `json:"_links"`
+	ID                   string
+	Name                 string
+	ParameterDescription string
+	Status               string
+	StartTime            int64 `json:"startTimeMillis"`
+	Duration             int64 `json:"durationMillis"`
+	StageFlowNodes       []PipelineNode
+	ParentNodes          []int64
 }
 
 type PipelineInputAction struct {
