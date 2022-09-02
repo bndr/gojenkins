@@ -561,16 +561,16 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 // 		gojenkins.DASHBOARD_VIEW
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
-func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
+func (j *Jenkins) CreateView(ctx context.Context, name string, viewType JenkinsViewType) (*View, error) {
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
 	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,
-		"mode":   viewType,
+		"mode":   string(viewType),
 		"Submit": "OK",
 		"json": makeJson(map[string]string{
 			"name": name,
-			"mode": viewType,
+			"mode": string(viewType),
 		}),
 	}
 	r, err := j.Requester.Post(ctx, endpoint, nil, view.Raw, data)

@@ -34,12 +34,14 @@ type ViewResponse struct {
 	URL         string        `json:"url"`
 }
 
-var (
-	LIST_VIEW      = "hudson.model.ListView"
-	NESTED_VIEW    = "hudson.plugins.nested_view.NestedView"
-	MY_VIEW        = "hudson.model.MyView"
-	DASHBOARD_VIEW = "hudson.plugins.view.dashboard.Dashboard"
-	PIPELINE_VIEW  = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
+type JenkinsViewType string
+
+const (
+	LIST_VIEW      JenkinsViewType = "hudson.model.ListView"
+	NESTED_VIEW    JenkinsViewType = "hudson.plugins.nested_view.NestedView"
+	MY_VIEW        JenkinsViewType = "hudson.model.MyView"
+	DASHBOARD_VIEW JenkinsViewType = "hudson.plugins.view.dashboard.Dashboard"
+	PIPELINE_VIEW  JenkinsViewType = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
 )
 
 // Returns True if successfully added Job, otherwise false
