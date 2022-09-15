@@ -62,7 +62,7 @@ func (j *Jenkins) Init(ctx context.Context) (*Jenkins, error) {
 
 	j.Version = rsp.Header.Get("X-Jenkins")
 	if j.Raw == nil || rsp.StatusCode != http.StatusOK {
-		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
+		return nil, errors.New(fmt.Sprintf("Connection Failed, please verify that the host and credentials are correct. Status Code %d", rsp.StatusCode))
 	}
 
 	return j, nil
