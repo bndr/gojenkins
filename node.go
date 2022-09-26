@@ -35,10 +35,11 @@ type Node struct {
 }
 
 type NodeResponse struct {
-	Class       string        `json:"_class"`
-	Actions     []interface{} `json:"actions"`
-	DisplayName string        `json:"displayName"`
-	Executors   []struct {
+	Class          string        `json:"_class"`
+	Actions        []interface{} `json:"actions"`
+	AssignedLabels []interface{} `json:"assignedLabels"`
+	DisplayName    string        `json:"displayName"`
+	Executors      []struct {
 		CurrentExecutable struct {
 			Number    int    `json:"number"`
 			URL       string `json:"url"`
