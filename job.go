@@ -425,7 +425,7 @@ func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64
 		return 0, err
 	}
 	if isQueued {
-		Error.Printf("%s is already running", j.GetName())
+		Logger.Error("%s is already running", j.GetName())
 		return 0, nil
 	}
 
@@ -474,7 +474,7 @@ func (j *Job) Invoke(ctx context.Context, files []string, skipIfRunning bool, pa
 		return false, err
 	}
 	if isQueued {
-		Error.Printf("%s is already running", j.GetName())
+		Logger.Error("%s is already running", j.GetName())
 		return false, nil
 	}
 	isRunning, err := j.IsRunning(ctx)

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
@@ -146,7 +145,13 @@ func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) e
 	return nil
 }
 
-func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
+func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct interface{}, options ...interface{}) (resp *http.Response, err error) {
+	defer func() {
+		if err != nil {
+			Logger.Error("Error while performing '%s' request to endpoint '%s': %s", ar.Method, ar.Endpoint+ar.Suffix, err.Error())
+		}
+	}()
+
 	if !strings.HasSuffix(ar.Endpoint, "/") && ar.Method != "POST" {
 		ar.Endpoint += "/"
 	}
@@ -182,13 +187,13 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		for _, file := range files {
 			fileData, err := os.Open(file)
 			if err != nil {
-				Error.Println(err.Error())
+				Logger.Error(err.Error())
 				return nil, err
 			}
 
 			part, err := writer.CreateFormFile("file", filepath.Base(file))
 			if err != nil {
-				Error.Println(err.Error())
+				Logger.Error(err.Error())
 				return nil, err
 			}
 			if _, err = io.Copy(part, fileData); err != nil {
@@ -227,25 +232,25 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		req.Header.Add(k, ar.Headers.Get(k))
 	}
 
-	if response, err := r.Client.Do(req); err != nil {
+	if resp, err = r.Client.Do(req); err != nil {
 		return nil, err
 	} else {
 		if v := ctx.Value("debug"); v != nil {
-			dump, err := httputil.DumpResponse(response, true)
+			dump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				log.Fatal(err)
+				Logger.Error("Error while performing '%s' request to endpoint '%s': %s", ar.Method, ar.Endpoint+ar.Suffix, err.Error())
 			}
-			log.Printf("DEBUG %q\n", dump)
+			Logger.Debug("%q\n", dump)
 		}
-		errorText := response.Header.Get("X-Error")
+		errorText := resp.Header.Get("X-Error")
 		if errorText != "" {
 			return nil, errors.New(errorText)
 		}
 		switch responseStruct.(type) {
 		case *string:
-			return r.ReadRawResponse(response, responseStruct)
+			return r.ReadRawResponse(resp, responseStruct)
 		default:
-			return r.ReadJSONResponse(response, responseStruct)
+			return r.ReadJSONResponse(resp, responseStruct)
 		}
 
 	}
