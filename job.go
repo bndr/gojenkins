@@ -205,6 +205,23 @@ func (j *Job) GetBuildsFields(ctx context.Context, fields []string, custom inter
 	return nil
 }
 
+func (j *Job) GetBuildsFieldsWithFilter(ctx context.Context, fields []string, fromIndex int, toIndex int, custom interface{}) error {
+	if fields == nil || len(fields) == 0 {
+		return fmt.Errorf("one or more field value needs to be specified")
+	}
+	if fromIndex < 0 || toIndex < 0 {
+		return fmt.Errorf("filter index must be equal to or greater than zero")
+	}
+	// {fromIndex,toIndex} where fromIndex is inclusive and toIndex is exclusive
+	filter := "{" + strconv.Itoa(fromIndex) + "," + strconv.Itoa(toIndex) + "}"
+
+	_, err := j.Jenkins.Requester.GetJSON(ctx, j.Base, &custom, map[string]string{"tree": "builds[" + strings.Join(fields, ",") + "]" + filter})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Returns All Builds with Number and URL
 func (j *Job) GetAllBuildIds(ctx context.Context) ([]JobBuild, error) {
 	var buildsResp struct {
