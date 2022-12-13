@@ -104,7 +104,7 @@ func (t *Task) Cancel(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return response.StatusCode == 200, nil
+	return response.StatusCode == 200 || response.StatusCode == 204, nil
 }
 
 func (t *Task) GetJob(ctx context.Context) (*Job, error) {
