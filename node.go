@@ -34,38 +34,42 @@ type Node struct {
 	Base    string
 }
 
+type NodeExecutor struct {
+	Idle              bool `json:"idle"`
+	Number            int  `json:"number"`
+	CurrentExecutable struct {
+		Number    int    `json:"number"`
+		URL       string `json:"url"`
+		SubBuilds []struct {
+			Abort             bool        `json:"abort"`
+			Build             interface{} `json:"build"`
+			BuildNumber       int         `json:"buildNumber"`
+			Duration          string      `json:"duration"`
+			Icon              string      `json:"icon"`
+			JobName           string      `json:"jobName"`
+			ParentBuildNumber int         `json:"parentBuildNumber"`
+			ParentJobName     string      `json:"parentJobName"`
+			PhaseName         string      `json:"phaseName"`
+			Result            string      `json:"result"`
+			Retry             bool        `json:"retry"`
+			URL               string      `json:"url"`
+		} `json:"subBuilds"`
+	} `json:"currentExecutable"`
+}
+
 type NodeResponse struct {
-	Class          string              `json:"_class"`
-	Actions        []interface{}       `json:"actions"`
-	DisplayName    string              `json:"displayName"`
-	AssignedLabels []map[string]string `json:"assignedLabels"`
-	Executors      []struct {
-		CurrentExecutable struct {
-			Number    int    `json:"number"`
-			URL       string `json:"url"`
-			SubBuilds []struct {
-				Abort             bool        `json:"abort"`
-				Build             interface{} `json:"build"`
-				BuildNumber       int         `json:"buildNumber"`
-				Duration          string      `json:"duration"`
-				Icon              string      `json:"icon"`
-				JobName           string      `json:"jobName"`
-				ParentBuildNumber int         `json:"parentBuildNumber"`
-				ParentJobName     string      `json:"parentJobName"`
-				PhaseName         string      `json:"phaseName"`
-				Result            string      `json:"result"`
-				Retry             bool        `json:"retry"`
-				URL               string      `json:"url"`
-			} `json:"subBuilds"`
-		} `json:"currentExecutable"`
-	} `json:"executors"`
-	Icon                string   `json:"icon"`
-	IconClassName       string   `json:"iconClassName"`
-	Idle                bool     `json:"idle"`
-	JnlpAgent           bool     `json:"jnlpAgent"`
-	LaunchSupported     bool     `json:"launchSupported"`
-	LoadStatistics      struct{} `json:"loadStatistics"`
-	ManualLaunchAllowed bool     `json:"manualLaunchAllowed"`
+	Class               string              `json:"_class"`
+	Actions             []interface{}       `json:"actions"`
+	DisplayName         string              `json:"displayName"`
+	AssignedLabels      []map[string]string `json:"assignedLabels"`
+	Executors           []*NodeExecutor     `json:"executors"`
+	Icon                string              `json:"icon"`
+	IconClassName       string              `json:"iconClassName"`
+	Idle                bool                `json:"idle"`
+	JnlpAgent           bool                `json:"jnlpAgent"`
+	LaunchSupported     bool                `json:"launchSupported"`
+	LoadStatistics      struct{}            `json:"loadStatistics"`
+	ManualLaunchAllowed bool                `json:"manualLaunchAllowed"`
 	MonitorData         struct {
 		Hudson_NodeMonitors_ArchitectureMonitor interface{} `json:"hudson.node_monitors.ArchitectureMonitor"`
 		Hudson_NodeMonitors_ClockMonitor        interface{} `json:"hudson.node_monitors.ClockMonitor"`
