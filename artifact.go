@@ -44,7 +44,7 @@ func (a Artifact) GetData(ctx context.Context) ([]byte, error) {
 
 	code := response.StatusCode
 	if code != 200 {
-		Error.Printf("Jenkins responded with StatusCode: %d", code)
+		Logger.Error("Jenkins responded with StatusCode: %d", code)
 		return nil, errors.New("Could not get File Contents")
 	}
 	return []byte(data), nil
@@ -59,7 +59,7 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 	}
 
 	if _, err = os.Stat(path); err == nil {
-		Warning.Println("Local Copy already exists, Overwriting...")
+		Logger.Warn("Local Copy already exists, Overwriting...")
 	}
 
 	err = ioutil.WriteFile(path, data, 0644)
@@ -74,7 +74,7 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 // Save Artifact to directory using Artifact filename.
 func (a Artifact) SaveToDir(ctx context.Context, dir string) (bool, error) {
 	if _, err := os.Stat(dir); err != nil {
-		Error.Printf("can't save artifact: directory %s does not exist", dir)
+		Logger.Error("can't save artifact: directory %s does not exist", dir)
 		return false, fmt.Errorf("can't save artifact: directory %s does not exist", dir)
 	}
 	saved, err := a.Save(ctx, path.Join(dir, a.FileName))
