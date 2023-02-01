@@ -20,7 +20,7 @@ func TestInit(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
-	jenkins = CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins = CreateJenkins(nil, *jenkinsAddr, *jenkinsUsername, *jenkinsPassword)
 	_, err := jenkins.Init(ctx)
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }

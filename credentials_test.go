@@ -2,6 +2,7 @@ package gojenkins
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -20,6 +21,10 @@ var (
 	fileID     = "fileIDcred"
 	scope      = "GLOBAL"
 )
+
+var jenkinsAddr = flag.String("addr", "http://localhost:8080", "Jenkins address")
+var jenkinsUsername = flag.String("user", "admin", "Jenkins username")
+var jenkinsPassword = flag.String("password", "admin", "Jenkins password")
 
 func TestCreateUsernameCredentials(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
@@ -137,7 +142,7 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 func TestMain(m *testing.M) {
 	//setup
 	ctx := context.Background()
-	jenkins := CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins := CreateJenkins(nil, *jenkinsAddr, *jenkinsUsername, *jenkinsPassword)
 	jenkins.Init(ctx)
 
 	cm = &CredentialsManager{J: jenkins}

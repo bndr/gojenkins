@@ -299,7 +299,17 @@ if err != nil {
 
 ## Testing
 
+To run only unit tests:
+
     go test
+
+To run unit and integration tests:
+
+    INTEGRATION=true go test
+
+By default, integration tests connect to `http://localhost:8080` using the username `admin` and the password `admin`. To modify this behaviour, override the test options:
+
+    INTEGRATION=true go test -addr "http://jenkins:8080" -user "jenkins" -password "secret1"
 
 ## Contribute
 
