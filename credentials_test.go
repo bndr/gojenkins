@@ -27,9 +27,9 @@ var jenkinsUsername = flag.String("user", "admin", "Jenkins username")
 var jenkinsPassword = flag.String("password", "admin", "Jenkins password")
 
 func TestCreateUsernameCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	//if _, ok := os.LookupEnv(integration_test); !ok {
+	//	return
+	//}
 	cred := UsernameCredentials{
 		ID:       usernameID,
 		Scope:    scope,
@@ -141,6 +141,7 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	//setup
+	flag.Parse()
 	ctx := context.Background()
 	jenkins := CreateJenkins(nil, *jenkinsAddr, *jenkinsUsername, *jenkinsPassword)
 	jenkins.Init(ctx)
