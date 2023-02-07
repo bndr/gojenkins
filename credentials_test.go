@@ -74,6 +74,7 @@ func TestCreateFileCredentials(t *testing.T) {
 	assert.Equal(t, cred.Filename, cred.Filename, "Filename is not equal")
 }
 
+// TestCreateDockerCredentials requires Docker Commons plugin
 func TestCreateDockerCredentials(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
@@ -139,6 +140,8 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 
 }
 
+// TestMain setups the Jenkins client for all tests.
+// Available options are: -addr -user -password
 func TestMain(m *testing.M) {
 	//setup
 	flag.Parse()
