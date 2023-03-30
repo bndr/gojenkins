@@ -17,6 +17,7 @@ package gojenkins
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -493,21 +494,13 @@ func (j *Job) Invoke(ctx context.Context, files []string, skipIfRunning bool, pa
 		params = make(map[string]string)
 	}
 
-	// If files are specified - url is /build
-	if files != nil {
-		base = "/build"
-	}
 	reqParams := map[string]string{}
 	if securityToken != "" {
 		reqParams["token"] = securityToken
 	}
 
-	data := url.Values{}
-	for k, v := range params {
-		data.Set(k, v)
-	}
-
-	resp, err := j.Jenkins.Requester.PostFiles(ctx, j.Base+base, bytes.NewBufferString(data.Encode()), nil, reqParams, files)
+	paramBytes, _ := json.Marshal(params)
+	resp, err := j.Jenkins.Requester.PostFiles(ctx, j.Base+base, bytes.NewBuffer(paramBytes), nil, reqParams, files)
 	if err != nil {
 		return false, err
 	}

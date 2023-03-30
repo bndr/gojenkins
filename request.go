@@ -99,8 +99,6 @@ func (r *Requester) PostFiles(ctx context.Context, endpoint string, payload io.R
 	if err := r.SetCrumb(ctx, ar); err != nil {
 		return nil, err
 	}
-	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
-	ar.Suffix = ""
 	return r.Do(ctx, ar, &responseStruct, querystring, files)
 }
 
