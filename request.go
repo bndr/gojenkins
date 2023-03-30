@@ -99,6 +99,8 @@ func (r *Requester) PostFiles(ctx context.Context, endpoint string, payload io.R
 	if err := r.SetCrumb(ctx, ar); err != nil {
 		return nil, err
 	}
+	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	ar.Suffix = ""
 	return r.Do(ctx, ar, &responseStruct, querystring, files)
 }
 
@@ -170,8 +172,10 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 
 			URL.RawQuery = querystring.Encode()
 		case []string:
-			fileUpload = true
-			files = v
+			if v != nil {
+				fileUpload = true
+				files = v
+			}
 		}
 	}
 	var req *http.Request
