@@ -468,7 +468,7 @@ func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64
 	return number, nil
 }
 
-func (j *Job) Invoke(ctx context.Context, files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
+func (j *Job) Invoke(ctx context.Context, files map[string]string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
 	isQueued, err := j.IsQueued(ctx)
 	if err != nil {
 		return false, err
@@ -488,7 +488,7 @@ func (j *Job) Invoke(ctx context.Context, files []string, skipIfRunning bool, pa
 	base := "/build"
 
 	// If parameters are specified - url is /builWithParameters
-	if params != nil {
+	if params != nil || files != nil {
 		base = "/buildWithParameters"
 	} else {
 		params = make(map[string]string)
