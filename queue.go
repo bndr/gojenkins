@@ -17,6 +17,7 @@ package gojenkins
 import (
 	"context"
 	"strconv"
+	"strings"
 )
 
 type Queue struct {
@@ -108,7 +109,12 @@ func (t *Task) Cancel(ctx context.Context) (bool, error) {
 }
 
 func (t *Task) GetJob(ctx context.Context) (*Job, error) {
-	return t.Jenkins.GetJob(ctx, t.Raw.Task.Name)
+	parts := strings.Split(t.Raw.Task.URL, "/job/")
+	parentIDs := make([]string, 0)
+	if len(parts) > 2 {
+		parentIDs = parts[1 : len(parts)-1]
+	}
+	return t.Jenkins.GetJob(ctx, t.Raw.Task.Name, parentIDs...)
 }
 
 func (t *Task) GetWhy() string {
