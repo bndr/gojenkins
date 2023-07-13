@@ -2,8 +2,6 @@ package gojenkins
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -98,30 +96,22 @@ var userAPIResp struct {
 	FullName string `json:"fullName"`
 }
 
-func (u *User) GetUser(ctx context.Context, userName string) (User, error) {
-	getUserContext := "/securityRealm/user/" + userName + "/api/json"
-	response, err := u.Jenkins.Requester.GetJSON(ctx, getUserContext, nil, nil)
+func (j *Jenkins) GetUser(ctx context.Context, userName string) (*Users, error) {
+	u := Users{Jenkins: j, Raw: new(UserRespone), Base: "/user/" + userName}
+	_, err := u.Poll(ctx)
 	if err != nil {
-		return User{}, err
+		return nil, err
 	}
-	defer response.Body.Close()
+	return &u, nil
+}
 
-	if response.StatusCode != http.StatusOK {
-		return User{}, errors.New(fmt.Sprintf("error retrieving user. Status is %d", response.StatusCode))
-	}
-
-	err = json.NewDecoder(response.Body).Decode(&userAPIResp)
+func (j *Jenkins) GetAllUsers(ctx context.Context) (*Users, error) {
+	u := Users{Jenkins: j, Raw: new(UserRespone), Base: "/asynchPeople/"}
+	_, err := u.Poll(ctx)
 	if err != nil {
-		return User{}, err
+		return nil, err
 	}
-
-	user := User{
-		Jenkins:  u.Jenkins,
-		UserName: userAPIResp.UserName,
-		FullName: userAPIResp.FullName,
-	}
-
-	return user, nil
+	return &u, nil
 }
 
 func (u *Users) Poll(ctx context.Context) (int, error) {

@@ -595,24 +595,6 @@ func (j *Jenkins) Poll(ctx context.Context) (int, error) {
 	return resp.StatusCode, nil
 }
 
-func (j *Jenkins) GetUser(ctx context.Context, userName string) (*Users, error) {
-	u := Users{Jenkins: j, Raw: new(UserRespone), Base: "/user/" + userName}
-	_, err := u.Poll(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &u, nil
-}
-
-func (j *Jenkins) GetAllUsers(ctx context.Context) (*Users, error) {
-	u := Users{Jenkins: j, Raw: new(UserRespone), Base: "/asynchPeople/"}
-	_, err := u.Poll(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &u, nil
-}
-
 // Creates a new Jenkins Instance
 // Optional parameters are: client, username, password or token
 // After creating an instance call init method.
