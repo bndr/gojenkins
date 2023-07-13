@@ -39,6 +39,17 @@ type UserRespone struct {
 	Id          string `json:"id"`
 }
 
+type AllUsers struct {
+	Jenkins *Jenkins
+	Base    string
+
+	Raw *AllUsersResponse
+}
+
+type AllUsersResponse struct {
+	Users []UserRespone `json:"users"`
+}
+
 // ErrUser occurs when there is error creating or revoking Jenkins users
 type ErrUser struct {
 	Message string
@@ -91,11 +102,6 @@ func (u *User) Delete() error {
 	return u.Jenkins.DeleteUser(context.Background(), u.UserName)
 }
 
-var userAPIResp struct {
-	UserName string `json:"id"`
-	FullName string `json:"fullName"`
-}
-
 func (j *Jenkins) GetUser(ctx context.Context, userName string) (*Users, error) {
 	u := Users{Jenkins: j, Raw: new(UserRespone), Base: "/user/" + userName}
 	_, err := u.Poll(ctx)
@@ -105,8 +111,8 @@ func (j *Jenkins) GetUser(ctx context.Context, userName string) (*Users, error) 
 	return &u, nil
 }
 
-func (j *Jenkins) GetAllUsers(ctx context.Context) (*Users, error) {
-	u := Users{Jenkins: j, Raw: new(UserRespone), Base: "/asynchPeople/"}
+func (j *Jenkins) GetAllUsers(ctx context.Context) (*AllUsers, error) {
+	u := AllUsers{Jenkins: j, Raw: new(AllUsersResponse), Base: "/asynchPeople/"}
 	_, err := u.Poll(ctx)
 	if err != nil {
 		return nil, err
@@ -115,6 +121,15 @@ func (j *Jenkins) GetAllUsers(ctx context.Context) (*Users, error) {
 }
 
 func (u *Users) Poll(ctx context.Context) (int, error) {
+
+	response, err := u.Jenkins.Requester.GetJSON(ctx, u.Base, u.Raw, nil)
+	if err != nil {
+		return 0, err
+	}
+	return response.StatusCode, nil
+}
+
+func (u *AllUsers) Poll(ctx context.Context) (int, error) {
 
 	response, err := u.Jenkins.Requester.GetJSON(ctx, u.Base, u.Raw, nil)
 	if err != nil {
