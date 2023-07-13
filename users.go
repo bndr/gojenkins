@@ -2,11 +2,11 @@ package gojenkins
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
-	"encoding/json"
-	"errors"
 )
 
 const (
@@ -19,6 +19,26 @@ type User struct {
 	UserName string
 	FullName string
 	Email    string
+	Raw      *UserRespone
+}
+
+type Users struct {
+	Jenkins  *Jenkins
+	UserName string
+	FullName string
+	Email    string
+	Id       string
+	Base     string
+	Raw      *UserRespone
+}
+
+type UserRespone struct {
+	//
+	Class       string `json:"_class"`
+	AbsoluteUrl string `json:"absoluteUrl"`
+	Description string `json:"description"`
+	FullName    string `json:"fullName"`
+	Id          string `json:"id"`
 }
 
 // ErrUser occurs when there is error creating or revoking Jenkins users
@@ -73,9 +93,14 @@ func (u *User) Delete() error {
 	return u.Jenkins.DeleteUser(context.Background(), u.UserName)
 }
 
-func (j *Jenkins) GetUser(ctx context.Context, userName string) (User, error) {
+var userAPIResp struct {
+	UserName string `json:"id"`
+	FullName string `json:"fullName"`
+}
+
+func (u *User) GetUser(ctx context.Context, userName string) (User, error) {
 	getUserContext := "/securityRealm/user/" + userName + "/api/json"
-	response, err := j.Requester.Get(ctx, getUserContext, nil, nil)
+	response, err := u.Jenkins.Requester.GetJSON(ctx, getUserContext, nil, nil)
 	if err != nil {
 		return User{}, err
 	}
@@ -85,61 +110,25 @@ func (j *Jenkins) GetUser(ctx context.Context, userName string) (User, error) {
 		return User{}, errors.New(fmt.Sprintf("error retrieving user. Status is %d", response.StatusCode))
 	}
 
-	var userAPIResp struct {
-		UserName string `json:"id"`
-		FullName string `json:"fullName"`
-		Email    string `json:"email"`
-	}
-
 	err = json.NewDecoder(response.Body).Decode(&userAPIResp)
 	if err != nil {
 		return User{}, err
 	}
 
 	user := User{
-		Jenkins:  j,
+		Jenkins:  u.Jenkins,
 		UserName: userAPIResp.UserName,
 		FullName: userAPIResp.FullName,
-		Email:    userAPIResp.Email,
 	}
 
 	return user, nil
 }
 
+func (u *Users) Poll(ctx context.Context) (int, error) {
 
-// GetAllUsers retrieves information about all Jenkins users
-func (j *Jenkins) GetAllUsers(ctx context.Context) ([]User, error) {
-	getAllUsersContext := "/jenkins/asynchPeople/"
-	response, err := j.Requester.Get(ctx, getAllUsersContext, nil, nil)
+	response, err := u.Jenkins.Requester.GetJSON(ctx, u.Base, u.Raw, nil)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("error retrieving users. Status is %d", response.StatusCode))
-	}
-
-	var usersAPIResp []struct {
-		UserName string `json:"id"`
-		FullName string `json:"fullName"`
-		Email    string `json:"email"`
-	}
-
-	err = json.NewDecoder(response.Body).Decode(&usersAPIResp)
-	if err != nil {
-		return nil, err
-	}
-
-	users := make([]User, len(usersAPIResp))
-	for i, userAPIResp := range usersAPIResp {
-		users[i] = User{
-			Jenkins:  j,
-			UserName: userAPIResp.UserName,
-			FullName: userAPIResp.FullName,
-			Email:    userAPIResp.Email,
-		}
-	}
-
-	return users, nil
+	return response.StatusCode, nil
 }
