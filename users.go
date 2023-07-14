@@ -39,11 +39,29 @@ type UserRespone struct {
 	Id          string `json:"id"`
 }
 
+type UserResponeAll struct {
+	//
+
+	Class string `json:"_class"`
+	Users []struct {
+		LastChange int64 `json:"lastChange"`
+		Project    struct {
+			Class string `json:"_class"`
+			Name  string `json:"name"`
+			URL   string `json:"url"`
+		} `json:"project"`
+		User struct {
+			AbsoluteURL string `json:"absoluteUrl"`
+			FullName    string `json:"fullName"`
+		} `json:"user"`
+	} `json:"users"`
+}
+
 type AllUsers struct {
 	Jenkins *Jenkins
 	Base    string
 
-	Raw *AllUsersResponse
+	Raw *UserResponeAll
 }
 
 type AllUsersResponse struct {
@@ -112,7 +130,7 @@ func (j *Jenkins) GetUser(ctx context.Context, userName string) (*Users, error) 
 }
 
 func (j *Jenkins) GetAllUsers(ctx context.Context) (*AllUsers, error) {
-	u := AllUsers{Jenkins: j, Raw: new(AllUsersResponse), Base: "/asynchPeople/"}
+	u := AllUsers{Jenkins: j, Raw: new(UserResponeAll), Base: "/asynchPeople/"}
 	_, err := u.Poll(ctx)
 	if err != nil {
 		return nil, err
