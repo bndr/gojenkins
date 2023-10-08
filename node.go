@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
+	"strconv"
 )
 
 // Nodes
@@ -108,7 +109,7 @@ func (n *Node) GetLauncherConfig(ctx context.Context) (*Slave, error) {
 	return &sl, nil
 }
 
-func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) error {
+func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
 
 	slaveRequest := &Slave{
 		Name:         name,
@@ -124,15 +125,30 @@ func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, de
 	}
 	xmlBytes, err := xml.Marshal(slaveRequest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
+	resp, err := n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	// Get the updated node!
+	newNode, err := n.Jenkins.GetNode(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for success status code.
+	if resp.StatusCode < 400 {
+		_, err := newNode.Poll(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return newNode, nil
+	}
+
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 func (n *Node) Info(ctx context.Context) (*NodeResponse, error) {

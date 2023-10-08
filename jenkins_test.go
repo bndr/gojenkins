@@ -113,7 +113,7 @@ func TestUpdateNode(t *testing.T) {
 
 	launcher := NewJNLPLauncher()
 	launcher.WebSocket = true
-	if err = node.UpdateNode(ctx, "node17_test", 5, "Weep", "C:\\_jenkins", "WOOP", launcher); err != nil {
+	if _, err = node.UpdateNode(ctx, "node17_test", 5, "Weep", "C:\\_jenkins", "WOOP", launcher); err != nil {
 		t.Fatal(err)
 	}
 }
