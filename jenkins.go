@@ -101,45 +101,54 @@ func (j *Jenkins) SafeRestart(ctx context.Context) error {
 	return err
 }
 
+type createSSHLauncherRequest struct {
+	*sshLauncher
+	SlaveType       string        `json:"type"`
+	StaplerClassBag bool          `json:"stapler-class-bag"`
+	StaplerClass    LauncherClass `json:"stapler-class"`
+	Class           LauncherClass `json:"$class"`
+}
+
+func newSSHLauncherRequest(s *sshLauncher) *createSSHLauncherRequest {
+	return &createSSHLauncherRequest{
+		sshLauncher:     s,
+		SlaveType:       "hudson.slaves.DumbSlave",
+		StaplerClassBag: true,
+		StaplerClass:    s.GetClass(),
+		Class:           s.GetClass(),
+	}
+}
+
+type createJNLPLauncherRequest struct {
+	*jnlpLauncher
+	StaplerClass LauncherClass `json:"stapler-class"`
+	Class        LauncherClass `json:"$class"`
+}
+
+func newJNLPLauncherRequest(j *jnlpLauncher) *createJNLPLauncherRequest {
+	return &createJNLPLauncherRequest{
+		jnlpLauncher: j,
+		StaplerClass: j.GetClass(),
+		Class:        j.GetClass(),
+	}
+}
+
 // Create a new Node
 // Can be JNLPLauncher or SSHLauncher
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
 // Multiple labels should be separated by blanks
-func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
-	params := map[string]string{"method": "JNLPLauncher"}
-
-	if len(options) > 0 {
-		params, _ = options[0].(map[string]string)
+func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
+	// If no options are given create a JNLP node by default.
+	if launchOptions == nil {
+		launchOptions = NewJNLPLauncher()
 	}
-
-	if _, ok := params["method"]; !ok {
-		params["method"] = "JNLPLauncher"
-	}
-
-	method := params["method"]
-	var launcher map[string]string
-	switch method {
-	case "":
-		fallthrough
-	case "JNLPLauncher":
-		launcher = map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"}
-	case "SSHLauncher":
-		launcher = map[string]string{
-			"stapler-class":        "hudson.plugins.sshslaves.SSHLauncher",
-			"$class":               "hudson.plugins.sshslaves.SSHLauncher",
-			"host":                 params["host"],
-			"port":                 params["port"],
-			"credentialsId":        params["credentialsId"],
-			"jvmOptions":           params["jvmOptions"],
-			"javaPath":             params["javaPath"],
-			"prefixStartSlaveCmd":  params["prefixStartSlaveCmd"],
-			"suffixStartSlaveCmd":  params["suffixStartSlaveCmd"],
-			"maxNumRetries":        params["maxNumRetries"],
-			"retryWaitTime":        params["retryWaitTime"],
-			"lanuchTimeoutSeconds": params["lanuchTimeoutSeconds"],
-			"type":                 "hudson.slaves.DumbSlave",
-			"stapler-class-bag":    "true"}
+	var launcher interface{}
+	switch l := launchOptions.(type) {
+	case *jnlpLauncher:
+		launcher = newJNLPLauncherRequest(l)
+	case *sshLauncher:
+		launcher = newSSHLauncherRequest(l)
 	default:
 		return nil, errors.New("launcher method not supported")
 	}
@@ -505,7 +514,7 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 	return p.Contains(name), nil
 }
 
-//InstallPlugin with given version and name
+// InstallPlugin with given version and name
 func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
 	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
@@ -555,11 +564,13 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 // First Parameter - name of the View
 // Second parameter - Type
 // Possible Types:
-// 		gojenkins.LIST_VIEW
-// 		gojenkins.NESTED_VIEW
-// 		gojenkins.MY_VIEW
-// 		gojenkins.DASHBOARD_VIEW
-// 		gojenkins.PIPELINE_VIEW
+//
+//	gojenkins.LIST_VIEW
+//	gojenkins.NESTED_VIEW
+//	gojenkins.MY_VIEW
+//	gojenkins.DASHBOARD_VIEW
+//	gojenkins.PIPELINE_VIEW
+//
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}

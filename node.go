@@ -18,14 +18,6 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
-	"log"
-)
-
-type LauncherClass string
-
-const (
-	JNLPLauncherClass LauncherClass = "hudson.slaves.JNLPLauncher"
-	SSHLauncherClass  LauncherClass = "hudson.plugins.sshslaves.SSHLauncher"
 )
 
 // Nodes
@@ -92,36 +84,6 @@ type NodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
-type Launcher interface{}
-
-type CustomLauncher struct {
-	XMLName  xml.Name `xml:"launcher"`
-	Launcher Launcher `xml:"-"`
-	Class    string   `xml:"class,attr"`
-}
-
-type SSHLauncher struct {
-	XMLName              xml.Name `xml:"launcher"`
-	Plugin               string   `xml:"plugin,attr"`
-	Host                 string   `xml:"host"`
-	Port                 int      `xml:"port"`
-	CredentialsId        string   `xml:"credentialsId"`
-	LaunchTimeoutSeconds int      `xml:"launchTimeoutSeconds"`
-	MaxNumRetries        int      `xml:"maxNumRetries"`
-	RetryWaitTime        int      `xml:"retryWaitTime"`
-}
-
-type WorkDirSettings struct {
-	Disabled               bool   `xml:"disabled"`
-	InternalDir            string `xml:"internalDir"`
-	FailIfWorkDirIsMissing bool   `xml:"failIfWorkDirIsMissing"`
-}
-type JNLPLauncher struct {
-	XMLName         xml.Name         `xml:"launcher"`
-	WorkDirSettings *WorkDirSettings `xml:"workDirSettings"`
-	WebSocket       bool             `xml:"webSocket"`
-}
-
 type Slave struct {
 	XMLName        xml.Name        `xml:"slave"`
 	Name           string          `xml:"name"`
@@ -132,48 +94,6 @@ type Slave struct {
 	Launcher       *CustomLauncher `xml:"launcher"`
 	Label          string          `xml:"label"`
 	NodeProperties string          `xml:"nodeProperties"`
-}
-
-func (c *CustomLauncher) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	c.Class = ""
-	for _, attr := range start.Attr {
-		if attr.Name.Local == "class" {
-			c.Class = attr.Value
-			break
-		}
-	}
-	switch c.Class {
-	case string(SSHLauncherClass):
-		var sshLauncher SSHLauncher
-		if err := d.DecodeElement(&sshLauncher, &start); err != nil {
-			return err
-		}
-		c.Launcher = sshLauncher
-	case string(JNLPLauncherClass):
-		var jnlpLauncher JNLPLauncher
-		if err := d.DecodeElement(&jnlpLauncher, &start); err != nil {
-			return err
-		}
-		c.Launcher = jnlpLauncher
-	default:
-		return errors.New("unknown launcher class")
-	}
-	return nil
-}
-
-func (c *CustomLauncher) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	switch l := c.Launcher.(type) {
-	case *SSHLauncher:
-		start.Name.Local = "launcher"
-		start.Attr = []xml.Attr{{Name: xml.Name{Local: "class"}, Value: string(SSHLauncherClass)}}
-		return e.EncodeElement(l, start)
-	case *JNLPLauncher:
-		start.Name.Local = "launcher"
-		start.Attr = []xml.Attr{{Name: xml.Name{Local: "class"}, Value: string(JNLPLauncherClass)}}
-		return e.EncodeElement(l, start)
-	default:
-		return errors.New("unsupported launcher type")
-	}
 }
 
 // GetConfig returns the launcher configuration for a given node.
@@ -188,17 +108,29 @@ func (n *Node) GetLauncherConfig(ctx context.Context) (*Slave, error) {
 	return &sl, nil
 }
 
-func (n *Node) UpdateNode(ctx context.Context, s *Slave) error {
-	xmlBytes, err := xml.Marshal(s)
+func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) error {
+
+	slaveRequest := &Slave{
+		Name:         name,
+		NumExecutors: numExecutors,
+		Description:  description,
+		RemoteFS:     remoteFS,
+		Label:        label,
+		Mode:         NORMAL,
+		Launcher: &CustomLauncher{
+			Class:    launchOptions.GetClass(),
+			Launcher: launchOptions,
+		},
+	}
+	xmlBytes, err := xml.Marshal(slaveRequest)
 	if err != nil {
 		return err
 	}
 
-	resp, err := n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
+	_, err = n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
 	if err != nil {
 		return err
 	}
-	log.Print(resp.StatusCode)
 
 	return nil
 }

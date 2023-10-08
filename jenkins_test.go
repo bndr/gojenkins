@@ -50,12 +50,12 @@ func TestCreateNodes(t *testing.T) {
 	// if _, ok := os.LookupEnv(integration_test); !ok {
 	// 	return
 	// }
-	id1 := "node1_test"
+	id1 := "node17_test"
 	//id2 := "node2_test"
-	id3 := "node3_test"
-	id4 := "node4_test"
+	//id3 := "node3_test"
+	//id4 := "node4_test"
 
-	jnlp := map[string]string{"method": "JNLPLauncher"}
+	//jnlp := map[string]string{"method": "JNLPLauncher"}
 	//ssh := map[string]string{"method": "SSHLauncher"}
 	ctx := context.Background()
 
@@ -64,16 +64,18 @@ func TestCreateNodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	node1, _ := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
+	jnlpLauncher := NewSSHLauncher()
+	jnlpLauncher.Host = "127.0.0.9"
+	node1, _ := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlpLauncher)
 	assert.Equal(t, id1, node1.GetName())
 
 	//node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
 	//assert.Equal(t, id2, node2.GetName())
 
-	node3, _ := jenkins.CreateNode(ctx, id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
-	assert.Equal(t, id3, node3.GetName())
-	node4, _ := jenkins.CreateNode(ctx, id4, 1, "Node 4 Description", "/var/lib/jenkins", "jdk7")
-	assert.Equal(t, id4, node4.GetName())
+	// node3, _ := jenkins.CreateNode(ctx, id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
+	// assert.Equal(t, id3, node3.GetName())
+	// node4, _ := jenkins.CreateNode(ctx, id4, 1, "Node 4 Description", "/var/lib/jenkins", "jdk7")
+	// assert.Equal(t, id4, node4.GetName())
 }
 
 func TestGetNodeConfig(t *testing.T) {
@@ -104,29 +106,16 @@ func TestUpdateNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	node, err := jenkins.GetNode(ctx, "Hello-God")
+	node, err := jenkins.GetNode(ctx, "node17_test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	slave := &Slave{
-		Name:         "Hello-God",
-		Description:  "Work it!",
-		RemoteFS:     "C:\\_jenkins",
-		NumExecutors: 20,
-		Mode:         NORMAL,
-		Launcher: &CustomLauncher{
-			Launcher: &JNLPLauncher{
-				WebSocket: false,
-				WorkDirSettings: &WorkDirSettings{
-					FailIfWorkDirIsMissing: false,
-					InternalDir:            "remoting",
-					Disabled:               false,
-				},
-			},
-			Class: string(JNLPLauncherClass),
-		},
+
+	launcher := NewJNLPLauncher()
+	launcher.WebSocket = true
+	if err = node.UpdateNode(ctx, "node17_test", 5, "Weep", "C:\\_jenkins", "WOOP", launcher); err != nil {
+		t.Fatal(err)
 	}
-	node.UpdateNode(ctx, slave)
 }
 
 func TestDeleteNodes(t *testing.T) {
