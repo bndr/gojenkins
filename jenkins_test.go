@@ -16,11 +16,11 @@ var (
 )
 
 func TestInit(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	// if _, ok := os.LookupEnv(integration_test); !ok {
+	// 	return
+	// }
 	ctx := context.Background()
-	jenkins = CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins = CreateJenkins(nil, "http://localhost:5000", "aidaleuc", "11d3433d67057c2e26bc273d1045b1e771")
 	_, err := jenkins.Init(ctx)
 	assert.Nil(t, err, "Jenkins Initialization should not fail")
 }
@@ -47,9 +47,9 @@ func TestCreateJobs(t *testing.T) {
 }
 
 func TestCreateNodes(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	// if _, ok := os.LookupEnv(integration_test); !ok {
+	// 	return
+	// }
 	id1 := "node1_test"
 	//id2 := "node2_test"
 	id3 := "node3_test"
@@ -57,8 +57,13 @@ func TestCreateNodes(t *testing.T) {
 
 	jnlp := map[string]string{"method": "JNLPLauncher"}
 	//ssh := map[string]string{"method": "SSHLauncher"}
-
 	ctx := context.Background()
+
+	jenkins = CreateJenkins(nil, "http://localhost:5000", "aidaleuc", "11d3433d67057c2e26bc273d1045b1e771")
+	_, err := jenkins.Init(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	node1, _ := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
 	assert.Equal(t, id1, node1.GetName())
 
@@ -69,6 +74,59 @@ func TestCreateNodes(t *testing.T) {
 	assert.Equal(t, id3, node3.GetName())
 	node4, _ := jenkins.CreateNode(ctx, id4, 1, "Node 4 Description", "/var/lib/jenkins", "jdk7")
 	assert.Equal(t, id4, node4.GetName())
+}
+
+func TestGetNodeConfig(t *testing.T) {
+	ctx := context.Background()
+	jenkins = CreateJenkins(nil, "http://localhost:5000", "aidaleuc", "11d3433d67057c2e26bc273d1045b1e771")
+	_, err := jenkins.Init(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := jenkins.GetNode(ctx, "Hello-God")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := node.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatalf("error retrieving node conifg %v", err)
+	}
+
+	assert.NotNil(t, config.Launcher)
+}
+
+func TestUpdateNode(t *testing.T) {
+
+	ctx := context.Background()
+	jenkins = CreateJenkins(nil, "http://localhost:5000", "aidaleuc", "11d3433d67057c2e26bc273d1045b1e771")
+	_, err := jenkins.Init(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := jenkins.GetNode(ctx, "Hello-God")
+	if err != nil {
+		t.Fatal(err)
+	}
+	slave := &Slave{
+		Name:         "Hello-God",
+		Description:  "Work it!",
+		RemoteFS:     "C:\\_jenkins",
+		NumExecutors: 20,
+		Mode:         NORMAL,
+		Launcher: &CustomLauncher{
+			Launcher: &JNLPLauncher{
+				WebSocket: false,
+				WorkDirSettings: &WorkDirSettings{
+					FailIfWorkDirIsMissing: false,
+					InternalDir:            "remoting",
+					Disabled:               false,
+				},
+			},
+			Class: string(JNLPLauncherClass),
+		},
+	}
+	node.UpdateNode(ctx, slave)
 }
 
 func TestDeleteNodes(t *testing.T) {

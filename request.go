@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -245,6 +246,13 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		case *string:
 			return r.ReadRawResponse(response, responseStruct)
 		default:
+			break
+		}
+
+		switch response.Header.Get("Content-Type") {
+		case "application/xml":
+			return r.ReadXMLResponse(response, responseStruct)
+		default:
 			return r.ReadJSONResponse(response, responseStruct)
 		}
 
@@ -272,5 +280,25 @@ func (r *Requester) ReadJSONResponse(response *http.Response, responseStruct int
 	defer response.Body.Close()
 
 	json.NewDecoder(response.Body).Decode(responseStruct)
+	return response, nil
+}
+
+func (r *Requester) ReadXMLResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
+	defer response.Body.Close()
+
+	// Jenkins uses xml 1.1. We can try to convert anyway
+	bytesArr, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	stringReponse := string(bytesArr)
+	replacedResponse := strings.ReplaceAll(stringReponse, "?xml version=\"1.1\"", "?xml version=\"1.0\"")
+
+	newBuf := bytes.NewBufferString(replacedResponse)
+	err = xml.NewDecoder(newBuf).Decode(responseStruct)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
