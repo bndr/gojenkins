@@ -64,7 +64,7 @@ func TestCreateNodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	jnlpLauncher := NewSSHLauncher()
+	jnlpLauncher := DefaultSSHLauncher()
 	jnlpLauncher.Host = "127.0.0.9"
 	node1, _ := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlpLauncher)
 	assert.Equal(t, id1, node1.GetName())
@@ -111,7 +111,7 @@ func TestUpdateNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	launcher := NewJNLPLauncher()
+	launcher := DefaultJNLPLauncher()
 	launcher.WebSocket = true
 	if _, err = node.UpdateNode(ctx, "node17_test", 5, "Weep", "C:\\_jenkins", "WOOP", launcher); err != nil {
 		t.Fatal(err)

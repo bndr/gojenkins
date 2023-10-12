@@ -141,7 +141,7 @@ func newJNLPLauncherRequest(j *jnlpLauncher) *createJNLPLauncherRequest {
 func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
 	// If no options are given create a JNLP node by default.
 	if launchOptions == nil {
-		launchOptions = NewJNLPLauncher()
+		launchOptions = DefaultJNLPLauncher()
 	}
 	var launcher interface{}
 	switch l := launchOptions.(type) {

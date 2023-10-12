@@ -107,15 +107,50 @@ func (s *sshLauncher) GetClass() LauncherClass {
 	return SSHLauncherClass
 }
 
-func NewSSHLauncher() *sshLauncher {
+func NewSSHLauncher(
+	host string,
+	port int,
+	credentialsId string,
+	launchTimeout int,
+	maxRetries int,
+	retryWaitTime int,
+	jvmOptions string,
+	javaPath string,
+	PrefixStartSlaveCmd string,
+	SuffixStartSlaveCmd string) *sshLauncher {
 	return &sshLauncher{Class: SSHLauncherClass}
+}
+
+// Returns the defaults that Jenkins fills out when no options are given.
+func DefaultSSHLauncher() *sshLauncher {
+	return NewSSHLauncher(
+		"",
+		22,
+		"",
+		60,
+		0,
+		0,
+		"",
+		"",
+		"",
+		"",
+	)
 }
 
 func (j *jnlpLauncher) GetClass() LauncherClass {
 	return JNLPLauncherClass
 }
 
-func NewJNLPLauncher() *jnlpLauncher {
+func NewJNLPLauncher(webSocket bool, w *WorkDirSettings) *jnlpLauncher {
 	return &jnlpLauncher{Class: JNLPLauncherClass,
-		WorkDirSettings: &WorkDirSettings{}}
+		WorkDirSettings: w,
+		WebSocket:       webSocket}
+}
+
+func DefaultJNLPLauncher() *jnlpLauncher {
+	return NewJNLPLauncher(false, &WorkDirSettings{
+		Disabled:               false,
+		InternalDir:            "remoting",
+		FailIfWorkDirIsMissing: false,
+	})
 }
