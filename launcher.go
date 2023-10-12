@@ -116,5 +116,6 @@ func (j *jnlpLauncher) GetClass() LauncherClass {
 }
 
 func NewJNLPLauncher() *jnlpLauncher {
-	return &jnlpLauncher{Class: JNLPLauncherClass}
+	return &jnlpLauncher{Class: JNLPLauncherClass,
+		WorkDirSettings: &WorkDirSettings{}}
 }
