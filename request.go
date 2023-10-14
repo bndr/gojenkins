@@ -249,7 +249,7 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 			break
 		}
 
-		switch response.Header.Get("Content-Type") {
+		switch ar.Headers.Get("Content-Type") {
 		case "application/xml":
 			return r.ReadXMLResponse(response, responseStruct)
 		default:

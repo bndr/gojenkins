@@ -34,7 +34,7 @@ type SSHLauncher struct {
 	MaxNumRetries        int           `xml:"maxNumRetries" json:"maxNumRetries"`
 	RetryWaitTime        int           `xml:"retryWaitTime" json:"retryWaitTime"`
 	JvmOptions           string        `xml:"jvmOptions" json:"jvmOptions"`
-	JavaPath             string        `xml:"javaPath" json:"JavaPath"`
+	JavaPath             string        `xml:"javaPath" json:"javaPath"`
 	PrefixStartSlaveCmd  string        `xml:"prefixStartSlaveCmd" json:"prefixStartSlaveCmd"`
 	SuffixStartSlaveCmd  string        `xml:"suffixStartSlaveCmd" json:"suffixStartSlaveCmd"`
 }
@@ -116,9 +116,20 @@ func NewSSHLauncher(
 	retryWaitTime int,
 	jvmOptions string,
 	javaPath string,
-	PrefixStartSlaveCmd string,
-	SuffixStartSlaveCmd string) *SSHLauncher {
-	return &SSHLauncher{Class: SSHLauncherClass}
+	prefixStartSlaveCmd string,
+	suffixStartSlaveCmd string) *SSHLauncher {
+	return &SSHLauncher{
+		Class:                SSHLauncherClass,
+		Host:                 host,
+		Port:                 port,
+		CredentialsId:        credentialsId,
+		LaunchTimeoutSeconds: launchTimeout,
+		MaxNumRetries:        maxRetries,
+		RetryWaitTime:        retryWaitTime,
+		JvmOptions:           jvmOptions,
+		JavaPath:             javaPath,
+		PrefixStartSlaveCmd:  prefixStartSlaveCmd,
+		SuffixStartSlaveCmd:  suffixStartSlaveCmd}
 }
 
 // Returns the defaults that Jenkins fills out when no options are given.

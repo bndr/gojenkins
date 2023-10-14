@@ -17,6 +17,7 @@ package gojenkins
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -40,7 +41,20 @@ var (
 	MY_VIEW        = "hudson.model.MyView"
 	DASHBOARD_VIEW = "hudson.plugins.view.dashboard.Dashboard"
 	PIPELINE_VIEW  = "au.com.centrumsystems.hudson.plugin.buildpipeline.BuildPipelineView"
+	errDeleteView  = errors.New("failed to delete view")
 )
+
+func (v *View) Delete(ctx context.Context) error {
+	url := "/doDelete"
+	resp, err := v.Jenkins.Requester.Post(ctx, v.Base+url, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode == 200 {
+		return nil
+	}
+	return fmt.Errorf("%w for view %s. Status code: %d", errDeleteView, v.Raw.Name, resp.StatusCode)
+}
 
 // Returns True if successfully added Job, otherwise false
 func (v *View) AddJob(ctx context.Context, name string) (bool, error) {
