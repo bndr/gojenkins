@@ -102,16 +102,16 @@ func (j *Jenkins) SafeRestart(ctx context.Context) error {
 }
 
 type createSSHLauncherRequest struct {
-	*sshLauncher
+	*SSHLauncher
 	SlaveType       string        `json:"type"`
 	StaplerClassBag bool          `json:"stapler-class-bag"`
 	StaplerClass    LauncherClass `json:"stapler-class"`
 	Class           LauncherClass `json:"$class"`
 }
 
-func newSSHLauncherRequest(s *sshLauncher) *createSSHLauncherRequest {
+func newSSHLauncherRequest(s *SSHLauncher) *createSSHLauncherRequest {
 	return &createSSHLauncherRequest{
-		sshLauncher:     s,
+		SSHLauncher:     s,
 		SlaveType:       "hudson.slaves.DumbSlave",
 		StaplerClassBag: true,
 		StaplerClass:    s.GetClass(),
@@ -120,14 +120,14 @@ func newSSHLauncherRequest(s *sshLauncher) *createSSHLauncherRequest {
 }
 
 type createJNLPLauncherRequest struct {
-	*jnlpLauncher
+	*JNLPLauncher
 	StaplerClass LauncherClass `json:"stapler-class"`
 	Class        LauncherClass `json:"$class"`
 }
 
-func newJNLPLauncherRequest(j *jnlpLauncher) *createJNLPLauncherRequest {
+func newJNLPLauncherRequest(j *JNLPLauncher) *createJNLPLauncherRequest {
 	return &createJNLPLauncherRequest{
-		jnlpLauncher: j,
+		JNLPLauncher: j,
 		StaplerClass: j.GetClass(),
 		Class:        j.GetClass(),
 	}
@@ -145,9 +145,9 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 	}
 	var launcher interface{}
 	switch l := launchOptions.(type) {
-	case *jnlpLauncher:
+	case *JNLPLauncher:
 		launcher = newJNLPLauncherRequest(l)
-	case *sshLauncher:
+	case *SSHLauncher:
 		launcher = newSSHLauncherRequest(l)
 	default:
 		return nil, errors.New("launcher method not supported")

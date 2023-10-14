@@ -24,7 +24,7 @@ type CustomLauncher struct {
 	Class    LauncherClass `xml:"class,attr" json:"$class"`
 }
 
-type sshLauncher struct {
+type SSHLauncher struct {
 	XMLName              xml.Name      `xml:"launcher" json:"-"`
 	Class                LauncherClass `xml:"-" json:"-"`
 	Host                 string        `xml:"host" json:"host"`
@@ -44,7 +44,7 @@ type WorkDirSettings struct {
 	InternalDir            string `xml:"internalDir" json:"internalDir"`
 	FailIfWorkDirIsMissing bool   `xml:"failIfWorkDirIsMissing" json:"failIfWorkDirIsMissing"`
 }
-type jnlpLauncher struct {
+type JNLPLauncher struct {
 	XMLName         xml.Name         `xml:"launcher" json:"-"`
 	Class           LauncherClass    `xml:"-" json:"-"`
 	WorkDirSettings *WorkDirSettings `xml:"workDirSettings" json:"workDirSettings"`
@@ -61,19 +61,19 @@ func (c *CustomLauncher) UnmarshalXML(d *xml.Decoder, start xml.StartElement) er
 	}
 	switch c.Class {
 	case SSHLauncherClass:
-		var sshLauncher sshLauncher
-		if err := d.DecodeElement(&sshLauncher, &start); err != nil {
+		var SSHLauncher SSHLauncher
+		if err := d.DecodeElement(&SSHLauncher, &start); err != nil {
 			return err
 		}
-		sshLauncher.Class = sshLauncher.GetClass()
-		c.Launcher = &sshLauncher
+		SSHLauncher.Class = SSHLauncher.GetClass()
+		c.Launcher = &SSHLauncher
 	case JNLPLauncherClass:
-		var jnlpLauncher jnlpLauncher
-		if err := d.DecodeElement(&jnlpLauncher, &start); err != nil {
+		var JNLPLauncher JNLPLauncher
+		if err := d.DecodeElement(&JNLPLauncher, &start); err != nil {
 			return err
 		}
-		jnlpLauncher.Class = jnlpLauncher.GetClass()
-		c.Launcher = &jnlpLauncher
+		JNLPLauncher.Class = JNLPLauncher.GetClass()
+		c.Launcher = &JNLPLauncher
 	default:
 		return errors.New("unknown launcher class")
 	}
@@ -82,11 +82,11 @@ func (c *CustomLauncher) UnmarshalXML(d *xml.Decoder, start xml.StartElement) er
 
 func (c *CustomLauncher) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	switch l := c.Launcher.(type) {
-	case *sshLauncher:
+	case *SSHLauncher:
 		start.Name.Local = "launcher"
 		start.Attr = []xml.Attr{{Name: xml.Name{Local: "class"}, Value: string(SSHLauncherClass)}}
 		return e.EncodeElement(l, start)
-	case *jnlpLauncher:
+	case *JNLPLauncher:
 		start.Name.Local = "launcher"
 		start.Attr = []xml.Attr{{Name: xml.Name{Local: "class"}, Value: string(JNLPLauncherClass)}}
 		return e.EncodeElement(l, start)
@@ -103,7 +103,7 @@ func (c *CustomLauncher) MarshalXML(e *xml.Encoder, start xml.StartElement) erro
 	}
 }
 
-func (s *sshLauncher) GetClass() LauncherClass {
+func (s *SSHLauncher) GetClass() LauncherClass {
 	return SSHLauncherClass
 }
 
@@ -117,12 +117,12 @@ func NewSSHLauncher(
 	jvmOptions string,
 	javaPath string,
 	PrefixStartSlaveCmd string,
-	SuffixStartSlaveCmd string) *sshLauncher {
-	return &sshLauncher{Class: SSHLauncherClass}
+	SuffixStartSlaveCmd string) *SSHLauncher {
+	return &SSHLauncher{Class: SSHLauncherClass}
 }
 
 // Returns the defaults that Jenkins fills out when no options are given.
-func DefaultSSHLauncher() *sshLauncher {
+func DefaultSSHLauncher() *SSHLauncher {
 	return NewSSHLauncher(
 		"",
 		22,
@@ -137,17 +137,17 @@ func DefaultSSHLauncher() *sshLauncher {
 	)
 }
 
-func (j *jnlpLauncher) GetClass() LauncherClass {
+func (j *JNLPLauncher) GetClass() LauncherClass {
 	return JNLPLauncherClass
 }
 
-func NewJNLPLauncher(webSocket bool, w *WorkDirSettings) *jnlpLauncher {
-	return &jnlpLauncher{Class: JNLPLauncherClass,
+func NewJNLPLauncher(webSocket bool, w *WorkDirSettings) *JNLPLauncher {
+	return &JNLPLauncher{Class: JNLPLauncherClass,
 		WorkDirSettings: w,
 		WebSocket:       webSocket}
 }
 
-func DefaultJNLPLauncher() *jnlpLauncher {
+func DefaultJNLPLauncher() *JNLPLauncher {
 	return NewJNLPLauncher(false, &WorkDirSettings{
 		Disabled:               false,
 		InternalDir:            "remoting",
