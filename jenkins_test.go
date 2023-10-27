@@ -2,6 +2,7 @@ package gojenkins
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -15,60 +16,403 @@ var (
 	queueID int64
 )
 
-func TestInit(t *testing.T) {
+func createTestJobs(ctx context.Context) ([]*Job, error) {
+	job_data := getFileAsString("job.xml")
+	job1ID := "Job1_test"
+	job2ID := "job2_test"
+	job1, err := jenkins.CreateJob(ctx, job_data, job1ID)
+	if err != nil {
+		return nil, err
+	}
+	job2, err := jenkins.CreateJob(ctx, job_data, job2ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*Job{job1, job2}, nil
+}
+
+func deleteJobs(ctx context.Context, j []*Job) error {
+	errorsArr := []error{}
+	for _, j := range j {
+		ok, err := j.Delete(ctx)
+		if !ok || err != nil {
+			errorsArr = append(errorsArr, err)
+		}
+	}
+	if len(errorsArr) > 0 {
+		return errors.New("one or more jobs failed to delete")
+	}
+	return nil
+}
+
+func init() {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
 	}
 	ctx := context.Background()
-	jenkins = CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins = CreateJenkins(nil, "http://localhost:5000", "aidaleuc", "11d3433d67057c2e26bc273d1045b1e771")
 	_, err := jenkins.Init(ctx)
-	assert.Nil(t, err, "Jenkins Initialization should not fail")
+
+	// More or less fail all other tests if we can't connect.
+	if err != nil {
+		panic(err)
+	}
+
+	jobs, err := jenkins.GetAllJobs(ctx)
+	if err != nil {
+		panic(err)
+	}
+	if err = deleteJobs(ctx, jobs); err != nil {
+		panic(err)
+	}
+
+	views, err := jenkins.GetAllViews(ctx)
+	if err != nil {
+		panic(err)
+	}
+	for _, view := range views {
+		if view.Base == "/view/all" {
+			continue
+		}
+		if err := view.Delete(ctx); err != nil {
+			panic(err)
+		}
+	}
+
+	nodes, err := jenkins.GetAllNodes(ctx)
+	if err != nil {
+		panic(err)
+	}
+	for _, node := range nodes {
+		if node.Raw.DisplayName == "Built-In Node" {
+			continue
+		}
+		ok, err := node.Delete(ctx)
+		if !ok || err != nil {
+			panic("failed to delete node")
+		}
+	}
 }
 
 func TestCreateJobs(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
 	}
+
 	job1ID := "Job1_test"
 	job2ID := "job2_test"
-	job_data := getFileAsString("job.xml")
-
 	ctx := context.Background()
-	job1, err := jenkins.CreateJob(ctx, job_data, job1ID)
+	jobs, err := createTestJobs(ctx)
+	if err != nil {
+		t.Fatalf("failed to create jobs: %v", err)
+	}
+	job1 := jobs[0]
+	defer job1.Delete(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, job1)
 	assert.Equal(t, "Some Job Description", job1.GetDescription())
 	assert.Equal(t, job1ID, job1.GetName())
 
-	job2, _ := jenkins.CreateJob(ctx, job_data, job2ID)
+	job2 := jobs[1]
+	defer job2.Delete(ctx)
 	assert.NotNil(t, job2)
 	assert.Equal(t, "Some Job Description", job2.GetDescription())
 	assert.Equal(t, job2ID, job2.GetName())
 }
 
-func TestCreateNodes(t *testing.T) {
+func TestCreateNodeSSHBasic(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
 	}
-	id1 := "node1_test"
-	//id2 := "node2_test"
-	id3 := "node3_test"
-	id4 := "node4_test"
-
-	jnlp := map[string]string{"method": "JNLPLauncher"}
-	//ssh := map[string]string{"method": "SSHLauncher"}
-
+	id1 := "ssh_test"
 	ctx := context.Background()
-	node1, _ := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
+
+	sshLauncher := DefaultSSHLauncher()
+	node1, _ := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", sshLauncher)
+	defer node1.Delete(ctx)
+	ok, err := node1.IsJnlpAgent(ctx)
+	if err != nil {
+		t.Fatalf("failed to query jenkins about jnlp secreet")
+	}
 	assert.Equal(t, id1, node1.GetName())
 
-	//node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
-	//assert.Equal(t, id2, node2.GetName())
+	// Assert it is a ssh node!
+	assert.Equal(t, ok, false)
+}
 
-	node3, _ := jenkins.CreateNode(ctx, id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
-	assert.Equal(t, id3, node3.GetName())
-	node4, _ := jenkins.CreateNode(ctx, id4, 1, "Node 4 Description", "/var/lib/jenkins", "jdk7")
-	assert.Equal(t, id4, node4.GetName())
+func TestCreateNodeSSHAdvanced(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+	id1 := "ssh_test"
+	ctx := context.Background()
+
+	host := "127.0.0.1"
+	port := 26
+	credential := ""
+	timeouts := 25
+	jvmOptions := "woop"
+	javaPath := "home/bin/java"
+	suffixPrefix := "worpp"
+	sshLauncher := NewSSHLauncher(host, port, credential, timeouts, timeouts, timeouts, jvmOptions, javaPath, suffixPrefix, suffixPrefix)
+	node1, err := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", sshLauncher)
+	defer node1.Delete(ctx)
+	if err != nil {
+		t.Fatal("failed to create node")
+	}
+
+	config, err := node1.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatal("failed to get config")
+	}
+
+	actualLauncher, ok := config.Launcher.Launcher.(*SSHLauncher)
+	if !ok {
+		t.Fatal("wrong type")
+	}
+
+	assert.Equal(t, actualLauncher.Class, SSHLauncherClass)
+	assert.Equal(t, actualLauncher.Port, port)
+	assert.Equal(t, actualLauncher.CredentialsId, credential)
+	assert.Equal(t, actualLauncher.RetryWaitTime, timeouts)
+	assert.Equal(t, actualLauncher.MaxNumRetries, timeouts)
+	assert.Equal(t, actualLauncher.LaunchTimeoutSeconds, timeouts)
+	assert.Equal(t, actualLauncher.JvmOptions, jvmOptions)
+	assert.Equal(t, actualLauncher.JavaPath, javaPath)
+	assert.Equal(t, actualLauncher.PrefixStartSlaveCmd, suffixPrefix)
+	assert.Equal(t, actualLauncher.SuffixStartSlaveCmd, suffixPrefix)
+}
+
+func TestUpdateNodeSSH(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+
+	// Setup
+	id1 := "ssh_test"
+	newNodeName := "ssh_test_new"
+	ctx := context.Background()
+	host := "127.0.0.1"
+	port := 26
+	credential := ""
+	timeouts := 25
+	jvmOptions := "woop"
+	javaPath := "home/bin/java"
+	description := "GORB"
+	label := "donkey kong"
+	remoteFS := "C:\\_jenkins"
+	suffixPrefix := "worpp"
+	executors := 15
+	sshLauncher := NewSSHLauncher(host, port, credential, timeouts, timeouts, timeouts, jvmOptions, javaPath, suffixPrefix, suffixPrefix)
+	node1, err := jenkins.CreateNode(ctx, id1, 1, "Node 1 Description", "/var/lib/jenkins", "", DefaultJNLPLauncher())
+	if err != nil {
+		t.Fatal("failed to create node")
+	}
+
+	// ACT
+	newNode, err := node1.UpdateNode(ctx, newNodeName, executors, description, remoteFS, label, sshLauncher)
+	defer newNode.Delete(ctx)
+	if err != nil {
+		t.Fatal("failed to update node")
+	}
+	config, err := newNode.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatal("failed to get config")
+	}
+
+	newNodeInfo, err := newNode.Info(ctx)
+	if err != nil {
+		t.Fatal("failed to get node info")
+	}
+
+	actualLauncher, ok := config.Launcher.Launcher.(*SSHLauncher)
+	if !ok {
+		t.Fatal("wrong type")
+	}
+
+	// ASSERT
+	// Test we updated all the things
+	assert.Equal(t, newNode.GetName(), newNodeName)
+	assert.Equal(t, len(newNodeInfo.Executors), executors)
+	assert.Equal(t, config.Description, description)
+	assert.Equal(t, config.NumExecutors, executors)
+	assert.Equal(t, config.Label, label)
+	assert.Equal(t, config.Name, newNodeName)
+	assert.Equal(t, config.RemoteFS, remoteFS)
+	assert.Equal(t, actualLauncher.Class, SSHLauncherClass)
+	assert.Equal(t, actualLauncher.Port, port)
+	assert.Equal(t, actualLauncher.CredentialsId, credential)
+	assert.Equal(t, actualLauncher.RetryWaitTime, timeouts)
+	assert.Equal(t, actualLauncher.MaxNumRetries, timeouts)
+	assert.Equal(t, actualLauncher.LaunchTimeoutSeconds, timeouts)
+	assert.Equal(t, actualLauncher.JvmOptions, jvmOptions)
+	assert.Equal(t, actualLauncher.JavaPath, javaPath)
+	assert.Equal(t, actualLauncher.PrefixStartSlaveCmd, suffixPrefix)
+	assert.Equal(t, actualLauncher.SuffixStartSlaveCmd, suffixPrefix)
+}
+
+func TestGetNodeConfig(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+	ctx := context.Background()
+	sshLauncher := DefaultSSHLauncher()
+	node1, err := jenkins.CreateNode(ctx, "whatev", 1, "Node 1 Description", "/var/lib/jenkins", "", sshLauncher)
+	defer node1.Delete(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshConfig, err := node1.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatalf("error retrieving node conifg %v", err)
+	}
+
+	node2, err := jenkins.CreateNode(ctx, "whatev-2", 1, "", "C:\\_jenkins", "boop", nil)
+	if err != nil {
+		t.Fatalf("error retrieving node config %v", err)
+	}
+
+	jnlpConfig, err := node2.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatalf("error retrieving config")
+	}
+	assert.NotNil(t, sshConfig.Launcher)
+	assert.Equal(t, sshConfig.Launcher.Class, SSHLauncherClass)
+	assert.NotNil(t, jnlpConfig.Launcher)
+	assert.Equal(t, jnlpConfig.Launcher.Class, JNLPLauncherClass)
+}
+
+func TestCreateJNLPNodeBasic(t *testing.T) {
+	ctx := context.Background()
+
+	name := "whatever"
+	executors := 5
+	description := "A basic node"
+	fs := "/var/jenkins"
+	label := "tay tor"
+
+	node, err := jenkins.CreateNode(ctx, name, executors, description, fs, label, nil)
+	defer node.Delete(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jnlpNode, err := node.IsJnlpAgent(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, node.GetName(), name)
+	assert.Equal(t, jnlpNode, true)
+}
+
+func TestCreateJNLPNodeAdvanced(t *testing.T) {
+	ctx := context.Background()
+
+	name := "whatever"
+	executors := 5
+	description := "A basic node"
+	fs := "/var/jenkins"
+	label := "tay tor"
+
+	launcher := NewJNLPLauncher(true, &WorkDirSettings{
+		Disabled:               true,
+		InternalDir:            "my-fake-remoting-dir",
+		FailIfWorkDirIsMissing: true,
+	})
+
+	node, err := jenkins.CreateNode(ctx, name, executors, description, fs, label, launcher)
+	defer node.Delete(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jnlpNode, err := node.IsJnlpAgent(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	launcherConfig, err := node.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jnlpLauncherConfig := launcherConfig.Launcher.Launcher.(*JNLPLauncher)
+	assert.Equal(t, node.GetName(), name)
+	assert.Equal(t, jnlpNode, true)
+	assert.Equal(t, launcherConfig.NumExecutors, executors)
+	assert.Equal(t, launcherConfig.Description, description)
+	assert.Equal(t, launcherConfig.Label, label)
+	assert.Equal(t, launcherConfig.RemoteFS, fs)
+	assert.Equal(t, jnlpLauncherConfig.WebSocket, true)
+	assert.Equal(t, jnlpLauncherConfig.WorkDirSettings.Disabled, true)
+	assert.Equal(t, jnlpLauncherConfig.WorkDirSettings.InternalDir, "my-fake-remoting-dir")
+	assert.Equal(t, jnlpLauncherConfig.WorkDirSettings.FailIfWorkDirIsMissing, true)
+}
+
+func TestUpdateNodeJNLP(t *testing.T) {
+	ctx := context.Background()
+
+	name := "whatever"
+	executors := 5
+	description := "A basic node"
+	fs := "/var/jenkins"
+	label := "tay tor"
+
+	node, err := jenkins.CreateNode(ctx, "who-cares", 1, "", "C:\\_jenkins", "", nil)
+	defer node.Delete(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	launcher := NewJNLPLauncher(true, &WorkDirSettings{
+		Disabled:               true,
+		InternalDir:            "my-fake-remoting-dir",
+		FailIfWorkDirIsMissing: true,
+	})
+
+	newNode, err := node.UpdateNode(ctx, name, executors, description, fs, label, launcher)
+	defer newNode.Delete(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jnlpNode, err := newNode.IsJnlpAgent(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	launcherConfig, err := newNode.GetLauncherConfig(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jnlpLauncherConfig := launcherConfig.Launcher.Launcher.(*JNLPLauncher)
+	assert.Equal(t, newNode.GetName(), name)
+	assert.Equal(t, jnlpNode, true)
+	assert.Equal(t, launcherConfig.NumExecutors, executors)
+	assert.Equal(t, launcherConfig.Description, description)
+	assert.Equal(t, launcherConfig.Label, label)
+	assert.Equal(t, launcherConfig.RemoteFS, fs)
+	assert.Equal(t, jnlpLauncherConfig.WebSocket, true)
+	assert.Equal(t, jnlpLauncherConfig.WorkDirSettings.Disabled, true)
+	assert.Equal(t, jnlpLauncherConfig.WorkDirSettings.InternalDir, "my-fake-remoting-dir")
+	assert.Equal(t, jnlpLauncherConfig.WorkDirSettings.FailIfWorkDirIsMissing, true)
+}
+
+func TestGetJNLPSecret(t *testing.T) {
+	ctx := context.Background()
+	node, err := jenkins.CreateNode(ctx, "who-cares", 1, "", "C:\\_jenkins", "", nil)
+	defer node.Delete(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err := node.GetJNLPSecret(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, secret)
+	assert.NotEqual(t, secret, "")
 }
 
 func TestDeleteNodes(t *testing.T) {
@@ -87,7 +431,12 @@ func TestCreateBuilds(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
+	if _, err := createTestJobs(ctx); err != nil {
+		t.Fatalf("failed to create test jobs")
+	}
+
 	jobs, _ := jenkins.GetAllJobs(ctx)
+	defer deleteJobs(ctx, jobs)
 	for _, item := range jobs {
 		queueID, _ = item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
 		item.Poll(ctx)
@@ -132,13 +481,22 @@ func TestCreateViews(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
+
+	jobs, err := createTestJobs(ctx)
+	if err != nil {
+		t.Fatalf("failed to create jobs")
+	}
+	defer deleteJobs(ctx, jobs)
 	list_view, err := jenkins.CreateView(ctx, "test_list_view", LIST_VIEW)
+	defer list_view.Delete(ctx)
+
 	assert.Nil(t, err)
 	assert.Equal(t, "test_list_view", list_view.GetName())
 	assert.Equal(t, "", list_view.GetDescription())
 	assert.Equal(t, 0, len(list_view.GetJobs()))
 
 	my_view, err := jenkins.CreateView(ctx, "test_my_view", MY_VIEW)
+	defer my_view.Delete(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, "test_my_view", my_view.GetName())
 	assert.Equal(t, "", my_view.GetDescription())
@@ -150,10 +508,16 @@ func TestGetAllJobs(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
 	}
+
 	ctx := context.Background()
+	testJobs, err := createTestJobs(ctx)
+	defer deleteJobs(ctx, testJobs)
+	if err != nil {
+		t.Fatalf("failed to create test jobs")
+	}
 	jobs, _ := jenkins.GetAllJobs(ctx)
 	assert.Equal(t, 2, len(jobs))
-	assert.Equal(t, jobs[0].Raw.Color, "blue")
+	assert.Equal(t, jobs[0].Raw.Color, "notbuilt")
 }
 
 func TestGetAllNodes(t *testing.T) {
@@ -161,9 +525,13 @@ func TestGetAllNodes(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
+
+	sshLauncher := DefaultSSHLauncher()
+	node1, _ := jenkins.CreateNode(ctx, "whatever-id", 1, "Node 1 Description", "/var/lib/jenkins", "", sshLauncher)
+	defer node1.Delete(ctx)
 	nodes, _ := jenkins.GetAllNodes(ctx)
-	assert.Equal(t, 3, len(nodes))
-	assert.Equal(t, nodes[0].GetName(), "master")
+	assert.Equal(t, 2, len(nodes))
+	assert.Equal(t, nodes[0].GetName(), "Built-In Node")
 }
 
 func TestGetAllBuilds(t *testing.T) {
@@ -171,6 +539,26 @@ func TestGetAllBuilds(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
+
+	createdJobs, err := createTestJobs(ctx)
+	defer deleteJobs(ctx, createdJobs)
+
+	if err != nil {
+		t.Fatalf("failed to create test jobs")
+	}
+
+	jobs, _ := jenkins.GetAllJobs(ctx)
+	for _, item := range jobs {
+		queueID, _ = item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
+		item.Poll(ctx)
+		isQueued, _ := item.IsQueued(ctx)
+		assert.Equal(t, true, isQueued)
+		time.Sleep(10 * time.Second)
+		builds, _ := item.GetAllBuildIds(ctx)
+
+		assert.True(t, (len(builds) > 0))
+
+	}
 	builds, _ := jenkins.GetAllBuildIds(ctx, "Job1_test")
 	for _, b := range builds {
 		build, _ := jenkins.GetBuild(ctx, "Job1_test", b.Number)
@@ -179,43 +567,17 @@ func TestGetAllBuilds(t *testing.T) {
 	assert.Equal(t, 1, len(builds))
 }
 
-func TestGetLabel(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
-	ctx := context.Background()
-	label, err := jenkins.GetLabel(ctx, "test_label")
-	assert.Nil(t, err)
-	assert.Equal(t, label.GetName(), "test_label")
-	assert.Equal(t, 0, len(label.GetNodes()))
-
-	label, err = jenkins.GetLabel(ctx, "jdk7")
-	assert.Nil(t, err)
-	assert.Equal(t, label.GetName(), "jdk7")
-	assert.Equal(t, 1, len(label.GetNodes()))
-	assert.Equal(t, "node3_test", label.GetNodes()[0].NodeName)
-
-	//label, err = jenkins.GetLabel("jdk8")
-	//assert.Nil(t, err)
-	//assert.Equal(t, label.GetName(), "jdk8")
-	//assert.Equal(t, 1, len(label.GetNodes()))
-	//assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
-	//
-	//label, err = jenkins.GetLabel("docker")
-	//assert.Nil(t, err)
-	//assert.Equal(t, label.GetName(), "docker")
-	//assert.Equal(t, 1, len(label.GetNodes()))
-	//assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
-}
-
 func TestBuildMethods(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
 	}
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+
 	ctx := context.Background()
+	jobs, err := createTestJobs(ctx)
+	defer deleteJobs(ctx, jobs)
+	if err != nil {
+		t.Fatalf("failed")
+	}
 	job, _ := jenkins.GetJob(ctx, "Job1_test")
 	build, _ := job.GetLastBuild(ctx)
 	params := build.GetParameters()

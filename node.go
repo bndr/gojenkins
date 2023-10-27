@@ -4,23 +4,28 @@
 // not use this file except in compliance with the License. You may obtain
 // a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 // License for the specific language governing permissions and limitations
 // under the License.
-
 package gojenkins
 
 import (
 	"context"
+	"encoding/xml"
 	"errors"
+	"fmt"
+	"strconv"
+)
+
+var (
+	errJnlpSecret = errors.New("failed to query jenkins for jnlp secret.")
 )
 
 // Nodes
-
 type Computers struct {
 	BusyExecutors  int             `json:"busyExecutors"`
 	Computers      []*NodeResponse `json:"computer"`
@@ -83,6 +88,116 @@ type NodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
+// Jenkins slave configuration. This is different than the data returned by the rest api.
+// the rest api gives general information about the node, but this gives detailed information about the nodes
+// actual configuration
+type Slave struct {
+	XMLName        xml.Name        `xml:"slave"`
+	Name           string          `xml:"name"`
+	Description    string          `xml:"description"`
+	RemoteFS       string          `xml:"remoteFS"`
+	NumExecutors   int             `xml:"numExecutors"`
+	Mode           MODE            `xml:"mode"`
+	Launcher       *CustomLauncher `xml:"launcher"`
+	Label          string          `xml:"label"`
+	NodeProperties string          `xml:"nodeProperties"`
+}
+
+// GetConfig returns the launcher configuration for a given node.
+// Only supports SSH and JNLP launchers.
+func (n *Node) GetLauncherConfig(ctx context.Context) (*Slave, error) {
+	// Gets the node configuration with launcher information.
+	var sl Slave
+	_, err := n.Jenkins.Requester.GetXML(ctx, n.Base+"/config.xml", &sl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the go struct.
+	return &sl, nil
+}
+
+/*
+Updates a Jenkins node with a new configuration
+*/
+func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
+	// Request to update the node. Uses a custom launcher for options specific to the node update.
+	updateNodeRequest := &Slave{
+		Name:         name,
+		NumExecutors: numExecutors,
+		Description:  description,
+		RemoteFS:     remoteFS,
+		Label:        label,
+		Mode:         NORMAL,
+		Launcher: &CustomLauncher{
+			Class:    launchOptions.GetClass(),
+			Launcher: launchOptions,
+		},
+	}
+
+	// Converts the go struct to xml to send to Jenkins
+	xmlBytes, err := xml.Marshal(updateNodeRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// Post an XML request.
+	resp, err := n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the updated node!
+	newNode, err := n.Jenkins.GetNode(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for success status code.
+	if resp.StatusCode < 400 {
+		_, err := newNode.Poll(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return newNode, nil
+	}
+
+	// If the response indicated non success throw an error.
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
+}
+
+type jnlpSecret struct {
+	Root            xml.Name `xml:"jnlp"`
+	ApplicationDesc struct {
+		Argument []string `xml:"argument"`
+	} `xml:"application-desc"`
+}
+
+// Retrieves a JNLP secret for a JNLP node.
+func (n *Node) GetJNLPSecret(ctx context.Context) (string, error) {
+	jnlpAgent, err := n.IsJnlpAgent(ctx)
+	if err != nil {
+		return "", err
+	}
+	if !jnlpAgent {
+		return "", errors.New("agent is not a jnlp agent")
+	}
+	var jnlpResponse jnlpSecret
+	jnlpAgentEndpoint := fmt.Sprintf("%s/%s", n.Base, "jenkins-agent.jnlp")
+	_, err = n.Jenkins.Requester.GetXML(ctx, jnlpAgentEndpoint, &jnlpResponse, nil)
+
+	if err != nil {
+		return "", fmt.Errorf("%w for node %s Error details: %v", errJnlpSecret, n.GetName(), err)
+	}
+
+	// Make sure we are not going to index into a zero length array and panic.
+	if len(jnlpResponse.ApplicationDesc.Argument) == 0 {
+		return "", fmt.Errorf("%w for node %s : empty response", errJnlpSecret, n.GetName())
+	}
+
+	secret := jnlpResponse.ApplicationDesc.Argument[0]
+	return secret, nil
+}
 func (n *Node) Info(ctx context.Context) (*NodeResponse, error) {
 	_, err := n.Poll(ctx)
 	if err != nil {
