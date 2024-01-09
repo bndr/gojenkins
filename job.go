@@ -194,7 +194,7 @@ func (j *Job) GetLastCompletedBuild(ctx context.Context) (*Build, error) {
 }
 
 func (j *Job) GetBuildsFields(ctx context.Context, fields []string, custom interface{}) error {
-	if fields == nil || len(fields) == 0 {
+	if len(fields) == 0 {
 		return fmt.Errorf("one or more field value needs to be specified")
 	}
 	// limit overhead using builds instead of allBuilds, which returns the last 100 build
