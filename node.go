@@ -40,9 +40,12 @@ type NodeResponse struct {
 	DisplayName string        `json:"displayName"`
 	Executors   []struct {
 		CurrentExecutable struct {
-			Number    int    `json:"number"`
-			URL       string `json:"url"`
-			SubBuilds []struct {
+			Number          int    `json:"number"`
+			URL             string `json:"url"`
+			DisplayName     string `json:"displayName"`
+			FullDisplayName string `json:"fullDisplayName"`
+			Timestamp       int64  `json:"timestamp"`
+			SubBuilds       []struct {
 				Abort             bool        `json:"abort"`
 				Build             interface{} `json:"build"`
 				BuildNumber       int         `json:"buildNumber"`
