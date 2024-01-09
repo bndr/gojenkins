@@ -468,52 +468,62 @@ func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64
 	return number, nil
 }
 
-func (j *Job) Invoke(ctx context.Context, files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
+func (j *Job) Invoke(ctx context.Context, files map[string]string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (int64, error) {
 	isQueued, err := j.IsQueued(ctx)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	if isQueued {
 		Error.Printf("%s is already running", j.GetName())
-		return false, nil
+		return 0, nil
 	}
 	isRunning, err := j.IsRunning(ctx)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	if isRunning && skipIfRunning {
-		return false, fmt.Errorf("Will not request new build because %s is already running", j.GetName())
+		return 0, fmt.Errorf("Will not request new build because %s is already running", j.GetName())
 	}
 
 	base := "/build"
 
 	// If parameters are specified - url is /builWithParameters
-	if params != nil {
+	if params != nil || files != nil {
 		base = "/buildWithParameters"
 	} else {
 		params = make(map[string]string)
 	}
 
-	// If files are specified - url is /build
-	if files != nil {
-		base = "/build"
-	}
 	reqParams := map[string]string{}
-	buildParams := map[string]string{}
 	if securityToken != "" {
 		reqParams["token"] = securityToken
 	}
 
-	buildParams["json"] = string(makeJson(params))
-	b, _ := json.Marshal(buildParams)
-	resp, err := j.Jenkins.Requester.PostFiles(ctx, j.Base+base, bytes.NewBuffer(b), nil, reqParams, files)
+	paramBytes, _ := json.Marshal(params)
+	resp, err := j.Jenkins.Requester.PostFiles(ctx, j.Base+base, bytes.NewBuffer(paramBytes), nil, reqParams, files)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
-	if resp.StatusCode == 200 || resp.StatusCode == 201 {
-		return true, nil
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return 0, fmt.Errorf("Could not invoke job %q: %s", j.GetName(), resp.Status)
 	}
-	return false, errors.New(strconv.Itoa(resp.StatusCode))
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return 0, errors.New("Don't have key \"Location\" in response of header")
+	}
+
+	u, err := url.Parse(location)
+	if err != nil {
+		return 0, err
+	}
+
+	number, err := strconv.ParseInt(path.Base(u.Path), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return number, nil
 }
 
 func (j *Job) Poll(ctx context.Context) (int, error) {
