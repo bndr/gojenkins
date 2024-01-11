@@ -55,6 +55,16 @@ type StringCredentials struct {
 	Secret      string   `xml:"secret"`
 }
 
+// FileCredentials store only secret file
+type FileCredentials struct {
+	XMLName     xml.Name `xml:"org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl"`
+	ID          string   `xml:"id"`
+	Scope       string   `xml:"scope"`
+	Description string   `xml:"description"`
+	Secret      string   `xml:"secret"`
+	FileName    string   `xml:"fileName"`
+}
+
 //FileCredentials store a file
 //"SecretBytes" is a base64 encoded file content
 type FileCredentials struct {
