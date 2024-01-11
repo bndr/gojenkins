@@ -384,3 +384,17 @@ func getFileAsString(path string) string {
 
 	return string(buf)
 }
+
+func TestCreateViewInFolder(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+	ctx := context.Background()
+	viewName := "view_test"
+
+	view1, err := jenkins.CreateViewInFolder(ctx, viewName, LIST_VIEW, "folder1_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, view1)
+	assert.Equal(t, "Some Job Description", view1.GetDescription())
+	assert.Equal(t, viewName, view1.GetName())
+}

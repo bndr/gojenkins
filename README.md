@@ -172,16 +172,22 @@ for _, task := range tasks {
 
 ```go
 
-view, err := jenkins.CreateView(ctx, "test_view", gojenkins.LIST_VIEW)
+view1, err := jenkins.CreateView(ctx, "test_view", gojenkins.LIST_VIEW)
 
 if err != nil {
   panic(err)
 }
 
-status, err := view.AddJob(ctx, "jobName")
+status, err := view1.AddJob(ctx, "jobName")
 
 if status != nil {
   fmt.Println("Job has been added to view")
+}
+
+view2, err := jenkins.CreateViewInFolder(ctx, "test_view", gojenkins.LIST_VIEW, "parentFolder", "childFolder")
+
+if err != nil {
+    panic(err)
 }
 
 ```

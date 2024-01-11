@@ -198,6 +198,17 @@ func (j *Jenkins) CreateFolder(ctx context.Context, name string, parents ...stri
 	return folder, nil
 }
 
+// Create a new view in the folder
+// Example: jenkins.CreateViewInFolder("newViewName", gojenkins.LIST_VIEW,  "myFolder", "parentFolder")
+func (j *Jenkins) CreateViewInFolder(ctx context.Context, viewName string, viewType string, parentIDs ...string) (*View, error) {
+	viewObj := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/job/" + strings.Join(parentIDs, "/job/")}
+	view, err := viewObj.Create(ctx, viewName, viewType)
+	if err != nil {
+		return nil, err
+	}
+	return view, nil
+}
+
 // Create a new job in the folder
 // Example: jenkins.CreateJobInFolder("<config></config>", "newJobName", "myFolder", "parentFolder")
 func (j *Jenkins) CreateJobInFolder(ctx context.Context, config string, jobName string, parentIDs ...string) (*Job, error) {
@@ -562,27 +573,12 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 // 		gojenkins.PIPELINE_VIEW
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
-	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
-	endpoint := "/createView"
-	data := map[string]string{
-		"name":   name,
-		"mode":   viewType,
-		"Submit": "OK",
-		"json": makeJson(map[string]string{
-			"name": name,
-			"mode": viewType,
-		}),
-	}
-	r, err := j.Requester.Post(ctx, endpoint, nil, view.Raw, data)
-
+	viewObj := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/"}
+	view, err := viewObj.Create(ctx, name, viewType)
 	if err != nil {
 		return nil, err
 	}
-
-	if r.StatusCode == 200 {
-		return j.GetView(ctx, name)
-	}
-	return nil, errors.New(strconv.Itoa(r.StatusCode))
+	return view, nil
 }
 
 func (j *Jenkins) Poll(ctx context.Context) (int, error) {
