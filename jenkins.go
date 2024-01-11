@@ -40,18 +40,14 @@ type Jenkins struct {
 	Requester *Requester
 }
 
-// Loggers
-var (
-	Info    *log.Logger
-	Warning *log.Logger
-	Error   *log.Logger
-)
+// Main Logger
+var Logger LeveledLogger
 
 // Init Method. Should be called after creating a Jenkins Instance.
 // e.g jenkins,err := CreateJenkins("url").Init()
 // HTTP Client is set here, Connection to jenkins is tested here.
 func (j *Jenkins) Init(ctx context.Context) (*Jenkins, error) {
-	j.initLoggers()
+	j.initDefaultLogger()
 
 	// Check Connection
 	j.Raw = new(ExecutorResponse)
@@ -68,18 +64,24 @@ func (j *Jenkins) Init(ctx context.Context) (*Jenkins, error) {
 	return j, nil
 }
 
-func (j *Jenkins) initLoggers() {
-	Info = log.New(os.Stdout,
+func (j *Jenkins) initDefaultLogger() {
+	debug := log.New(os.Stdout,
+		"DEBUG: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+
+	info := log.New(os.Stdout,
 		"INFO: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
 
-	Warning = log.New(os.Stdout,
+	warning := log.New(os.Stdout,
 		"WARNING: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
 
-	Error = log.New(os.Stderr,
+	err := log.New(os.Stderr,
 		"ERROR: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
+
+	Logger = NewLeveledLogger(debug, info, warning, err)
 }
 
 // Get Basic Information About Jenkins
