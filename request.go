@@ -94,6 +94,16 @@ func (r *Requester) Post(ctx context.Context, endpoint string, payload io.Reader
 	return r.Do(ctx, ar, &responseStruct, querystring)
 }
 
+func (r *Requester) PostSimple(ctx context.Context, endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
+	ar := NewAPIRequest("POST", endpoint, payload)
+	if err := r.SetCrumb(ctx, ar); err != nil {
+		return nil, err
+	}
+	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	ar.Suffix = ""
+	return r.Do(ctx, ar, responseStruct, querystring)
+}
+
 func (r *Requester) PostFiles(ctx context.Context, endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string, files []string) (*http.Response, error) {
 	ar := NewAPIRequest("POST", endpoint, payload)
 	if err := r.SetCrumb(ctx, ar); err != nil {
