@@ -2,6 +2,7 @@ package gojenkins
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -20,6 +21,10 @@ var (
 	fileID     = "fileIDcred"
 	scope      = "GLOBAL"
 )
+
+var jenkinsAddr = flag.String("addr", "http://localhost:8080", "Jenkins address")
+var jenkinsUsername = flag.String("user", "admin", "Jenkins username")
+var jenkinsPassword = flag.String("password", "admin", "Jenkins password")
 
 func TestCreateUsernameCredentials(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
@@ -69,6 +74,7 @@ func TestCreateFileCredentials(t *testing.T) {
 	assert.Equal(t, cred.Filename, cred.Filename, "Filename is not equal")
 }
 
+// TestCreateDockerCredentials requires Docker Commons plugin
 func TestCreateDockerCredentials(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
@@ -134,10 +140,13 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 
 }
 
+// TestMain setups the Jenkins client for all tests.
+// Available options are: -addr -user -password
 func TestMain(m *testing.M) {
 	//setup
+	flag.Parse()
 	ctx := context.Background()
-	jenkins := CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
+	jenkins := CreateJenkins(nil, *jenkinsAddr, *jenkinsUsername, *jenkinsPassword)
 	jenkins.Init(ctx)
 
 	cm = &CredentialsManager{J: jenkins}
