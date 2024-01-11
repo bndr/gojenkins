@@ -419,7 +419,8 @@ func (j *Job) HasQueuedBuild() {
 	panic("Not Implemented yet")
 }
 
-func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64, error) {
+// InvokeSimpleWithRawParam starts a build with parameters in url.Values, it allowed duplicate key.
+func (j *Job) InvokeSimpleWithRawParam(ctx context.Context, params url.Values) (int64, error) {
 	isQueued, err := j.IsQueued(ctx)
 	if err != nil {
 		return 0, err
@@ -437,11 +438,7 @@ func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64
 	if len(parameters) > 0 {
 		endpoint = "/buildWithParameters"
 	}
-	data := url.Values{}
-	for k, v := range params {
-		data.Set(k, v)
-	}
-	resp, err := j.Jenkins.Requester.Post(ctx, j.Base+endpoint, bytes.NewBufferString(data.Encode()), nil, nil)
+	resp, err := j.Jenkins.Requester.Post(ctx, j.Base+endpoint, bytes.NewBufferString(params.Encode()), nil, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -466,6 +463,15 @@ func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64
 	}
 
 	return number, nil
+}
+
+// InvokeSimple starts a build with parameters in map.
+func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64, error) {
+	data := url.Values{}
+	for k, v := range params {
+		data.Set(k, v)
+	}
+	return j.InvokeSimpleWithRawParam(ctx, data)
 }
 
 func (j *Job) Invoke(ctx context.Context, files []string, skipIfRunning bool, params map[string]string, cause string, securityToken string) (bool, error) {
