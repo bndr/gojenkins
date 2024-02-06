@@ -17,6 +17,15 @@ package gojenkins
 import (
 	"context"
 	"errors"
+	"strings"
+
+	"github.com/antchfx/xmlquery"
+)
+
+const (
+	XMLComputerSecret          = `/argument`
+	XMLComputerInformation     = `/jnlp/application-desc`
+	XMLComputerInformationFile = "/jenkins-agent.jnlp"
 )
 
 // Nodes
@@ -231,4 +240,23 @@ func (n *Node) GetLogText(ctx context.Context) (string, error) {
 	}
 
 	return log, nil
+}
+
+func (n *Node) GetSecret(ctx context.Context) (string, error) {
+	var data string
+	_, err := n.Jenkins.Requester.GetXML(ctx, n.Base+XMLComputerInformationFile, &data, nil)
+	if err != nil {
+		return "", err
+	}
+	dataReader := strings.NewReader(data)
+	doc, err := xmlquery.Parse(dataReader)
+	if err != nil {
+		return "", nil
+	}
+	channel := xmlquery.FindOne(doc, XMLComputerInformation)
+	info := channel.SelectElement(XMLComputerSecret)
+	if info == nil {
+		return "", errors.New("Failed to extact secret information")
+	}
+	return info.InnerText(), nil
 }

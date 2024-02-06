@@ -103,7 +103,7 @@ func (j *Jenkins) SafeRestart(ctx context.Context) error {
 
 // Create a new Node
 // Can be JNLPLauncher or SSHLauncher
-// Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
+// Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher", "mode": "exclusive"})
 // By Default JNLPLauncher is created
 // Multiple labels should be separated by blanks
 func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, options ...interface{}) (*Node, error) {
@@ -117,13 +117,24 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 		params["method"] = "JNLPLauncher"
 	}
 
+	MODE := "NORMAL" // NOMAL, EXCLUSIVE
+	if _, ok := params["mode"]; ok {
+		MODE = strings.ToUpper(params["mode"])
+	}
+	webSocket := "false"
+	if _, ok := params["websocket"]; ok {
+		webSocket = params["websocket"]
+	}
+
 	method := params["method"]
 	var launcher map[string]string
 	switch method {
 	case "":
 		fallthrough
 	case "JNLPLauncher":
-		launcher = map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher"}
+		launcher = map[string]string{
+			"stapler-class": "hudson.slaves.JNLPLauncher",
+			"webSocket":     webSocket}
 	case "SSHLauncher":
 		launcher = map[string]string{
 			"stapler-class":        "hudson.plugins.sshslaves.SSHLauncher",
@@ -146,7 +157,6 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 
 	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
-	MODE := "NORMAL"
 	qr := map[string]string{
 		"name": name,
 		"type": NODE_TYPE,
@@ -184,6 +194,11 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 func (j *Jenkins) DeleteNode(ctx context.Context, name string) (bool, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	return node.Delete(ctx)
+}
+
+func (j *Jenkins) GetNodeSecret(ctx context.Context, name string) (string, error) {
+	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+	return node.GetSecret(ctx)
 }
 
 // Create a new folder
@@ -505,7 +520,7 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 	return p.Contains(name), nil
 }
 
-//InstallPlugin with given version and name
+// InstallPlugin with given version and name
 func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
 	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
@@ -555,11 +570,13 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 // First Parameter - name of the View
 // Second parameter - Type
 // Possible Types:
-// 		gojenkins.LIST_VIEW
-// 		gojenkins.NESTED_VIEW
-// 		gojenkins.MY_VIEW
-// 		gojenkins.DASHBOARD_VIEW
-// 		gojenkins.PIPELINE_VIEW
+//
+//	gojenkins.LIST_VIEW
+//	gojenkins.NESTED_VIEW
+//	gojenkins.MY_VIEW
+//	gojenkins.DASHBOARD_VIEW
+//	gojenkins.PIPELINE_VIEW
+//
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
