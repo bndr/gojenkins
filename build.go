@@ -60,6 +60,7 @@ type Culprit struct {
 }
 
 type generalObj struct {
+	Class                   string                   `json:"_class"`
 	Parameters              []parameter              `json:"parameters"`
 	Causes                  []map[string]interface{} `json:"causes"`
 	BuildsByBranchName      map[string]Builds        `json:"buildsByBranchName"`
