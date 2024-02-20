@@ -63,6 +63,7 @@ type generalObj struct {
 	Class                   string                   `json:"_class"`
 	Parameters              []parameter              `json:"parameters"`
 	Causes                  []map[string]interface{} `json:"causes"`
+	FoundFailureCauses      []map[string]interface{} `json:"foundFailureCauses"`
 	BuildsByBranchName      map[string]Builds        `json:"buildsByBranchName"`
 	LastBuiltRevision       BuildRevision            `json:"lastBuiltRevision"`
 	RemoteUrls              []string                 `json:"remoteUrls"`
