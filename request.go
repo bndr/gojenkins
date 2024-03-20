@@ -67,6 +67,11 @@ func (r *Requester) SetCrumb(ctx context.Context, ar *APIRequest) error {
 	response, _ := r.GetJSON(ctx, "/crumbIssuer/api/json", &crumbData, nil)
 
 	if response.StatusCode == 200 && crumbData["crumbRequestField"] != "" {
+		var cookies []string
+		for _, value := range response.Cookies() {
+			cookies = append(cookies, fmt.Sprintf("%s=%s", value.Name, value.Value))
+		}
+		ar.SetHeader("Cookie", strings.Join(cookies, ";"))
 		ar.SetHeader(crumbData["crumbRequestField"], crumbData["crumb"])
 		ar.SetHeader("Cookie", response.Header.Get("set-cookie"))
 	}
