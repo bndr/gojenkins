@@ -611,3 +611,44 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 	}
 	return j
 }
+
+//DefaultJenkins builds and returns a JenkinsClient.
+// Takes optional functional parameters to customize the JenkinsClient.
+func DefaultJenkins(base string, customize ...func(*Jenkins)) (*Jenkins, error) {
+	j := &Jenkins{}
+	j.Server = strings.TrimSuffix(base, "/")
+	j.Requester = &Requester{Base: base, SslVerify: true}
+	j.Requester.Client = http.DefaultClient
+
+	for _, option := range customize {
+		option(j)
+	}
+
+	return j.Init()
+
+}
+
+//WithClient supports using a custom http.Client instance. This method needs to be invoked optionally with DefaultJenkins()
+func WithClient(client *http.Client) func(*Jenkins) {
+	return func(j *Jenkins) {
+		if j.Requester == nil {
+			fmt.Print("Nil Requester passed")
+		} else {
+			j.Requester.Client = client
+		}
+	}
+}
+
+//WithBasicAuth supports passing username and password. This method needs to be invoked optionally with DefaultJenkins()
+func WithBasicAuth(username, password string) func(*Jenkins) {
+	return func(j *Jenkins) {
+		j.Requester.BasicAuth = &BasicAuth{Username: username, Password: password}
+	}
+}
+
+//WithSslVerify supports enabling/disabling sslVerify option. This method needs to be invoked optionally with DefaultJenkins()
+func WithSslVerify(sslVerify bool) func(*Jenkins) {
+	return func(j *Jenkins) {
+		j.Requester.SslVerify = sslVerify
+	}
+}
