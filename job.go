@@ -535,11 +535,16 @@ func (j *Job) History(ctx context.Context) ([]*History, error) {
 }
 
 func (pr *PipelineRun) ProceedInput(ctx context.Context) (bool, error) {
-	actions, _ := pr.GetPendingInputActions(ctx)
+	actions, err := pr.GetPendingInputActions(ctx)
+	if err != nil {
+		return false, err
+	}
+	if len(actions) == 0 {
+		return false, nil
+	}
 	data := url.Values{}
 	data.Set("inputId", actions[0].ID)
-	params := make(map[string]string)
-	data.Set("json", makeJson(params))
+	data.Set("json", "{}")
 
 	href := pr.Base + "/wfapi/inputSubmit"
 
@@ -554,14 +559,17 @@ func (pr *PipelineRun) ProceedInput(ctx context.Context) (bool, error) {
 }
 
 func (pr *PipelineRun) AbortInput(ctx context.Context) (bool, error) {
-	actions, _ := pr.GetPendingInputActions(ctx)
-	data := url.Values{}
-	params := make(map[string]string)
-	data.Set("json", makeJson(params))
+	actions, err := pr.GetPendingInputActions(ctx)
+	if err != nil {
+		return false, err
+	}
+	if len(actions) == 0 {
+		return false, nil
+	}
 
 	href := pr.Base + "/input/" + actions[0].ID + "/abort"
 
-	resp, err := pr.Job.Jenkins.Requester.Post(ctx, href, bytes.NewBufferString(data.Encode()), nil, nil)
+	resp, err := pr.Job.Jenkins.Requester.Post(ctx, href, nil, nil, nil)
 	if err != nil {
 		return false, err
 	}
