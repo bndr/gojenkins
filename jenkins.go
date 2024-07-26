@@ -560,6 +560,21 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	return views, nil
 }
 
+func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
+	endpoint := fmt.Sprintf("/view/%s/doDelete", name)
+	r, err := j.Requester.Post(ctx, endpoint, nil, nil, nil)
+
+	if err != nil {
+		return err
+	}
+
+	if r.StatusCode == 200 {
+		return nil
+	}
+	return errors.New(strconv.Itoa(r.StatusCode))
+}
+
+
 // Create View
 // First Parameter - name of the View
 // Second parameter - Type
