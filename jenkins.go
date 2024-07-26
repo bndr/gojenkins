@@ -309,7 +309,7 @@ func (j *Jenkins) GetNode(ctx context.Context, name string) (*Node, error) {
 	if status == 200 {
 		return &node, nil
 	}
-	return nil, errors.New("No node found")
+	return nil, errors.New("no node found")
 }
 
 func (j *Jenkins) GetLabel(ctx context.Context, name string) (*Label, error) {
@@ -321,7 +321,7 @@ func (j *Jenkins) GetLabel(ctx context.Context, name string) (*Label, error) {
 	if status == 200 {
 		return &label, nil
 	}
-	return nil, errors.New("No label found")
+	return nil, errors.New("no label found")
 }
 
 func (j *Jenkins) GetBuild(ctx context.Context, jobName string, number int64) (*Build, error) {
@@ -489,7 +489,7 @@ func (j *Jenkins) UninstallPlugin(ctx context.Context, name string) error {
 	url := fmt.Sprintf("/pluginManager/plugin/%s/doUninstall", name)
 	resp, err := j.Requester.Post(ctx, url, strings.NewReader(""), struct{}{}, map[string]string{})
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
+		return fmt.Errorf("invalid status code returned: %d", resp.StatusCode)
 	}
 	return err
 }
@@ -511,7 +511,7 @@ func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string
 	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
+		return fmt.Errorf("invalid status code returned: %d", resp.StatusCode)
 	}
 	return err
 }
@@ -550,6 +550,21 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	}
 	return views, nil
 }
+
+func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
+	endpoint := fmt.Sprintf("/view/%s/doDelete", name)
+	r, err := j.Requester.Post(ctx, endpoint, nil, nil, nil)
+
+	if err != nil {
+		return err
+	}
+
+	if r.StatusCode == 200 {
+		return nil
+	}
+	return errors.New(strconv.Itoa(r.StatusCode))
+}
+
 
 // Create View
 // First Parameter - name of the View
