@@ -58,6 +58,30 @@ var (
 // 	assert.Equal(t, len(viewsObj[0].Raw.Jobs), 0)
 // }
 
+// func TestCreateViews(t *testing.T) {
+// 	ctx := context.Background()
+// 	j, teardown := Setup(t, ctx)
+// 	defer teardown()
+
+// 	jobs, err := createTestJobs(ctx, j)
+// 	require.NoError(t, err)
+// 	defer deleteJobs(ctx, jobs)
+// 	list_view, err := j.CreateView(ctx, "test_list_view", LIST_VIEW)
+// 	defer list_view.Delete(ctx)
+
+// 	require.NoError(t, err)
+// 	require.Equal(t, "test_list_view", list_view.GetName())
+// 	require.Equal(t, "", list_view.GetDescription())
+// 	require.Equal(t, 0, len(list_view.GetJobs()))
+
+// 	my_view, err := j.CreateView(ctx, "test_my_view", MY_VIEW)
+// 	defer my_view.Delete(ctx)
+// 	require.NoError(t, err)
+// 	require.Equal(t, "test_my_view", my_view.GetName())
+// 	require.Equal(t, "", my_view.GetDescription())
+// 	require.Equal(t, 2, len(my_view.GetJobs()))
+// }
+
 // func TestGetSingleView(t *testing.T) {
 // 	ctx := context.Background()
 // 	j, teardown := Setup(t, ctx)

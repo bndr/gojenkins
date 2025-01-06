@@ -2,10 +2,13 @@ package gojenkins
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,80 +34,76 @@ func TestCreateJobs(t *testing.T) {
 
 func TestCreateBuilds(t *testing.T) {
 	ctx := context.Background()
-	j, teardown := Setup(t, ctx)
-	defer teardown()
-	if _, err := createTestJobs(ctx, j); err != nil {
-		t.Fatalf("failed to create test jobs")
+	jobstr := []string{
+		"job1", "job2",
 	}
 
-	jobs, _ := j.GetAllJobs(ctx)
-	defer deleteJobs(ctx, jobs)
-	for _, item := range jobs {
-		queueID, _ = item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
-		item.Poll(ctx)
-		isQueued, _ := item.IsQueued(ctx)
-		require.Equal(t, true, isQueued)
-		time.Sleep(10 * time.Second)
-		builds, _ := item.GetAllBuildIds(ctx)
+	jobs := []*Job{}
 
-		require.True(t, (len(builds) > 0))
+	for _, job := range jobstr {
+		jo := createMockJob(t, ctx, job)
+		jobs = append(jobs, jo)
+	}
+
+	for _, item := range jobs {
+		t.Run(item.GetName(), func(t *testing.T) {
+			defer item.Delete(ctx)
+			queueID, err := item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
+			assert.NoError(t, err)
+			require.NotEqual(t, 0, queueID)
+
+			item.Poll(ctx)
+			isQueued, _ := item.IsQueued(ctx)
+			require.Equal(t, true, isQueued)
+			time.Sleep(10 * time.Second)
+			builds, _ := item.GetAllBuildIds(ctx)
+
+			require.True(t, (len(builds) > 0))
+		})
 
 	}
 }
 
-// func TestGetQueueItem(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	task, err := j.GetQueueItem(ctx, queueID)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, task.Raw)
-// 	require.NotNil(t, task.Raw.ID)
-// }
+func TestGetQueueItem(t *testing.T) {
+	ctx := GetTestContext()
+	job := createMockJob(t, ctx, "mock_job")
+	defer job.Delete(ctx)
 
-// func TestParseBuildHistory(t *testing.T) {
-// 	r, err := os.Open("_tests/build_history.txt")
-// 	require.NoError(t, err)
-// 	history := parseBuildHistory(r)
-// 	require.True(t, len(history) == 3)
-// }
+	queueID, err := job.InvokeSimple(ctx, map[string]string{"params1": "param1"})
+	require.NoError(t, err)
+	task, err := J.GetQueueItem(ctx, queueID)
+	require.NoError(t, err)
+	require.NotNil(t, task.Raw)
+	require.NotNil(t, task.Raw.ID)
+}
 
-// func TestCreateViews(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
+func TestParseBuildHistory(t *testing.T) {
+	r, err := os.Open("_tests/build_history.txt")
+	require.NoError(t, err)
+	history := parseBuildHistory(r)
+	require.True(t, len(history) == 3)
+}
 
-// 	jobs, err := createTestJobs(ctx, j)
-// 	require.NoError(t, err)
-// 	defer deleteJobs(ctx, jobs)
-// 	list_view, err := j.CreateView(ctx, "test_list_view", LIST_VIEW)
-// 	defer list_view.Delete(ctx)
+func TestGetAllJobs(t *testing.T) {
+	ctx := context.Background()
+	createdJobs := []*Job{}
+	jobsToCreate := 10
+	for i := range jobsToCreate {
+		newJobName := fmt.Sprintf("job_%d", i)
+		job := createMockJob(t, ctx, newJobName)
+		createdJobs = append(createdJobs, job)
+	}
 
-// 	require.NoError(t, err)
-// 	require.Equal(t, "test_list_view", list_view.GetName())
-// 	require.Equal(t, "", list_view.GetDescription())
-// 	require.Equal(t, 0, len(list_view.GetJobs()))
+	defer func() {
+		for _, job := range createdJobs {
+			job.Delete(ctx)
+		}
+	}()
 
-// 	my_view, err := j.CreateView(ctx, "test_my_view", MY_VIEW)
-// 	defer my_view.Delete(ctx)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "test_my_view", my_view.GetName())
-// 	require.Equal(t, "", my_view.GetDescription())
-// 	require.Equal(t, 2, len(my_view.GetJobs()))
-// }
-
-// func TestGetAllJobs(t *testing.T) {
-// 	ctx := context.Background()
-
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	testJobs, err := createTestJobs(ctx, j)
-// 	defer deleteJobs(ctx, testJobs)
-// 	require.NoError(t, err)
-// 	jobs, _ := j.GetAllJobs(ctx)
-// 	require.Equal(t, 2, len(jobs))
-// 	require.Equal(t, jobs[0].Raw.Color, "notbuilt")
-// }
+	jobs, _ := J.GetAllJobs(ctx)
+	require.Equal(t, jobsToCreate, len(jobs))
+	require.Equal(t, jobs[0].Raw.Color, "notbuilt")
+}
 
 // func TestGetAllBuilds(t *testing.T) {
 // 	ctx := context.Background()
