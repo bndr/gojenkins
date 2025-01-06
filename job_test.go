@@ -108,7 +108,7 @@ func TestGetAllJobs(t *testing.T) {
 // func TestGetAllBuilds(t *testing.T) {
 // 	ctx := context.Background()
 // 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
+// 	defer teardown(
 // 	createdJobs, err := createTestJobs(ctx, j)
 // 	defer deleteJobs(ctx, createdJobs)
 
