@@ -45,6 +45,8 @@ var (
 	Info    *log.Logger
 	Warning *log.Logger
 	Error   *log.Logger
+
+	ErrNoNodeFound = errors.New("node not found")
 )
 
 // Init Method. Should be called after creating a Jenkins Instance.
@@ -318,7 +320,7 @@ func (j *Jenkins) GetNode(ctx context.Context, name string) (*Node, error) {
 	if status == 200 {
 		return &node, nil
 	}
-	return nil, errors.New("No node found")
+	return nil, fmt.Errorf("%w, name was %s", ErrNoNodeFound, name)
 }
 
 func (j *Jenkins) GetLabel(ctx context.Context, name string) (*Label, error) {

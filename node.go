@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	errJnlpSecret = errors.New("failed to query jenkins for jnlp secret.")
+	errJnlpSecret   = errors.New("failed to query jenkins for jnlp secret")
+	errNotJnlpAgent = errors.New("agent is not a jnlp agent")
 )
 
 // Nodes
@@ -105,7 +106,7 @@ type Slave struct {
 
 // GetConfig returns the launcher configuration for a given node.
 // Only supports SSH and JNLP launchers.
-func (n *Node) GetLauncherConfig(ctx context.Context) (*Slave, error) {
+func (n *Node) GetSlaveConfig(ctx context.Context) (*Slave, error) {
 	// Gets the node configuration with launcher information.
 	var sl Slave
 	_, err := n.Jenkins.Requester.GetXML(ctx, n.Base+"/config.xml", &sl, nil)
@@ -121,6 +122,9 @@ func (n *Node) GetLauncherConfig(ctx context.Context) (*Slave, error) {
 Updates a Jenkins node with a new configuration
 */
 func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
+	if launchOptions == nil {
+		launchOptions = DefaultJNLPLauncher()
+	}
 	// Request to update the node. Uses a custom launcher for options specific to the node update.
 	updateNodeRequest := &Slave{
 		Name:         name,
@@ -153,6 +157,20 @@ func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, de
 		return nil, err
 	}
 
+	// Make sure the launcher was updated correctly
+	// since the launchers are plugin based it is possible that Jenkins will return succcess
+	// even when the launcher was not updated
+	slaveConfig, err := newNode.GetSlaveConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the user requested a launch option to be set but the returned config
+	// was inaccurate return an error
+	if slaveConfig.Launcher == nil && launchOptions != nil {
+		return nil, fmt.Errorf("failed to set launcher config. Config was null")
+	}
+
 	// Check for success status code.
 	if resp.StatusCode < 400 {
 		_, err := newNode.Poll(ctx)
@@ -180,7 +198,7 @@ func (n *Node) GetJNLPSecret(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if !jnlpAgent {
-		return "", errors.New("agent is not a jnlp agent")
+		return "", errNotJnlpAgent
 	}
 	var jnlpResponse jnlpSecret
 	jnlpAgentEndpoint := fmt.Sprintf("%s/%s", n.Base, "jenkins-agent.jnlp")

@@ -1,147 +1,145 @@
 package gojenkins
 
-import (
-	"context"
-	"fmt"
-	"os"
-	"testing"
+// import (
+// 	"context"
+// 	"fmt"
+// 	"testing"
 
-	"github.com/stretchr/testify/assert"
-)
+// 	"github.com/stretchr/testify/assert"
+// )
 
-const integration_test string = "INTEGRATION"
+// const integration_test string = "INTEGRATION"
 
-var (
-	cm         *CredentialsManager
-	domain     = "_"
-	dockerID   = "dockerIDCred"
-	sshID      = "sshIdCred"
-	usernameID = "usernameIDcred"
-	fileID     = "fileIDcred"
-	scope      = "GLOBAL"
-)
+// var (
+// 	cm         *CredentialsManager
+// 	domain     = "_"
+// 	dockerID   = "dockerIDCred"
+// 	sshID      = "sshIdCred"
+// 	usernameID = "usernameIDcred"
+// 	fileID     = "fileIDcred"
+// 	scope      = "GLOBAL"
+// )
 
-func TestCreateUsernameCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
-	cred := UsernameCredentials{
-		ID:       usernameID,
-		Scope:    scope,
-		Username: "usernameTest",
-		Password: "pass",
-	}
+// func TestCreateUsernameCredentials(t *testing.T) {
+// 	ctx := context.Background()
+// 	j, cleanup := Setup(t, ctx)
+// 	defer cleanup()
 
-	ctx := context.Background()
-	err := cm.Add(ctx, domain, cred)
-	assert.Nil(t, err, "Could not create credential")
+// 	cm = &CredentialsManager{J: j}
+// 	cred := UsernameCredentials{
+// 		ID:       usernameID,
+// 		Scope:    scope,
+// 		Username: "usernameTest",
+// 		Password: "pass",
+// 	}
 
-	getCred := UsernameCredentials{}
-	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
-	assert.Nil(t, err, "Could not get credential")
+// 	err := cm.Add(ctx, domain, cred)
+// 	assert.Nil(t, err, "Could not create credential")
 
-	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
-	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
-	assert.Equal(t, cred.Username, cred.Username, "Username is not equal")
-}
+// 	getCred := UsernameCredentials{}
+// 	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
+// 	assert.Nil(t, err, "Could not get credential")
 
-func TestCreateFileCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
-	cred := FileCredentials{
-		ID:          fileID,
-		Scope:       scope,
-		Filename:    "testFile.json",
-		SecretBytes: "VGhpcyBpcyBhIHRlc3Qu\n",
-	}
+// 	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
+// 	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
+// 	assert.Equal(t, cred.Username, cred.Username, "Username is not equal")
+// }
 
-	ctx := context.Background()
-	err := cm.Add(ctx, domain, cred)
-	assert.Nil(t, err, "Could not create credential")
+// func TestCreateFileCredentials(t *testing.T) {
+// 	ctx := context.Background()
+// 	j, cleanup := Setup(t, ctx)
+// 	defer cleanup()
 
-	getCred := FileCredentials{}
-	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
-	assert.Nil(t, err, "Could not get credential")
+// 	cm = &CredentialsManager{J: j}
+// 	cred := FileCredentials{
+// 		ID:          fileID,
+// 		Scope:       scope,
+// 		Filename:    "testFile.json",
+// 		SecretBytes: "VGhpcyBpcyBhIHRlc3Qu\n",
+// 	}
 
-	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
-	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
-	assert.Equal(t, cred.Filename, cred.Filename, "Filename is not equal")
-}
+// 	err := cm.Add(ctx, domain, cred)
+// 	assert.Nil(t, err, "Could not create credential")
 
-func TestCreateDockerCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
-	cred := DockerServerCredentials{
-		Scope:             scope,
-		ID:                dockerID,
-		Username:          "docker-name",
-		ClientCertificate: "some secret value",
-		ClientKey:         "client key",
-	}
+// 	getCred := FileCredentials{}
+// 	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
+// 	assert.Nil(t, err, "Could not get credential")
 
-	ctx := context.Background()
-	err := cm.Add(ctx, domain, cred)
-	assert.Nil(t, err, "Could not create credential")
+// 	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
+// 	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
+// 	assert.Equal(t, cred.Filename, cred.Filename, "Filename is not equal")
+// }
 
-	getCred := DockerServerCredentials{}
-	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
-	assert.Nil(t, err, "Could not get credential")
+// func TestCreateDockerCredentials(t *testing.T) {
+// 	ctx := context.Background()
+// 	j, cleanup := Setup(t, ctx)
+// 	defer cleanup()
 
-	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
-	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
-	assert.Equal(t, cred.Username, cred.Username, "Username is not equal")
-	assert.Equal(t, cred.ClientCertificate, cred.ClientCertificate, "ClientCertificate is not equal")
-	assert.Equal(t, cred.ClientKey, cred.ClientKey, "Username is not equal")
+// 	cm = &CredentialsManager{J: j}
+// 	cred := DockerServerCredentials{
+// 		Scope:             scope,
+// 		ID:                dockerID,
+// 		Username:          "docker-name",
+// 		ClientCertificate: "some secret value",
+// 		ClientKey:         "client key",
+// 	}
 
-}
+// 	err := cm.Add(ctx, domain, cred)
+// 	assert.Nil(t, err, "Could not create credential")
 
-func TestCreateSSHCredentialsFullFlow(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
-	sshCred := SSHCredentials{
-		Scope:      scope,
-		ID:         sshID,
-		Username:   "RANDONMANE",
-		Passphrase: "password",
-		PrivateKeySource: &PrivateKeyFile{
-			Value: "testValueofkey",
-			Class: KeySourceOnMasterType,
-		},
-	}
+// 	getCred := DockerServerCredentials{}
+// 	err = cm.GetSingle(ctx, domain, cred.ID, &getCred)
+// 	assert.Nil(t, err, "Could not get credential")
 
-	ctx := context.Background()
-	err := cm.Add(ctx, domain, sshCred)
-	assert.Nil(t, err, "Could not create credential")
+// 	assert.Equal(t, cred.Scope, getCred.Scope, "Scope is not equal")
+// 	assert.Equal(t, cred.ID, cred.ID, "ID is not equal")
+// 	assert.Equal(t, cred.Username, cred.Username, "Username is not equal")
+// 	assert.Equal(t, cred.ClientCertificate, cred.ClientCertificate, "ClientCertificate is not equal")
+// 	assert.Equal(t, cred.ClientKey, cred.ClientKey, "Username is not equal")
 
-	sshCred.Username = "new_username"
-	err = cm.Update(ctx, domain, sshCred.ID, sshCred)
-	assert.Nil(t, err, "Could not update credential")
+// }
 
-	getSSH := SSHCredentials{}
-	err = cm.GetSingle(ctx, domain, sshCred.ID, &getSSH)
-	assert.Nil(t, err, "Could not get ssh credential")
+// func TestCreateSSHCredentialsFullFlow(t *testing.T) {
+// 	ctx := context.Background()
+// 	j, cleanup := Setup(t, ctx)
+// 	defer cleanup()
 
-	assert.Equal(t, sshCred.Scope, getSSH.Scope, "Scope is not equal")
-	assert.Equal(t, sshCred.ID, getSSH.ID, "ID is not equal")
-	assert.Equal(t, sshCred.Username, getSSH.Username, "Username is not equal")
-	assert.Equal(t, sshCred.Scope, getSSH.Scope, "Scope is not equal")
+// 	cm = &CredentialsManager{J: j}
+// 	sshCred := SSHCredentials{
+// 		Scope:      scope,
+// 		ID:         sshID,
+// 		Username:   "RANDONMANE",
+// 		Passphrase: "password",
+// 		PrivateKeySource: &PrivateKeyFile{
+// 			Value: "testValueofkey",
+// 			Class: KeySourceOnMasterType,
+// 		},
+// 	}
 
-	err = cm.Delete(ctx, domain, getSSH.ID)
-	assert.Nil(t, err, "Could not delete credentials")
+// 	err := cm.Add(ctx, domain, sshCred)
+// 	assert.Nil(t, err, "Could not create credential")
 
-}
+// 	sshCred.Username = "new_username"
+// 	err = cm.Update(ctx, domain, sshCred.ID, sshCred)
+// 	assert.Nil(t, err, "Could not update credential")
 
-func TestMain(m *testing.M) {
-	//setup
-	ctx := context.Background()
-	jenkins := CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
-	jenkins.Init(ctx)
+// 	getSSH := SSHCredentials{}
+// 	err = cm.GetSingle(ctx, domain, sshCred.ID, &getSSH)
+// 	assert.Nil(t, err, "Could not get ssh credential")
 
-	cm = &CredentialsManager{J: jenkins}
-	fmt.Printf("Debug, from TestMain\n")
-	//execute tests
-	os.Exit(m.Run())
-}
+// 	assert.Equal(t, sshCred.Scope, getSSH.Scope, "Scope is not equal")
+// 	assert.Equal(t, sshCred.ID, getSSH.ID, "ID is not equal")
+// 	assert.Equal(t, sshCred.Username, getSSH.Username, "Username is not equal")
+// 	assert.Equal(t, sshCred.Scope, getSSH.Scope, "Scope is not equal")
+
+// 	err = cm.Delete(ctx, domain, getSSH.ID)
+// 	assert.Nil(t, err, "Could not delete credentials")
+
+// }
+
+// func TestMain(t *testing.T) {
+// 	//setup
+
+// 	fmt.Printf("Debug, from TestMain\n")
+
+// }

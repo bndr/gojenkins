@@ -1,0 +1,5 @@
+cloudbees-folder:latest
+ssh-slaves:latest
+credentials:latest
+ssh-credentials:latest
+docker-commons:latest
