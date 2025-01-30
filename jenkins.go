@@ -137,7 +137,7 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 			"suffixStartSlaveCmd":  params["suffixStartSlaveCmd"],
 			"maxNumRetries":        params["maxNumRetries"],
 			"retryWaitTime":        params["retryWaitTime"],
-			"lanuchTimeoutSeconds": params["lanuchTimeoutSeconds"],
+			"launchTimeoutSeconds": params["launchTimeoutSeconds"],
 			"type":                 "hudson.slaves.DumbSlave",
 			"stapler-class-bag":    "true"}
 	default:
