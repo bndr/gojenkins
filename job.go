@@ -403,6 +403,9 @@ func (j *Job) IsRunning(ctx context.Context) (bool, error) {
 	}
 	lastBuild, err := j.GetLastBuild(ctx)
 	if err != nil {
+		if err.Error() == "404" {
+			return false, nil
+		}
 		return false, err
 	}
 	return lastBuild.IsRunning(ctx), nil

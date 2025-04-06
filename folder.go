@@ -75,3 +75,15 @@ func (f *Folder) Poll(ctx context.Context) (int, error) {
 	}
 	return response.StatusCode, nil
 }
+
+func (f *Folder) Delete(ctx context.Context) error {
+	resp, err := f.Jenkins.Requester.Post(ctx, f.Base+"/doDelete", nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("failed to delete folder, status code: " + strconv.Itoa(resp.StatusCode))
+	}
+
+	return nil
+}

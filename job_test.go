@@ -105,94 +105,98 @@ func TestGetAllJobs(t *testing.T) {
 	require.Equal(t, jobs[0].Raw.Color, "notbuilt")
 }
 
-// func TestGetAllBuilds(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown(
-// 	createdJobs, err := createTestJobs(ctx, j)
-// 	defer deleteJobs(ctx, createdJobs)
+func TestGetAllBuilds(t *testing.T) {
+	ctx := GetTestContext()
 
-// 	require.NoError(t, err)
+	jobs, cleanup := createMockJobs(t, ctx, 2)
+	defer cleanup()
 
-// 	jobs, _ := j.GetAllJobs(ctx)
-// 	for _, item := range jobs {
-// 		queueID, _ = item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
-// 		item.Poll(ctx)
-// 		isQueued, _ := item.IsQueued(ctx)
-// 		assert.Equal(t, true, isQueued)
-// 		time.Sleep(10 * time.Second)
-// 		builds, _ := item.GetAllBuildIds(ctx)
+	for _, item := range jobs {
+		t.Run(item.GetDetails().FullName, func(t *testing.T) {
+			_, err := item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
+			assert.NoError(t, err)
+			item.Poll(ctx)
+			isQueued, _ := item.IsQueued(ctx)
+			assert.Equal(t, true, isQueued)
+			time.Sleep(10 * time.Second)
+			builds, _ := item.GetAllBuildIds(ctx)
 
-// 		assert.True(t, (len(builds) > 0))
+			assert.True(t, (len(builds) > 0))
+		})
+	}
 
-// 	}
-// 	builds, _ := j.GetAllBuildIds(ctx, "Job1_test")
-// 	require.Equal(t, 1, len(builds))
-// 	for _, b := range builds {
-// 		build, _ := j.GetBuild(ctx, "Job1_test", b.Number)
-// 		assert.Equal(t, "SUCCESS", build.GetResult())
-// 	}
-// }
+	job := jobs[0]
+	builds, err := J.GetAllBuildIds(ctx, job.GetName())
+	require.NoError(t, err)
+	require.Equal(t, 1, len(builds))
+	for _, b := range builds {
+		build, err := J.GetBuild(ctx, job.GetName(), b.Number)
+		assert.NoError(t, err)
+		assert.Equal(t, "SUCCESS", build.GetResult())
+	}
+}
 
-// func TestBuildMethods(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	jobs, err := createTestJobs(ctx, j)
-// 	defer deleteJobs(ctx, jobs)
-// 	require.NoError(t, err)
-// 	job, _ := j.GetJob(ctx, "Job1_test")
-// 	require.NotNil(t, job)
+func TestBuildMethods(t *testing.T) {
+	ctx := GetTestContext()
+	jobName := "Job1_test"
+	job := createMockJob(t, ctx, jobName)
+	defer job.Delete(ctx)
+	// Start the job
+	_, err := job.InvokeSimple(ctx, map[string]string{"params1": "param1"})
+	require.NoError(t, err)
 
-// 	// Start the job
-// 	_, err = job.InvokeSimple(ctx, map[string]string{})
-// 	require.NoError(t, err)
-// 	build, _ := job.GetLastBuild(ctx)
-// 	require.NotNil(t, build)
-// 	params := build.GetParameters()
-// 	require.Equal(t, "params1", params[0].Name)
-// }
+	time.Sleep(10 * time.Second)
 
-// func TestGetSingleJob(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	jobs, err := createTestJobs(ctx, j)
-// 	require.NoError(t, err)
-// 	defer deleteJobs(ctx, jobs)
-// 	job, _ := j.GetJob(ctx, "Job1_test")
-// 	isRunning, _ := job.IsRunning(ctx)
-// 	config, err := job.GetConfig(ctx)
-// 	require.NoError(t, err)
-// 	require.Equal(t, false, isRunning)
-// 	require.Contains(t, config, "<project>")
-// }
+	_, err = job.Poll(ctx)
+	require.NoError(t, err)
+	build, err := job.GetLastBuild(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, build)
+	params := build.GetParameters()
+	require.Equal(t, "params1", params[0].Name)
+}
 
-// func TestEnableDisableJob(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	_, err := createTestJobs(ctx, j)
-// 	require.NoError(t, err)
-// 	job, _ := j.GetJob(ctx, "Job1_test")
-// 	result, _ := job.Disable(ctx)
-// 	assert.Equal(t, true, result)
-// 	result, _ = job.Enable(ctx)
-// 	assert.Equal(t, true, result)
-// }
+func TestGetSingleJob(t *testing.T) {
+	ctx := GetTestContext()
+	jobName := "Job1_test"
+	job := createMockJob(t, ctx, jobName)
+	defer job.Delete(ctx)
+	retrievedJob, err := J.GetJob(ctx, jobName)
+	require.NoError(t, err)
+	isRunning, err := retrievedJob.IsRunning(ctx)
+	require.NoError(t, err)
+	config, err := retrievedJob.GetConfig(ctx)
+	require.NoError(t, err)
 
-// func TestCopyDeleteJob(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	_, err := createTestJobs(ctx, j)
-// 	require.NoError(t, err)
-// 	job, _ := j.GetJob(ctx, "Job1_test")
-// 	jobCopy, _ := job.Copy(ctx, "Job1_test_copy")
-// 	assert.Equal(t, jobCopy.GetName(), "Job1_test_copy")
-// 	jobDelete, _ := job.Delete(ctx)
-// 	assert.Equal(t, true, jobDelete)
-// }
+	assert.Equal(t, false, isRunning)
+	assert.Contains(t, config, "<project>")
+	assert.Equal(t, jobName, retrievedJob.GetName())
+}
+
+func TestEnableDisableJob(t *testing.T) {
+	ctx := GetTestContext()
+	jobName := "Job1_test"
+	createdJob := createMockJob(t, ctx, jobName)
+	defer createdJob.Delete(ctx)
+	job, err := J.GetJob(ctx, "Job1_test")
+	require.NoError(t, err)
+	result, err := job.Disable(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, true, result)
+	result, err = job.Enable(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, true, result)
+}
+
+func TestCopyDeleteJob(t *testing.T) {
+	ctx := GetTestContext()
+	job := createMockJob(t, ctx, "my_job")
+	defer job.Delete(ctx)
+	jobCopy, _ := job.Copy(ctx, "Job1_test_copy")
+	assert.Equal(t, jobCopy.GetName(), "Job1_test_copy")
+	jobDelete, _ := job.Delete(ctx)
+	assert.Equal(t, true, jobDelete)
+}
 
 func getFileAsString(path string) string {
 	buf, err := ioutil.ReadFile("_tests/" + path)
@@ -209,4 +213,20 @@ func createMockJob(t *testing.T, ctx context.Context, name string) *Job {
 	job, err := J.CreateJob(ctx, jobConfig, name)
 	require.NoError(t, err)
 	return job
+}
+
+func createMockJobs(t *testing.T, ctx context.Context, count int) ([]*Job, func()) {
+	jobs := []*Job{}
+	for i := range count {
+		jobName := fmt.Sprintf("job_%d", i)
+		job := createMockJob(t, ctx, jobName)
+		jobs = append(jobs, job)
+	}
+
+	cleanupFunc := func() {
+		for _, job := range jobs {
+			job.Delete(ctx)
+		}
+	}
+	return jobs, cleanupFunc
 }

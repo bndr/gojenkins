@@ -47,6 +47,7 @@ var (
 	Error   *log.Logger
 
 	ErrNoNodeFound = errors.New("node not found")
+	ErrNotFound    = errors.New("not found")
 )
 
 // Init Method. Should be called after creating a Jenkins Instance.
@@ -354,9 +355,14 @@ func (j *Jenkins) GetJob(ctx context.Context, id string, parentIDs ...string) (*
 	if err != nil {
 		return nil, err
 	}
-	if status == 200 {
+	if status == http.StatusOK {
 		return &job, nil
 	}
+
+	if status == http.StatusNotFound {
+		return nil, fmt.Errorf("job %s %w", id, ErrNotFound)
+	}
+
 	return nil, errors.New(strconv.Itoa(status))
 }
 
@@ -378,10 +384,15 @@ func (j *Jenkins) GetFolder(ctx context.Context, id string, parents ...string) (
 	if err != nil {
 		return nil, fmt.Errorf("trouble polling folder: %v", err)
 	}
-	if status == 200 {
-		return &folder, nil
+
+	if status != http.StatusOK {
+		if status == http.StatusNotFound {
+			return nil, fmt.Errorf("folder %s %w", id, ErrNotFound)
+		}
+		return nil, errors.New(strconv.Itoa(status))
 	}
-	return nil, errors.New(strconv.Itoa(status))
+
+	return &folder, nil
 }
 
 func (j *Jenkins) GetAllNodes(ctx context.Context) ([]*Node, error) {
@@ -543,9 +554,17 @@ func (j *Jenkins) ValidateFingerPrint(ctx context.Context, id string) (bool, err
 func (j *Jenkins) GetView(ctx context.Context, name string) (*View, error) {
 	url := "/view/" + name
 	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
-	_, err := view.Poll(ctx)
+	sc, err := view.Poll(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if sc != http.StatusOK {
+		if sc == http.StatusNotFound {
+			return nil, fmt.Errorf("view %s %w", name, ErrNotFound)
+		}
+
+		return nil, errors.New(strconv.Itoa(sc))
 	}
 	return &view, nil
 }

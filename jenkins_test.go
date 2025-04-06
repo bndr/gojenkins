@@ -4,183 +4,197 @@ import (
 	"context"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
 	J *Jenkins
 )
 
-// import (
-// 	"context"
-// 	"errors"
-// 	"io/ioutil"
-// 	"os"
-// 	"testing"
-// 	"time"
+func TestGetPlugins(t *testing.T) {
+	ctx := GetTestContext()
+	plugins, err := J.GetPlugins(ctx, 3)
+	require.NoError(t, err)
+	require.Greater(t, plugins.Count(), 0)
+}
 
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// )
+func TestGetViews(t *testing.T) {
+	ctx := GetTestContext()
+	views := []string{
+		"View1",
+		"View2",
+		"View3",
+	}
 
-// var (
-// 	queueID int64
-// )
+	defer cleanupViews(ctx, views)
+	for _, view := range views {
+		_, err := J.CreateView(ctx, view, LIST_VIEW)
+		require.NoError(t, err)
+	}
 
-// func TestGetPlugins(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	plugins, err := j.GetPlugins(ctx, 3)
-// 	require.NoError(t, err)
-// 	require.Greater(t, 0, plugins.Count())
-// }
+	viewsObj, _ := J.GetAllViews(ctx)
 
-// func TestGetViews(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
+	// + 1 because of the default all view.
+	assert.Equal(t, len(viewsObj), len(views)+1)
+	assert.Equal(t, len(viewsObj[0].Raw.Jobs), 0)
+}
 
-// 	views := []string{
-// 		"View1",
-// 		"View2",
-// 		"View3",
-// 	}
+func TestCreateViews(t *testing.T) {
+	ctx := GetTestContext()
 
-// 	for _, view := range views {
-// 		_, err := j.CreateView(ctx, view, LIST_VIEW)
-// 		require.NoError(t, err)
-// 	}
+	job := createMockJob(t, ctx, "job")
+	defer job.Delete(ctx)
 
-// 	viewsObj, _ := j.GetAllViews(ctx)
+	job2 := createMockJob(t, ctx, "job2")
+	defer job2.Delete(ctx)
 
-// 	// + 1 because of the default all view.
-// 	assert.Equal(t, len(viewsObj), len(views)+1)
-// 	assert.Equal(t, len(viewsObj[0].Raw.Jobs), 0)
-// }
+	list_view, err := J.CreateView(ctx, "test_list_view", LIST_VIEW)
+	defer list_view.Delete(ctx)
 
-// func TestCreateViews(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
+	require.NoError(t, err)
+	require.Equal(t, "test_list_view", list_view.GetName())
+	require.Equal(t, "", list_view.GetDescription())
+	require.Equal(t, 0, len(list_view.GetJobs()))
 
-// 	jobs, err := createTestJobs(ctx, j)
-// 	require.NoError(t, err)
-// 	defer deleteJobs(ctx, jobs)
-// 	list_view, err := j.CreateView(ctx, "test_list_view", LIST_VIEW)
-// 	defer list_view.Delete(ctx)
+	my_view, err := J.CreateView(ctx, "test_my_view", MY_VIEW)
+	defer my_view.Delete(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "test_my_view", my_view.GetName())
+	require.Equal(t, "", my_view.GetDescription())
+	require.Equal(t, 2, len(my_view.GetJobs()))
+}
 
-// 	require.NoError(t, err)
-// 	require.Equal(t, "test_list_view", list_view.GetName())
-// 	require.Equal(t, "", list_view.GetDescription())
-// 	require.Equal(t, 0, len(list_view.GetJobs()))
+func TestGetSingleView(t *testing.T) {
+	ctx := GetTestContext()
 
-// 	my_view, err := j.CreateView(ctx, "test_my_view", MY_VIEW)
-// 	defer my_view.Delete(ctx)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "test_my_view", my_view.GetName())
-// 	require.Equal(t, "", my_view.GetDescription())
-// 	require.Equal(t, 2, len(my_view.GetJobs()))
-// }
+	view, err := J.GetView(ctx, "all")
+	require.NoError(t, err)
+	require.NotNil(t, view)
 
-// func TestGetSingleView(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
+	assert.Equal(t, view.GetName(), "all")
+}
 
-// 	view, err := j.GetView(ctx, "all")
-// 	require.NoError(t, err)
-// 	require.NotNil(t, view)
+func TestDeleteView(t *testing.T) {
+	ctx := GetTestContext()
 
-// 	assert.Equal(t, view.GetName(), "all")
-// }
+	job := createMockJob(t, ctx, "job")
+	defer job.Delete(ctx)
 
-// func TestCreateFolder(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	folders := []string{"folder1_test", "folder2_test"}
+	my_view, err := J.CreateView(ctx, "test_my_view", LIST_VIEW)
+	require.NoError(t, err)
 
-// 	for _, folder := range folders {
-// 		folderObj, err := j.CreateFolder(ctx, folder)
-// 		assert.NoError(t, err)
-// 		assert.NotNil(t, folderObj)
-// 		assert.Equal(t, folder, folderObj.GetName())
-// 	}
-// }
+	err = my_view.Delete(ctx)
+	assert.NoError(t, err)
 
-// func TestCreateJobInFolder(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	jobName := "Job_test"
-// 	jobName2 := "Job_test2"
-// 	job_data := getFileAsString("job.xml")
+	v, err := J.GetView(ctx, my_view.GetName())
+	assert.Nil(t, v)
+	assert.NotNil(t, err)
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+func TestDeleteFolder(t *testing.T) {
+	ctx := GetTestContext()
+	folders := []string{"folder1_test", "folder2_test"}
+	createdFolders := []*Folder{}
+	for _, folder := range folders {
+		folderObj, err := J.CreateFolder(ctx, folder)
+		createdFolders = append(createdFolders, folderObj)
+		assert.NoError(t, err)
+		assert.NotNil(t, folderObj)
+		assert.Equal(t, folder, folderObj.GetName())
+	}
 
-// 	folderObj, err := j.CreateFolder(ctx, "folder1_test")
-// 	require.NoError(t, err)
-// 	require.NotNil(t, folderObj)
+	for _, folderObj := range createdFolders {
+		err := folderObj.Delete(ctx)
+		assert.NoError(t, err)
 
-// 	folder2, err := j.CreateFolder(ctx, "folder2_test", "folder1_test")
-// 	require.NoError(t, err)
-// 	require.NotNil(t, folder2)
+		_, err = J.GetFolder(ctx, folderObj.GetName())
+		assert.ErrorIs(t, err, ErrNotFound)
+	}
+}
 
-// 	job1, err := j.CreateJobInFolder(ctx, job_data, jobName, "folder1_test")
-// 	assert.NoError(t, err)
-// 	assert.NotNil(t, job1)
-// 	assert.Equal(t, "Some Job Description", job1.GetDescription())
-// 	assert.Equal(t, jobName, job1.GetName())
+func TestCreateFolder(t *testing.T) {
+	ctx := GetTestContext()
+	folders := []string{"folder1_test", "folder2_test"}
 
-// 	job2, err := j.CreateJobInFolder(ctx, job_data, jobName2, "folder1_test", "folder2_test")
-// 	assert.NoError(t, err)
-// 	assert.NotNil(t, job2)
-// 	assert.Equal(t, "Some Job Description", job2.GetDescription())
-// 	assert.Equal(t, jobName2, job2.GetName())
-// }
+	for _, folder := range folders {
+		folderObj, err := J.CreateFolder(ctx, folder)
+		defer folderObj.Delete(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, folderObj)
+		assert.Equal(t, folder, folderObj.GetName())
+	}
+}
 
-// func TestGetFolder(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	folderObj, err := j.CreateFolder(ctx, "folder1_test")
-// 	require.NoError(t, err)
-// 	require.NotNil(t, folderObj)
+func TestCreateJobInFolder(t *testing.T) {
+	ctx := GetTestContext()
+	jobName := "Job_test"
+	jobName2 := "Job_test2"
+	job_data := getFileAsString("job.xml")
 
-// 	folder2, err := j.CreateFolder(ctx, "folder2_test", "folder1_test")
-// 	require.NoError(t, err)
-// 	require.NotNil(t, folder2)
+	folderObj, err := J.CreateFolder(ctx, "folder1_test")
+	defer folderObj.Delete(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, folderObj)
 
-// 	folder1, err := j.GetFolder(ctx, "folder1_test")
-// 	assert.Nil(t, err)
-// 	assert.NotNil(t, folder1)
-// 	assert.Equal(t, "folder1_test", folder1.GetName())
+	folder2, err := J.CreateFolder(ctx, "folder2_test", "folder1_test")
+	defer folder2.Delete(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, folder2)
 
-// 	folder2, err = j.GetFolder(ctx, "folder2_test", "folder1_test")
-// 	assert.Nil(t, err)
-// 	assert.NotNil(t, folder2)
-// 	assert.Equal(t, "folder2_test", folder2.GetName())
-// }
-// func TestInstallPlugin(t *testing.T) {
-// 	ctx := context.Background()
+	job1, err := J.CreateJobInFolder(ctx, job_data, jobName, "folder1_test")
+	defer job1.Delete(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, job1)
+	assert.Equal(t, "Some Job Description", job1.GetDescription())
+	assert.Equal(t, jobName, job1.GetName())
 
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	err := j.InstallPlugin(ctx, "packer", "1.4")
+	job2, err := J.CreateJobInFolder(ctx, job_data, jobName2, "folder1_test", "folder2_test")
+	defer job2.Delete(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, job2)
+	assert.Equal(t, "Some Job Description", job2.GetDescription())
+	assert.Equal(t, jobName2, job2.GetName())
+}
 
-// 	assert.Nil(t, err, "Could not install plugin")
-// }
+func TestGetFolder(t *testing.T) {
+	ctx := GetTestContext()
+	folderObj, err := J.CreateFolder(ctx, "folder1_test")
+	defer folderObj.Delete(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, folderObj)
 
-// func TestConcurrentRequests(t *testing.T) {
-// 	ctx := context.Background()
-// 	j, teardown := Setup(t, ctx)
-// 	defer teardown()
-// 	for i := 0; i <= 16; i++ {
-// 		go func() {
-// 			j.GetAllJobs(ctx)
-// 			j.GetAllViews(ctx)
-// 			j.GetAllNodes(ctx)
-// 		}()
-// 	}
-// }
+	folder2, err := J.CreateFolder(ctx, "folder2_test", "folder1_test")
+	require.NoError(t, err)
+	require.NotNil(t, folder2)
+
+	folder1, err := J.GetFolder(ctx, "folder1_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, folder1)
+	assert.Equal(t, "folder1_test", folder1.GetName())
+
+	folder2, err = J.GetFolder(ctx, "folder2_test", "folder1_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, folder2)
+	assert.Equal(t, "folder2_test", folder2.GetName())
+}
+func TestInstallPlugin(t *testing.T) {
+	ctx := GetTestContext()
+	err := J.InstallPlugin(ctx, "packer", "1.4")
+	assert.Nil(t, err, "Could not install plugin")
+}
+
+func TestConcurrentRequests(t *testing.T) {
+	ctx := GetTestContext()
+	for i := 0; i <= 16; i++ {
+		go func() {
+			J.GetAllJobs(ctx)
+			J.GetAllViews(ctx)
+			J.GetAllNodes(ctx)
+		}()
+	}
+}
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
@@ -197,4 +211,12 @@ func TestMain(m *testing.M) {
 
 	// Exit with the code from the test run
 	os.Exit(code)
+}
+
+func cleanupViews(ctx context.Context, views []string) {
+	for _, view := range views {
+		retrievedView, _ := J.GetView(ctx, view)
+		retrievedView.Delete(ctx)
+	}
+
 }
