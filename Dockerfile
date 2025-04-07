@@ -1,2 +1,4 @@
 FROM jenkins/jenkins:lts
-RUN /usr/local/bin/install-plugins.sh cloudbees-folder ssh-slaves credentials ssh-credentials docker-commons
+
+COPY ./plugins.txt /tmp/plugins.txt
+RUN jenkins-plugin-cli --plugin-file /tmp/plugins.txt

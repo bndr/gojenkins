@@ -1,12 +1,10 @@
 package gojenkins
 
 import (
-	"context"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const integration_test string = "INTEGRATION"
@@ -22,9 +20,9 @@ var (
 )
 
 func TestCreateUsernameCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	ctx := GetTestContext()
+
+	cm = &CredentialsManager{J: J}
 	cred := UsernameCredentials{
 		ID:       usernameID,
 		Scope:    scope,
@@ -32,8 +30,8 @@ func TestCreateUsernameCredentials(t *testing.T) {
 		Password: "pass",
 	}
 
-	ctx := context.Background()
 	err := cm.Add(ctx, domain, cred)
+	defer cm.Delete(ctx, domain, cred.ID)
 	assert.Nil(t, err, "Could not create credential")
 
 	getCred := UsernameCredentials{}
@@ -46,9 +44,9 @@ func TestCreateUsernameCredentials(t *testing.T) {
 }
 
 func TestCreateFileCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	ctx := GetTestContext()
+
+	cm = &CredentialsManager{J: J}
 	cred := FileCredentials{
 		ID:          fileID,
 		Scope:       scope,
@@ -56,8 +54,8 @@ func TestCreateFileCredentials(t *testing.T) {
 		SecretBytes: "VGhpcyBpcyBhIHRlc3Qu\n",
 	}
 
-	ctx := context.Background()
 	err := cm.Add(ctx, domain, cred)
+	defer cm.Delete(ctx, domain, cred.ID)
 	assert.Nil(t, err, "Could not create credential")
 
 	getCred := FileCredentials{}
@@ -70,9 +68,9 @@ func TestCreateFileCredentials(t *testing.T) {
 }
 
 func TestCreateDockerCredentials(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	ctx := GetTestContext()
+
+	cm = &CredentialsManager{J: J}
 	cred := DockerServerCredentials{
 		Scope:             scope,
 		ID:                dockerID,
@@ -81,8 +79,8 @@ func TestCreateDockerCredentials(t *testing.T) {
 		ClientKey:         "client key",
 	}
 
-	ctx := context.Background()
 	err := cm.Add(ctx, domain, cred)
+	defer cm.Delete(ctx, domain, cred.ID)
 	assert.Nil(t, err, "Could not create credential")
 
 	getCred := DockerServerCredentials{}
@@ -98,9 +96,8 @@ func TestCreateDockerCredentials(t *testing.T) {
 }
 
 func TestCreateSSHCredentialsFullFlow(t *testing.T) {
-	if _, ok := os.LookupEnv(integration_test); !ok {
-		return
-	}
+	ctx := GetTestContext()
+	cm = &CredentialsManager{J: J}
 	sshCred := SSHCredentials{
 		Scope:      scope,
 		ID:         sshID,
@@ -112,8 +109,8 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	err := cm.Add(ctx, domain, sshCred)
+	defer cm.Delete(ctx, domain, sshCred.ID)
 	assert.Nil(t, err, "Could not create credential")
 
 	sshCred.Username = "new_username"
@@ -131,17 +128,52 @@ func TestCreateSSHCredentialsFullFlow(t *testing.T) {
 
 	err = cm.Delete(ctx, domain, getSSH.ID)
 	assert.Nil(t, err, "Could not delete credentials")
-
 }
 
-func TestMain(m *testing.M) {
-	//setup
-	ctx := context.Background()
-	jenkins := CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
-	jenkins.Init(ctx)
+func TestDeleteCredential(t *testing.T) {
+	ctx := GetTestContext()
 
-	cm = &CredentialsManager{J: jenkins}
-	fmt.Printf("Debug, from TestMain\n")
-	//execute tests
-	os.Exit(m.Run())
+	cm = &CredentialsManager{J: J}
+	cred := UsernameCredentials{
+		ID:       usernameID,
+		Scope:    scope,
+		Username: "usernameTest",
+		Password: "pass",
+	}
+
+	err := cm.Add(ctx, domain, cred)
+	require.Nil(t, err, "Could not create credential")
+
+	err = cm.Delete(ctx, domain, cred.ID)
+	require.NoError(t, err)
+
+	var retrievedCred UsernameCredentials
+	err = cm.GetSingle(ctx, domain, cred.ID, retrievedCred)
+	require.Error(t, err)
+}
+
+func TestGetCredential(t *testing.T) {
+	ctx := GetTestContext()
+
+	cm = &CredentialsManager{J: J}
+	cred := UsernameCredentials{
+		ID:       usernameID,
+		Scope:    scope,
+		Username: "usernameTest",
+		Password: "pass",
+	}
+
+	err := cm.Add(ctx, domain, cred)
+	require.Nil(t, err, "Could not create credential")
+
+	var retrievedCred UsernameCredentials
+	err = cm.GetSingle(ctx, domain, cred.ID, &retrievedCred)
+	assert.NoError(t, err)
+	assert.NotNil(t, retrievedCred)
+
+	// Password is left out as it is redacted by Jenkins
+	assert.Equal(t, cred.ID, retrievedCred.ID)
+	assert.Equal(t, cred.Description, retrievedCred.Description)
+	assert.Equal(t, cred.Scope, retrievedCred.Scope)
+	assert.Equal(t, cred.Username, retrievedCred.Username)
 }
