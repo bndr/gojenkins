@@ -118,52 +118,6 @@ func (n *Node) GetSlaveConfig(ctx context.Context) (*Slave, error) {
 	return &sl, nil
 }
 
-func (n *Node) UpdateNodeV2(ctx context.Context, s *Slave) (*Node, error) {
-	// Converts the go struct to xml to send to Jenkins
-	xmlBytes, err := xml.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	// Post an XML request.
-	resp, err := n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the updated node!
-	newNode, err := n.Jenkins.GetNode(ctx, s.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Make sure the launcher was updated correctly
-	// since the launchers are plugin based it is possible that Jenkins will return succcess
-	// even when the launcher was not updated
-	slaveConfig, err := newNode.GetSlaveConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the user requested a launch option to be set but the returned config
-	// was inaccurate return an error
-	if slaveConfig.Launcher == nil && s.Launcher != nil {
-		return nil, fmt.Errorf("failed to set launcher config. Config was null")
-	}
-
-	// Check for success status code.
-	if resp.StatusCode < 400 {
-		_, err := newNode.Poll(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return newNode, nil
-	}
-
-	// If the response indicated non success throw an error.
-	return nil, errors.New(strconv.Itoa(resp.StatusCode))
-}
-
 /*
 Updates a Jenkins node with a new configuration
 */
@@ -185,7 +139,49 @@ func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, de
 		},
 	}
 
-	return n.UpdateNodeV2(ctx, updateNodeRequest)
+	// Converts the go struct to xml to send to Jenkins
+	xmlBytes, err := xml.Marshal(updateNodeRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// Post an XML request.
+	resp, err := n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the updated node!
+	newNode, err := n.Jenkins.GetNode(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make sure the launcher was updated correctly
+	// since the launchers are plugin based it is possible that Jenkins will return succcess
+	// even when the launcher was not updated
+	slaveConfig, err := newNode.GetSlaveConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the user requested a launch option to be set but the returned config
+	// was inaccurate return an error
+	if slaveConfig.Launcher == nil && launchOptions != nil {
+		return nil, fmt.Errorf("failed to set launcher config. Config was null")
+	}
+
+	// Check for success status code.
+	if resp.StatusCode < 400 {
+		_, err := newNode.Poll(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return newNode, nil
+	}
+
+	// If the response indicated non success throw an error.
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
 type jnlpSecret struct {
