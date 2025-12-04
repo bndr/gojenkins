@@ -30,6 +30,12 @@ type securityRealmUser struct {
 	Properties []securityRealmUserConfig `json:"property"`
 }
 
+type currentUserResponse struct {
+	ID         string                    `json:"id"`
+	FullName   string                    `json:"fullName"`
+	Properties []securityRealmUserConfig `json:"property"`
+}
+
 type securityRealmUserConfig struct {
 	Class   string `json:"_class"`
 	Address string `json:"address"`
@@ -120,6 +126,23 @@ func (j *Jenkins) ListUsers(ctx context.Context) ([]User, error) {
 	}
 
 	return users, nil
+}
+
+// GetCurrentUser returns the Jenkins account associated with the current credentials.
+func (j *Jenkins) GetCurrentUser(ctx context.Context) (*User, error) {
+	resp := new(currentUserResponse)
+	_, err := j.Requester.GetJSON(ctx, "/me", resp, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &User{
+		Jenkins:  j,
+		UserName: resp.ID,
+		FullName: resp.FullName,
+		Email:    extractUserEmail(resp.Properties),
+	}
+	return user, nil
 }
 
 func extractUserEmail(props []securityRealmUserConfig) string {

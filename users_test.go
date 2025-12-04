@@ -42,3 +42,35 @@ func TestListUsers(t *testing.T) {
 		t.Fatalf("expected email 'admin@example.com', got %s", users[0].Email)
 	}
 }
+
+func TestGetCurrentUser(t *testing.T) {
+	handler := http.NewServeMux()
+	handler.HandleFunc("/me/api/json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id":"admin","fullName":"Admin","property":[{"_class":"hudson.tasks.Mailer$UserProperty","address":"admin@example.com"}]}`)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client := server.Client()
+	jenk := CreateJenkins(client, server.URL)
+
+	ctx := context.Background()
+	user, err := jenk.GetCurrentUser(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if user == nil {
+		t.Fatalf("expected user, got nil")
+	}
+	if user.UserName != "admin" {
+		t.Fatalf("expected username 'admin', got %s", user.UserName)
+	}
+	if user.FullName != "Admin" {
+		t.Fatalf("expected full name 'Admin', got %s", user.FullName)
+	}
+	if user.Email != "admin@example.com" {
+		t.Fatalf("expected email 'admin@example.com', got %s", user.Email)
+	}
+}

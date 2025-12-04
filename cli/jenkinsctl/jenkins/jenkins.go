@@ -518,6 +518,22 @@ func (j *Jenkins) ShowUsers() error {
 	return nil
 }
 
+// ShowCurrentUser prints details about the account used to authenticate with Jenkins
+func (j *Jenkins) ShowCurrentUser() error {
+	user, err := j.Instance.GetCurrentUser(j.Context)
+	if err != nil {
+		return err
+	}
+
+	email := strings.TrimSpace(user.Email)
+	if email == "" {
+		email = "-"
+	}
+
+	fmt.Printf("👤 %s (%s) %s\n", user.UserName, user.FullName, email)
+	return nil
+}
+
 // getFileAsString
 func getFileAsString(path string) (string, error) {
 	buf, err := ioutil.ReadFile(path)
