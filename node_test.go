@@ -532,17 +532,20 @@ func TestCreateNodeV2WithMultipleNodeProperties(t *testing.T) {
 			WithDescription("Node with disk space monitor"),
 			WithRemoteFS("/var/jenkins"),
 			WithNodeProperties(
-				NewDiskSpaceMonitorNodeProperty("1GiB"),
+				NewDiskSpaceMonitorNodeProperty("1GiB", "500MiB", "800MiB", "400MiB"),
 			),
 		)
 		slaveConfig := verifyNodeConfig(t, ctx, node, nodeName)
 		require.NotNil(t, slaveConfig.NodeProperties)
 		require.Len(t, slaveConfig.NodeProperties.Properties, 1)
 
-		// Verify disk space property
+		// Verify disk space property - check all threshold fields
 		diskProp, ok := slaveConfig.NodeProperties.Properties[0].(*DiskSpaceMonitorNodeProperty)
 		require.True(t, ok, "Expected DiskSpaceMonitorNodeProperty")
 		assert.Equal(t, "1GiB", diskProp.FreeDiskSpaceThreshold)
+		assert.Equal(t, "500MiB", diskProp.FreeTempSpaceThreshold)
+		assert.Equal(t, "800MiB", diskProp.FreeDiskSpaceWarningThreshold)
+		assert.Equal(t, "400MiB", diskProp.FreeTempSpaceWarningThreshold)
 	})
 
 	t.Run("CreateNodeV2WithRawProperty", func(t *testing.T) {
@@ -650,6 +653,7 @@ func TestCreateNodeV2WithMultipleNodeProperties(t *testing.T) {
 			case *DiskSpaceMonitorNodeProperty:
 				foundDisk = true
 				assert.Equal(t, "2GiB", p.FreeDiskSpaceThreshold)
+				assert.Equal(t, "2GiB", p.FreeTempSpaceThreshold)
 			case *WorkspaceCleanupNodeProperty:
 				foundWorkspace = true
 				// ws-cleanup plugin property has no additional fields to check

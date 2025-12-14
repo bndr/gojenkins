@@ -84,35 +84,35 @@ func (e EnvironmentVariables) MarshalXML(enc *xml.Encoder, start xml.StartElemen
 		XMLName xml.Name `xml:"int"`
 		Value   int      `xml:",chardata"`
 	}
-	
+
 	start.Name.Local = "envVars"
 	start.Attr = []xml.Attr{{Name: xml.Name{Local: "serialization"}, Value: "custom"}}
 	if err := enc.EncodeToken(start); err != nil {
 		return err
 	}
-	
+
 	if err := enc.Encode(UnserializableParents{}); err != nil {
 		return err
 	}
-	
+
 	// <tree-map> needs manual handling due to mixed content
 	treeMapStart := xml.StartElement{Name: xml.Name{Local: "tree-map"}}
 	if err := enc.EncodeToken(treeMapStart); err != nil {
 		return err
 	}
-	
+
 	if err := encodeTreeMapHeader(enc); err != nil {
 		return err
 	}
-	
+
 	if err := enc.Encode(Int{Value: len(e.Tree)}); err != nil {
 		return err
 	}
-	
+
 	if err := encodeEnvVarEntries(enc, e.Tree); err != nil {
 		return err
 	}
-	
+
 	if err := enc.EncodeToken(xml.EndElement{Name: treeMapStart.Name}); err != nil {
 		return err
 	}
@@ -124,13 +124,13 @@ func (e *EnvironmentVariables) UnmarshalXML(d *xml.Decoder, start xml.StartEleme
 	var strings []string
 	var count int
 	countRead := false
-	
+
 	for {
 		token, err := d.Token()
 		if err != nil {
 			return err
 		}
-		
+
 		switch t := token.(type) {
 		case xml.StartElement:
 			if t.Name.Local == "int" {
@@ -227,12 +227,12 @@ func NewToolLocationNodeProperty(locations map[string]string) *ToolLocationNodeP
 
 // DiskSpaceMonitorNodeProperty configures disk space monitoring thresholds for a node
 type DiskSpaceMonitorNodeProperty struct {
-	XMLName                          xml.Name `xml:"hudson.node__monitors.DiskSpaceMonitorNodeProperty"`
-	Class                            string   `xml:"-"`
-	FreeDiskSpaceThreshold           string   `xml:"freeDiskSpaceThreshold"`
-	FreeTempSpaceThreshold           string   `xml:"freeTempSpaceThreshold"`
-	FreeDiskSpaceWarningThreshold    string   `xml:"freeDiskSpaceWarningThreshold,omitempty"`
-	FreeTempSpaceWarningThreshold    string   `xml:"freeTempSpaceWarningThreshold,omitempty"`
+	XMLName                       xml.Name `xml:"hudson.node__monitors.DiskSpaceMonitorNodeProperty"`
+	Class                         string   `xml:"-"`
+	FreeDiskSpaceThreshold        string   `xml:"freeDiskSpaceThreshold"`
+	FreeTempSpaceThreshold        string   `xml:"freeTempSpaceThreshold"`
+	FreeDiskSpaceWarningThreshold string   `xml:"freeDiskSpaceWarningThreshold,omitempty"`
+	FreeTempSpaceWarningThreshold string   `xml:"freeTempSpaceWarningThreshold,omitempty"`
 }
 
 func (d *DiskSpaceMonitorNodeProperty) GetClass() string {
@@ -241,14 +241,25 @@ func (d *DiskSpaceMonitorNodeProperty) GetClass() string {
 
 // NewDiskSpaceMonitorNodeProperty creates a disk space monitor property
 // thresholds should be strings like "1GiB", "500MiB", etc.
+// Parameters:
+//   - freeDiskThreshold: required threshold for free disk space
+//   - freeTempThreshold: optional threshold for free temp space (defaults to freeDiskThreshold)
+//   - freeDiskWarningThreshold: optional warning threshold for free disk space
+//   - freeTempWarningThreshold: optional warning threshold for free temp space
 func NewDiskSpaceMonitorNodeProperty(freeDiskThreshold string, freeTempThreshold ...string) *DiskSpaceMonitorNodeProperty {
 	prop := &DiskSpaceMonitorNodeProperty{
-		Class:                      "hudson.node_monitors.DiskSpaceMonitorNodeProperty",
-		FreeDiskSpaceThreshold:     freeDiskThreshold,
-		FreeTempSpaceThreshold:     freeDiskThreshold,
+		Class:                  "hudson.node_monitors.DiskSpaceMonitorNodeProperty",
+		FreeDiskSpaceThreshold: freeDiskThreshold,
+		FreeTempSpaceThreshold: freeDiskThreshold,
 	}
 	if len(freeTempThreshold) > 0 {
 		prop.FreeTempSpaceThreshold = freeTempThreshold[0]
+	}
+	if len(freeTempThreshold) > 1 {
+		prop.FreeDiskSpaceWarningThreshold = freeTempThreshold[1]
+	}
+	if len(freeTempThreshold) > 2 {
+		prop.FreeTempSpaceWarningThreshold = freeTempThreshold[2]
 	}
 	return prop
 }
@@ -259,7 +270,7 @@ type WorkspaceCleanupNodeProperty struct {
 	XMLName xml.Name `xml:"hudson.plugins.ws__cleanup.DisableDeferredWipeoutNodeProperty"`
 	Class   string   `xml:"-"`
 	// Plugin attribute is optional - Jenkins sets this automatically based on installed plugin version
-	Plugin  string   `xml:"plugin,attr,omitempty"`
+	Plugin string `xml:"plugin,attr,omitempty"`
 }
 
 func (w *WorkspaceCleanupNodeProperty) GetClass() string {
@@ -295,7 +306,8 @@ func (r *RawNodeProperty) GetClass() string {
 
 // NewRawNodeProperty creates a custom node property with the given class name and inner XML
 // Example:
-//   prop := NewRawNodeProperty("my.custom.NodeProperty", "<setting>value</setting>")
+//
+//	prop := NewRawNodeProperty("my.custom.NodeProperty", "<setting>value</setting>")
 func NewRawNodeProperty(className string, innerXML string) *RawNodeProperty {
 	return &RawNodeProperty{
 		XMLName:  xml.Name{Local: className},
@@ -343,7 +355,7 @@ func (e *PropertyMarshalError) Unwrap() error {
 // UnmarshalXML handles custom unmarshaling for NodeProperties
 func (np *NodeProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	np.Properties = []NodeProperty{}
-	
+
 	for {
 		token, err := d.Token()
 		if err != nil {
@@ -356,7 +368,7 @@ func (np *NodeProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) e
 		switch t := token.(type) {
 		case xml.StartElement:
 			var prop NodeProperty
-			
+
 			// Determine the type based on the element name
 			// Note: Jenkins may mangle element names by replacing . with __ in some cases
 			switch t.Name.Local {
@@ -394,17 +406,17 @@ func (np *NodeProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) e
 				}
 				prop = &rawProp
 			}
-			
+
 			if prop != nil {
 				np.Properties = append(np.Properties, prop)
 			}
-			
+
 		case xml.EndElement:
 			if t.Name.Local == "nodeProperties" {
 				return nil
 			}
 		}
 	}
-	
+
 	return nil
 }

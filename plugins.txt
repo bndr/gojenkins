@@ -3,3 +3,4 @@ ssh-slaves:latest
 credentials:latest
 ssh-credentials:latest
 docker-commons:latest
+ws-cleanup:latest
