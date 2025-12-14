@@ -272,7 +272,26 @@ if err != nil {
   log.Fatal(err)
 }
 // Delete user not created by gojenkins
-err = jenkins.DeleteUser("username")
+err = jenkins.DeleteUser(ctx, "username")
+if err != nil {
+  log.Fatal(err)
+}
+
+// List all users
+users, err := jenkins.ListUsers(ctx)
+if err != nil {
+  log.Fatal(err)
+}
+for _, u := range users {
+  fmt.Printf("%s (%s) %s\n", u.UserName, u.FullName, u.Email)
+}
+
+// Inspect the account tied to the current credentials
+me, err := jenkins.GetCurrentUser(ctx)
+if err != nil {
+  log.Fatal(err)
+}
+fmt.Printf("Authenticated as %s (%s) %s\n", me.UserName, me.FullName, me.Email)
 ```
 
 ## Create and Revoke API Tokens

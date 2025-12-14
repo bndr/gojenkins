@@ -59,6 +59,30 @@ var pluginsInfo = &cobra.Command{
 	},
 }
 
+var usersInfo = &cobra.Command{
+	Use:   "users",
+	Short: "get all users",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := jenkinsMod.ShowUsers(); err != nil {
+			fmt.Println("❌ cannot get users")
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	},
+}
+
+var currentUserInfo = &cobra.Command{
+	Use:   "current-user",
+	Short: "get the authenticated user",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := jenkinsMod.ShowCurrentUser(); err != nil {
+			fmt.Println("❌ cannot get current user")
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	},
+}
+
 var viewsInfo = &cobra.Command{
 	Use:   "views",
 	Short: "get all views",
@@ -264,6 +288,8 @@ func init() {
 	// get
 	getCmd.AddCommand(connectionInfo)
 	getCmd.AddCommand(pluginsInfo)
+	getCmd.AddCommand(usersInfo)
+	getCmd.AddCommand(currentUserInfo)
 	getCmd.AddCommand(viewsInfo)
 	getCmd.AddCommand(nodes)
 	getCmd.AddCommand(build)

@@ -9,7 +9,37 @@ import (
 
 const (
 	createUserContext = "/securityRealm/createAccountByAdmin"
+	listUserContext   = "/securityRealm"
 )
+
+type securityRealmUserList struct {
+	Users securityRealmUsers `json:"users"`
+}
+
+type securityRealmUsers struct {
+	Users []securityRealmUserNode `json:"users"`
+}
+
+type securityRealmUserNode struct {
+	User securityRealmUser `json:"user"`
+}
+
+type securityRealmUser struct {
+	ID         string                    `json:"id"`
+	FullName   string                    `json:"fullName"`
+	Properties []securityRealmUserConfig `json:"property"`
+}
+
+type currentUserResponse struct {
+	ID         string                    `json:"id"`
+	FullName   string                    `json:"fullName"`
+	Properties []securityRealmUserConfig `json:"property"`
+}
+
+type securityRealmUserConfig struct {
+	Class   string `json:"_class"`
+	Address string `json:"address"`
+}
 
 // User is a Jenkins account
 type User struct {
@@ -69,4 +99,57 @@ func (j *Jenkins) DeleteUser(ctx context.Context, userName string) error {
 // Delete deletes a Jenkins account
 func (u *User) Delete() error {
 	return u.Jenkins.DeleteUser(context.Background(), u.UserName)
+}
+
+// ListUsers returns all Jenkins accounts that the security realm exposes.
+func (j *Jenkins) ListUsers(ctx context.Context) ([]User, error) {
+	resp := new(securityRealmUserList)
+	query := map[string]string{"depth": "1"}
+	_, err := j.Requester.GetJSON(ctx, listUserContext, resp, query)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Users.Users) == 0 {
+		return []User{}, nil
+	}
+
+	users := make([]User, 0, len(resp.Users.Users))
+	for _, item := range resp.Users.Users {
+		user := User{
+			Jenkins:  j,
+			UserName: item.User.ID,
+			FullName: item.User.FullName,
+			Email:    extractUserEmail(item.User.Properties),
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+// GetCurrentUser returns the Jenkins account associated with the current credentials.
+func (j *Jenkins) GetCurrentUser(ctx context.Context) (*User, error) {
+	resp := new(currentUserResponse)
+	_, err := j.Requester.GetJSON(ctx, "/me", resp, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &User{
+		Jenkins:  j,
+		UserName: resp.ID,
+		FullName: resp.FullName,
+		Email:    extractUserEmail(resp.Properties),
+	}
+	return user, nil
+}
+
+func extractUserEmail(props []securityRealmUserConfig) string {
+	for _, prop := range props {
+		if prop.Class == "hudson.tasks.Mailer$UserProperty" && prop.Address != "" {
+			return prop.Address
+		}
+	}
+	return ""
 }
