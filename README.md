@@ -121,6 +121,89 @@ for _, node := range nodes {
 
 ```
 
+### Create and Manage Jenkins Nodes
+
+```go
+// Create a basic node with JNLP launcher
+node, err := jenkins.CreateNodeV2(ctx, "my-node",
+    WithNumExecutors(2),
+    WithDescription("My Jenkins Node"),
+    WithRemoteFS("/var/jenkins"),
+    WithLabel("docker linux"),
+)
+if err != nil {
+    panic(err)
+}
+
+// Create a node with environment variables
+envVars := map[string]string{
+    "JAVA_HOME": "/usr/lib/jvm/java-11",
+    "PATH":      "/usr/local/bin:/usr/bin",
+}
+node, err := jenkins.CreateNodeV2(ctx, "node-with-env",
+    WithNumExecutors(4),
+    WithRemoteFS("/home/jenkins"),
+    WithNodeProperties(
+        NewEnvironmentVariablesNodeProperty(envVars),
+    ),
+)
+
+// Create a node with SSH launcher
+sshLauncher := &SSHLauncher{
+    Host:                    "192.168.1.100",
+    Port:                    22,
+    CredentialsId:           "ssh-key-id",
+    JavaPath:                "/usr/bin/java",
+    JvmOptions:              "-Xmx1024m",
+    LaunchTimeoutSeconds:    60,
+    MaxNumRetries:           10,
+    RetryWaitTime:           15,
+    SshHostKeyVerificationStrategy: &ManuallyTrustedKeyVerificationStrategy{},
+}
+
+node, err := jenkins.CreateNodeV2(ctx, "ssh-node",
+    WithNumExecutors(2),
+    WithDescription("SSH Connected Node"),
+    WithRemoteFS("/home/jenkins"),
+    WithLabel("ssh production"),
+    WithLauncher(sshLauncher),
+)
+
+// Create a node with multiple node properties
+toolLocations := map[string]string{
+    "hudson.plugins.git.GitTool$DescriptorImpl:Default": "/usr/bin/git",
+    "hudson.model.JDK:JDK11":                            "/usr/lib/jvm/java-11",
+}
+
+node, err := jenkins.CreateNodeV2(ctx, "full-featured-node",
+    WithNumExecutors(4),
+    WithDescription("Node with all features"),
+    WithRemoteFS("/var/jenkins"),
+    WithLabel("builds testing"),
+    WithNodeProperties(
+        NewEnvironmentVariablesNodeProperty(envVars),
+        NewToolLocationNodeProperty(toolLocations),
+        NewDiskSpaceMonitorNodeProperty("1GiB"),
+    ),
+)
+
+// Update an existing node
+updatedNode, err := node.UpdateNodeV2(ctx, "my-node",
+    WithNumExecutors(8),
+    WithDescription("Updated description"),
+    WithLabel("updated-label"),
+)
+if err != nil {
+    panic(err)
+}
+
+// Delete a node
+err = node.Delete(ctx)
+if err != nil {
+    panic(err)
+}
+```
+
 ### Get all Builds for specific Job, and check their status
 
 ```go

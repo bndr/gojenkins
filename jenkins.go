@@ -17,6 +17,7 @@ package gojenkins
 
 import (
 	"context"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"log"
@@ -141,13 +142,128 @@ func newJNLPLauncherRequest(j *JNLPLauncher) *createJNLPLauncherRequest {
 // Example : jenkins.CreateNode("nodeName", 1, "Description", "/var/lib/jenkins", "jdk8 docker", map[string]string{"method": "JNLPLauncher"})
 // By Default JNLPLauncher is created
 // Multiple labels should be separated by blanks
+// CreateNode creates a new Jenkins node with the specified configuration.
+// This is a convenience wrapper around CreateNodeV2 for backward compatibility.
+// CreateNode creates a new Jenkins node.
+//
+// Deprecated: Use CreateNodeV2 instead. CreateNodeV2 provides a more flexible API
+// with functional options and support for node properties (environment variables,
+// tool locations, etc.).
+//
+// Example migration:
+//   // Old way:
+//   node, err := jenkins.CreateNode(ctx, "node1", 2, "description", "/var/jenkins", "label", launcher)
+//
+//   // New way:
+//   node, err := jenkins.CreateNodeV2(ctx, "node1",
+//       WithNumExecutors(2),
+//       WithDescription("description"),
+//       WithRemoteFS("/var/jenkins"),
+//       WithLabel("label"),
+//       WithLauncher(launcher),
+//   )
 func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
-	// If no options are given create a JNLP node by default.
-	if launchOptions == nil {
-		launchOptions = DefaultJNLPLauncher()
+	options := []NodeOption{
+		WithNumExecutors(numExecutors),
+		WithDescription(description),
+		WithRemoteFS(remoteFS),
+		WithLabel(label),
 	}
+	
+	if launchOptions != nil {
+		options = append(options, WithLauncher(launchOptions))
+	}
+	
+	return j.CreateNodeV2(ctx, name, options...)
+}
+
+// buildNodeCreationRequest constructs the query parameters for node creation via JSON API
+func buildNodeCreationRequest(name string, config *nodeConfig, launcher interface{}) map[string]string {
+	const NODE_TYPE = "hudson.slaves.DumbSlave$DescriptorImpl"
+	const MODE = "NORMAL"
+	
+	return map[string]string{
+		"name": name,
+		"type": NODE_TYPE,
+		"json": makeJson(map[string]interface{}{
+			"name":               name,
+			"nodeDescription":    config.description,
+			"remoteFS":           config.remoteFS,
+			"numExecutors":       config.numExecutors,
+			"mode":               MODE,
+			"type":               NODE_TYPE,
+			"labelString":        config.label,
+			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
+			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
+			"launcher":           launcher,
+		}),
+	}
+}
+
+/*
+CreateNodeV2 creates a Jenkins node with the given name and options.
+This version uses functional options pattern for better extensibility and maintainability.
+It uses XML API to support setting node properties.
+Example:
+  node, err := jenkins.CreateNodeV2(ctx, "mynode",
+      WithNumExecutors(2),
+      WithDescription("My node"),
+      WithRemoteFS("/var/jenkins"),
+      WithLabel("docker linux"),
+      WithLauncher(DefaultJNLPLauncher()),
+      WithNodeProperties(
+          NewEnvironmentVariablesNodeProperty(map[string]string{"VAR1": "value1"}),
+      ),
+  )
+*/
+func (j *Jenkins) CreateNodeV2(ctx context.Context, name string, options ...NodeOption) (*Node, error) {
+	// Set defaults
+	config := &nodeConfig{
+		name:         name,
+		numExecutors: 1,
+		description:  "",
+		remoteFS:     "/var/jenkins",
+		label:        "",
+		launcher:     DefaultJNLPLauncher(),
+	}
+
+	// Apply options
+	for _, opt := range options {
+		opt(config)
+	}
+
+	// Build the Slave XML structure
+	createNodeRequest := &Slave{
+		Name:         config.name,
+		NumExecutors: config.numExecutors,
+		Description:  config.description,
+		RemoteFS:     config.remoteFS,
+		Label:        config.label,
+		Mode:         NORMAL,
+		Launcher: &CustomLauncher{
+			Class:    config.launcher.GetClass(),
+			Launcher: config.launcher,
+		},
+	}
+
+	// Add node properties if provided
+	if len(config.nodeProperties) > 0 {
+		createNodeRequest.NodeProperties = &NodeProperties{
+			Properties: config.nodeProperties,
+		}
+	}
+
+	// Converts the go struct to xml
+	xmlBytes, err := xml.Marshal(createNodeRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// Jenkins' /computer/doCreateItem XML API is unreliable, so we use a hybrid approach:
+	// Create the node structure using JSON API, then immediately set the full config via XML.
+	// This ensures node properties are set correctly in a single transaction from the caller's perspective.
 	var launcher interface{}
-	switch l := launchOptions.(type) {
+	switch l := config.launcher.(type) {
 	case *JNLPLauncher:
 		launcher = newJNLPLauncherRequest(l)
 	case *SSHLauncher:
@@ -156,40 +272,37 @@ func (j *Jenkins) CreateNode(ctx context.Context, name string, numExecutors int,
 		return nil, errors.New("launcher method not supported")
 	}
 
-	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
-	NODE_TYPE := "hudson.slaves.DumbSlave$DescriptorImpl"
-	MODE := "NORMAL"
-	qr := map[string]string{
-		"name": name,
-		"type": NODE_TYPE,
-		"json": makeJson(map[string]interface{}{
-			"name":               name,
-			"nodeDescription":    description,
-			"remoteFS":           remoteFS,
-			"numExecutors":       numExecutors,
-			"mode":               MODE,
-			"type":               NODE_TYPE,
-			"labelString":        label,
-			"retentionsStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always"},
-			"nodeProperties":     map[string]string{"stapler-class-bag": "true"},
-			"launcher":           launcher,
-		}),
-	}
+	qr := buildNodeCreationRequest(name, config, launcher)
 
+	// Step 1: Create basic node via JSON API
 	resp, err := j.Requester.Post(ctx, "/computer/doCreateItem", nil, nil, qr)
-
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode < 400 {
-		_, err := node.Poll(ctx)
+	if resp.StatusCode >= 400 {
+		return nil, errors.New(strconv.Itoa(resp.StatusCode))
+	}
+
+	// Step 2: If node properties are present, immediately update with full XML config
+	node := &Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
+	if len(config.nodeProperties) > 0 {
+		resp, err = j.Requester.PostXML(ctx, node.Base+"/config.xml", string(xmlBytes), nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		return node, nil
+		if resp.StatusCode >= 400 {
+			return nil, errors.New(strconv.Itoa(resp.StatusCode))
+		}
 	}
-	return nil, errors.New(strconv.Itoa(resp.StatusCode))
+
+	// Poll to get the fully initialized node
+	_, err = node.Poll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return node, nil
 }
 
 // Delete a Jenkins slave node

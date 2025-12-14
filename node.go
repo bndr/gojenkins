@@ -93,15 +93,71 @@ type NodeResponse struct {
 // the rest api gives general information about the node, but this gives detailed information about the nodes
 // actual configuration
 type Slave struct {
-	XMLName        xml.Name        `xml:"slave"`
-	Name           string          `xml:"name"`
-	Description    string          `xml:"description"`
-	RemoteFS       string          `xml:"remoteFS"`
-	NumExecutors   int             `xml:"numExecutors"`
-	Mode           MODE            `xml:"mode"`
-	Launcher       *CustomLauncher `xml:"launcher"`
-	Label          string          `xml:"label"`
-	NodeProperties string          `xml:"nodeProperties"`
+	XMLName        xml.Name         `xml:"slave"`
+	Name           string           `xml:"name"`
+	Description    string           `xml:"description"`
+	RemoteFS       string           `xml:"remoteFS"`
+	NumExecutors   int              `xml:"numExecutors"`
+	Mode           MODE             `xml:"mode"`
+	Launcher       *CustomLauncher  `xml:"launcher"`
+	Label          string           `xml:"label"`
+	NodeProperties *NodeProperties  `xml:"nodeProperties,omitempty"`
+}
+
+// NodeOption is a function type for configuring a Node
+type NodeOption func(*nodeConfig)
+
+// nodeConfig holds configuration options for creating/updating nodes
+type nodeConfig struct {
+	name           string
+	numExecutors   int
+	description    string
+	remoteFS       string
+	label          string
+	launcher       Launcher
+	nodeProperties []NodeProperty
+}
+
+// WithNodeProperties sets the node properties
+func WithNodeProperties(props ...NodeProperty) NodeOption {
+	return func(c *nodeConfig) {
+		c.nodeProperties = append(c.nodeProperties, props...)
+	}
+}
+
+// WithLauncher sets the launcher for the node
+func WithLauncher(launcher Launcher) NodeOption {
+	return func(c *nodeConfig) {
+		c.launcher = launcher
+	}
+}
+
+// WithNumExecutors sets the number of executors
+func WithNumExecutors(num int) NodeOption {
+	return func(c *nodeConfig) {
+		c.numExecutors = num
+	}
+}
+
+// WithDescription sets the node description
+func WithDescription(desc string) NodeOption {
+	return func(c *nodeConfig) {
+		c.description = desc
+	}
+}
+
+// WithRemoteFS sets the remote filesystem root
+func WithRemoteFS(fs string) NodeOption {
+	return func(c *nodeConfig) {
+		c.remoteFS = fs
+	}
+}
+
+// WithLabel sets the node label
+func WithLabel(label string) NodeOption {
+	return func(c *nodeConfig) {
+		c.label = label
+	}
 }
 
 // GetConfig returns the launcher configuration for a given node.
@@ -121,6 +177,24 @@ func (n *Node) GetSlaveConfig(ctx context.Context) (*Slave, error) {
 /*
 Updates a Jenkins node with a new configuration
 */
+// UpdateNode updates an existing Jenkins node.
+//
+// Deprecated: Use UpdateNodeV2 instead. UpdateNodeV2 provides a more flexible API
+// with functional options and support for node properties (environment variables,
+// tool locations, etc.).
+//
+// Example migration:
+//   // Old way:
+//   updated, err := node.UpdateNode(ctx, "new-name", 4, "updated", "/path", "label", launcher)
+//
+//   // New way:
+//   updated, err := node.UpdateNodeV2(ctx, "new-name",
+//       WithNumExecutors(4),
+//       WithDescription("updated"),
+//       WithRemoteFS("/path"),
+//       WithLabel("label"),
+//       WithLauncher(launcher),
+//   )
 func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, description string, remoteFS string, label string, launchOptions Launcher) (*Node, error) {
 	if launchOptions == nil {
 		launchOptions = DefaultJNLPLauncher()
@@ -168,6 +242,90 @@ func (n *Node) UpdateNode(ctx context.Context, name string, numExecutors int, de
 	// If the user requested a launch option to be set but the returned config
 	// was inaccurate return an error
 	if slaveConfig.Launcher == nil && launchOptions != nil {
+		return nil, fmt.Errorf("failed to set launcher config. Config was null")
+	}
+
+	// Check for success status code.
+	if resp.StatusCode < 400 {
+		_, err := newNode.Poll(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return newNode, nil
+	}
+
+	// If the response indicated non success throw an error.
+	return nil, errors.New(strconv.Itoa(resp.StatusCode))
+}
+
+/*
+UpdateNodeV2 updates a Jenkins node with the given name and options.
+This version uses functional options pattern for better extensibility and maintainability.
+It uses XML API to support setting node properties.
+*/
+func (n *Node) UpdateNodeV2(ctx context.Context, name string, options ...NodeOption) (*Node, error) {
+	// Set defaults
+	config := &nodeConfig{
+		name:         name,
+		numExecutors: 1,
+		description:  "",
+		remoteFS:     "/var/jenkins",
+		label:        "",
+		launcher:     DefaultJNLPLauncher(),
+	}
+
+	// Apply options
+	for _, opt := range options {
+		opt(config)
+	}
+
+	// Build the Slave XML structure
+	updateNodeRequest := &Slave{
+		Name:         config.name,
+		NumExecutors: config.numExecutors,
+		Description:  config.description,
+		RemoteFS:     config.remoteFS,
+		Label:        config.label,
+		Mode:         NORMAL,
+		Launcher: &CustomLauncher{
+			Class:    config.launcher.GetClass(),
+			Launcher: config.launcher,
+		},
+	}
+
+	// Add node properties if provided
+	if len(config.nodeProperties) > 0 {
+		updateNodeRequest.NodeProperties = &NodeProperties{
+			Properties: config.nodeProperties,
+		}
+	}
+
+	// Converts the go struct to xml to send to Jenkins
+	xmlBytes, err := xml.Marshal(updateNodeRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// Post an XML request.
+	resp, err := n.Jenkins.Requester.PostXML(ctx, n.Base+"/config.xml", string(xmlBytes), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the updated node!
+	newNode, err := n.Jenkins.GetNode(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make sure the launcher was updated correctly
+	slaveConfig, err := newNode.GetSlaveConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the user requested a launch option to be set but the returned config was inaccurate return an error
+	if slaveConfig.Launcher == nil && config.launcher != nil {
 		return nil, fmt.Errorf("failed to set launcher config. Config was null")
 	}
 
