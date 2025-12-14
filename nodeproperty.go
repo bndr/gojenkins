@@ -266,6 +266,7 @@ func NewDiskSpaceMonitorNodeProperty(freeDiskThreshold string, freeTempThreshold
 
 // WorkspaceCleanupNodeProperty disables deferred workspace wipeout for a node
 // This is from the ws-cleanup plugin
+// The presence of this property means deferred wipeout is disabled
 type WorkspaceCleanupNodeProperty struct {
 	XMLName xml.Name `xml:"hudson.plugins.ws__cleanup.DisableDeferredWipeoutNodeProperty"`
 	Class   string   `xml:"-"`
@@ -277,18 +278,13 @@ func (w *WorkspaceCleanupNodeProperty) GetClass() string {
 	return "hudson.plugins.ws_cleanup.DisableDeferredWipeoutNodeProperty"
 }
 
-// NewWorkspaceCleanupNodeProperty creates a workspace cleanup property
-// This disables deferred wipeout (requires ws-cleanup plugin)
-func NewWorkspaceCleanupNodeProperty() *WorkspaceCleanupNodeProperty {
+// NewDeferredWipeoutNodeProperty creates a workspace cleanup property that disables deferred wipeout
+// The presence of this property disables deferred wipeout (requires ws-cleanup plugin)
+func NewDeferredWipeoutNodeProperty() *WorkspaceCleanupNodeProperty {
 	return &WorkspaceCleanupNodeProperty{
 		Class: "hudson.plugins.ws_cleanup.DisableDeferredWipeoutNodeProperty",
 		// Plugin version is omitted - Jenkins will set it automatically
 	}
-}
-
-// NewDeferredWipeoutNodeProperty is an alias for NewWorkspaceCleanupNodeProperty
-func NewDeferredWipeoutNodeProperty() *WorkspaceCleanupNodeProperty {
-	return NewWorkspaceCleanupNodeProperty()
 }
 
 // RawNodeProperty allows users to define custom node properties with arbitrary XML content
