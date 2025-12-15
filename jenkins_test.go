@@ -431,14 +431,13 @@ func TestDeleteView(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 创建 mock HTTP server
+			// create mock HTTP server
 			var ts *httptest.Server
 			if tt.hasError {
-				// 模拟网络错误：不启动 server，或返回错误
+				// Simulated network error: server not started, or error returned
 				ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// 不会走到这里
 				}))
-				ts.Close() // 关闭 server，后续请求会失败
+				ts.Close() // close server
 			} else {
 				ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					if r.URL.Path != "/view/test-view/doDelete" {
@@ -456,7 +455,7 @@ func TestDeleteView(t *testing.T) {
 				defer ts.Close()
 			}
 
-			// 创建 Jenkins 实例，使用 mock server 的 URL
+			// Create a Jenkins instance using the URL of the mock server
 			ctx := context.Background()
 			err := jenkins.DeleteView(ctx, "test-view")
 
