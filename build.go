@@ -24,6 +24,7 @@ import (
 	"time"
 )
 
+// Build represents a Jenkins build and provides methods to interact with it.
 type Build struct {
 	Raw     *BuildResponse
 	Job     *Job
@@ -42,11 +43,13 @@ type branch struct {
 	Name string
 }
 
+// BuildRevision represents a VCS revision associated with a build.
 type BuildRevision struct {
 	SHA1   string   `json:"SHA1"`
 	Branch []branch `json:"branch"`
 }
 
+// Builds represents build information for branches in a multi-branch project.
 type Builds struct {
 	BuildNumber int64         `json:"buildNumber"`
 	BuildResult interface{}   `json:"buildResult"`
@@ -54,6 +57,7 @@ type Builds struct {
 	Revision    BuildRevision `json:"revision"`
 }
 
+// Culprit represents a user who may have caused a build to fail.
 type Culprit struct {
 	AbsoluteUrl string
 	FullName    string
@@ -73,6 +77,7 @@ type generalObj struct {
 	UrlName                 string
 }
 
+// TestResult represents the test results of a build.
 type TestResult struct {
 	Duration  float64 `json:"duration"`
 	Empty     bool    `json:"empty"`
@@ -103,6 +108,7 @@ type TestResult struct {
 	} `json:"suites"`
 }
 
+// BuildResponse represents the JSON response from the Jenkins API for a build.
 type BuildResponse struct {
 	Actions   []generalObj
 	Artifacts []struct {
@@ -189,26 +195,32 @@ type consoleResponse struct {
 	HasMoreText bool
 }
 
-// Builds
+// Info returns the raw BuildResponse containing all build details.
 func (b *Build) Info() *BuildResponse {
 	return b.Raw
 }
 
+// GetActions returns all actions associated with the build.
 func (b *Build) GetActions() []generalObj {
 	return b.Raw.Actions
 }
 
+// GetUrl returns the URL of the build.
 func (b *Build) GetUrl() string {
 	return b.Raw.URL
 }
 
+// GetBuildNumber returns the build number.
 func (b *Build) GetBuildNumber() int64 {
 	return b.Raw.Number
 }
+
+// GetResult returns the result status of the build (e.g., SUCCESS, FAILURE).
 func (b *Build) GetResult() string {
 	return b.Raw.Result
 }
 
+// GetArtifacts returns all artifacts produced by the build.
 func (b *Build) GetArtifacts() []Artifact {
 	artifacts := make([]Artifact, len(b.Raw.Artifacts))
 	for i, artifact := range b.Raw.Artifacts {
@@ -222,10 +234,12 @@ func (b *Build) GetArtifacts() []Artifact {
 	return artifacts
 }
 
+// GetCulprits returns the list of users who may have caused the build to fail.
 func (b *Build) GetCulprits() []Culprit {
 	return b.Raw.Culprits
 }
 
+// Stop aborts a running build.
 func (b *Build) Stop(ctx context.Context) (bool, error) {
 	if b.IsRunning(ctx) {
 		response, err := b.Jenkins.Requester.Post(ctx, b.Base+"/stop", nil, nil, nil)
@@ -237,6 +251,7 @@ func (b *Build) Stop(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// GetConsoleOutput returns the complete console output of the build.
 func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	url := b.Base + "/consoleText"
 	var content string
@@ -244,6 +259,8 @@ func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	return content
 }
 
+// GetConsoleOutputFromIndex returns console output starting from a specific byte offset.
+// Useful for streaming logs progressively.
 func (b *Build) GetConsoleOutputFromIndex(ctx context.Context, startID int64) (consoleResponse, error) {
 	strstart := strconv.FormatInt(startID, 10)
 	url := b.Base + "/logText/progressiveText"
@@ -267,6 +284,7 @@ func (b *Build) GetConsoleOutputFromIndex(ctx context.Context, startID int64) (c
 	return console, err
 }
 
+// GetCauses returns the causes that triggered the build.
 func (b *Build) GetCauses(ctx context.Context) ([]map[string]interface{}, error) {
 	_, err := b.Poll(ctx)
 	if err != nil {
@@ -277,9 +295,10 @@ func (b *Build) GetCauses(ctx context.Context) ([]map[string]interface{}, error)
 			return a.Causes, nil
 		}
 	}
-	return nil, errors.New("No Causes")
+	return nil, errors.New("no causes")
 }
 
+// GetParameters returns the parameters used to trigger the build.
 func (b *Build) GetParameters() []parameter {
 	for _, a := range b.Raw.Actions {
 		if a.Parameters != nil {
@@ -289,6 +308,7 @@ func (b *Build) GetParameters() []parameter {
 	return nil
 }
 
+// GetInjectedEnvVars returns the environment variables injected into the build.
 func (b *Build) GetInjectedEnvVars(ctx context.Context) (map[string]string, error) {
 	var envVars struct {
 		EnvMap map[string]string `json:"envMap"`
@@ -301,6 +321,7 @@ func (b *Build) GetInjectedEnvVars(ctx context.Context) (map[string]string, erro
 	return envVars.EnvMap, nil
 }
 
+// GetDownstreamBuilds returns all downstream builds triggered by this build.
 func (b *Build) GetDownstreamBuilds(ctx context.Context) ([]*Build, error) {
 	result := make([]*Build, 0)
 	downstreamJobs, err := b.Job.GetDownstreamJobs(ctx)
@@ -329,6 +350,7 @@ func (b *Build) GetDownstreamBuilds(ctx context.Context) ([]*Build, error) {
 	return result, nil
 }
 
+// GetDownstreamJobNames returns the names of downstream jobs that used artifacts from this build.
 func (b *Build) GetDownstreamJobNames(ctx context.Context) []string {
 	result := make([]string, 0)
 	downstreamJobs := b.Job.GetDownstreamJobsMetadata()
@@ -345,6 +367,7 @@ func (b *Build) GetDownstreamJobNames(ctx context.Context) []string {
 	return result
 }
 
+// GetAllFingerPrints returns all fingerprints associated with this build.
 func (b *Build) GetAllFingerPrints(ctx context.Context) []*FingerPrint {
 	b.Poll(ctx)
 	result := make([]*FingerPrint, len(b.Raw.FingerPrint))
@@ -354,6 +377,7 @@ func (b *Build) GetAllFingerPrints(ctx context.Context) []*FingerPrint {
 	return result
 }
 
+// GetUpstreamJob returns the job that triggered this build.
 func (b *Build) GetUpstreamJob(ctx context.Context) (*Job, error) {
 	causes, err := b.GetCauses(ctx)
 	if err != nil {
@@ -365,9 +389,10 @@ func (b *Build) GetUpstreamJob(ctx context.Context) (*Job, error) {
 			return b.Jenkins.GetJob(ctx, job.(string))
 		}
 	}
-	return nil, errors.New("Unable to get Upstream Job")
+	return nil, errors.New("unable to get an upstream job")
 }
 
+// GetUpstreamBuildNumber returns the build number of the upstream build that triggered this build.
 func (b *Build) GetUpstreamBuildNumber(ctx context.Context) (int64, error) {
 	causes, err := b.GetCauses(ctx)
 	if err != nil {
@@ -386,6 +411,7 @@ func (b *Build) GetUpstreamBuildNumber(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
+// GetUpstreamBuild returns the upstream build that triggered this build.
 func (b *Build) GetUpstreamBuild(ctx context.Context) (*Build, error) {
 	job, err := b.GetUpstreamJob(ctx)
 	if err != nil {
@@ -400,6 +426,7 @@ func (b *Build) GetUpstreamBuild(ctx context.Context) (*Build, error) {
 	return nil, errors.New("Build not found")
 }
 
+// GetMatrixRuns returns all matrix configuration builds for a matrix project build.
 func (b *Build) GetMatrixRuns(ctx context.Context) ([]*Build, error) {
 	_, err := b.Poll(ctx, 0)
 	if err != nil {
@@ -416,6 +443,7 @@ func (b *Build) GetMatrixRuns(ctx context.Context) ([]*Build, error) {
 	return result, nil
 }
 
+// GetResultSet returns the test results for the build.
 func (b *Build) GetResultSet(ctx context.Context) (*TestResult, error) {
 
 	url := b.Base + "/testReport"
@@ -430,19 +458,23 @@ func (b *Build) GetResultSet(ctx context.Context) (*TestResult, error) {
 
 }
 
+// GetTimestamp returns the time when the build started.
 func (b *Build) GetTimestamp() time.Time {
 	msInt := int64(b.Raw.Timestamp)
 	return time.Unix(0, msInt*int64(time.Millisecond))
 }
 
+// GetDuration returns the duration of the build in milliseconds.
 func (b *Build) GetDuration() float64 {
 	return b.Raw.Duration
 }
 
+// GetRevision returns the VCS revision (commit hash) associated with the build.
 func (b *Build) GetRevision() string {
 	vcs := b.Raw.ChangeSet.Kind
 
-	if vcs == "git" || vcs == "hg" {
+	switch vcs {
+	case "git", "hg":
 		for _, a := range b.Raw.Actions {
 			if a.LastBuiltRevision.SHA1 != "" {
 				return a.LastBuiltRevision.SHA1
@@ -451,30 +483,33 @@ func (b *Build) GetRevision() string {
 				return a.MercurialRevisionNumber
 			}
 		}
-	} else if vcs == "svn" {
+	case "svn":
 		return strconv.Itoa(b.Raw.ChangeSet.Revisions[0].Revision)
 	}
 	return ""
 }
 
-func (b *Build) GetRevisionBranch() string {
+// GetRevisionBranch returns the git branch SHA1 for the build.
+func (b *Build) GetRevisionBranch() (string, error) {
 	vcs := b.Raw.ChangeSet.Kind
 	if vcs == "git" {
 		for _, a := range b.Raw.Actions {
 			if len(a.LastBuiltRevision.Branch) > 0 && a.LastBuiltRevision.Branch[0].SHA1 != "" {
-				return a.LastBuiltRevision.Branch[0].SHA1
+				return a.LastBuiltRevision.Branch[0].SHA1, nil
 			}
 		}
 	} else {
-		panic("Not implemented")
+		return "", errors.New("not a git build")
 	}
-	return ""
+	return "", errors.New("no branch found")
 }
 
+// IsGood returns true if the build completed successfully.
 func (b *Build) IsGood(ctx context.Context) bool {
 	return (!b.IsRunning(ctx) && b.Raw.Result == STATUS_SUCCESS)
 }
 
+// IsRunning returns true if the build is currently in progress.
 func (b *Build) IsRunning(ctx context.Context) bool {
 	_, err := b.Poll(ctx)
 	if err != nil {
@@ -483,6 +518,7 @@ func (b *Build) IsRunning(ctx context.Context) bool {
 	return b.Raw.Building
 }
 
+// SetDescription sets the description for the build.
 func (b *Build) SetDescription(ctx context.Context, description string) error {
 	data := url.Values{}
 	data.Set("description", description)

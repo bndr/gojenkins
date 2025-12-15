@@ -19,6 +19,7 @@ import (
 	"strconv"
 )
 
+// Queue represents the Jenkins build queue.
 type Queue struct {
 	Jenkins *Jenkins
 	Raw     *queueResponse
@@ -29,6 +30,7 @@ type queueResponse struct {
 	Items []taskResponse
 }
 
+// Task represents a single item in the Jenkins build queue.
 type Task struct {
 	Raw     *taskResponse
 	Jenkins *Jenkins
@@ -64,6 +66,7 @@ type generalAction struct {
 	Parameters []parameter
 }
 
+// Tasks returns all tasks currently in the queue.
 func (q *Queue) Tasks() []*Task {
 	tasks := make([]*Task, len(q.Raw.Items))
 	for i, t := range q.Raw.Items {
@@ -72,6 +75,7 @@ func (q *Queue) Tasks() []*Task {
 	return tasks
 }
 
+// GetTaskById returns a task from the queue by its ID.
 func (q *Queue) GetTaskById(id int64) *Task {
 	for _, t := range q.Raw.Items {
 		if t.ID == id {
@@ -81,6 +85,7 @@ func (q *Queue) GetTaskById(id int64) *Task {
 	return nil
 }
 
+// GetTasksForJob returns all queued tasks for a specific job.
 func (q *Queue) GetTasksForJob(name string) []*Task {
 	tasks := make([]*Task, 0)
 	for _, t := range q.Raw.Items {
@@ -91,11 +96,13 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 	return tasks
 }
 
+// CancelTask cancels a queued task by its ID.
 func (q *Queue) CancelTask(ctx context.Context, id int64) (bool, error) {
 	task := q.GetTaskById(id)
 	return task.Cancel(ctx)
 }
 
+// Cancel removes the task from the build queue.
 func (t *Task) Cancel(ctx context.Context) (bool, error) {
 	qr := map[string]string{
 		"id": strconv.FormatInt(t.Raw.ID, 10),
@@ -107,14 +114,17 @@ func (t *Task) Cancel(ctx context.Context) (bool, error) {
 	return response.StatusCode == 200, nil
 }
 
+// GetJob returns the job associated with this task.
 func (t *Task) GetJob(ctx context.Context) (*Job, error) {
 	return t.Jenkins.GetJob(ctx, t.Raw.Task.Name)
 }
 
+// GetWhy returns the reason why the task is waiting in the queue.
 func (t *Task) GetWhy() string {
 	return t.Raw.Why
 }
 
+// GetParameters returns the build parameters for this task.
 func (t *Task) GetParameters() []parameter {
 	for _, a := range t.Raw.Actions {
 		if a.Parameters != nil {
@@ -124,6 +134,7 @@ func (t *Task) GetParameters() []parameter {
 	return nil
 }
 
+// GetCauses returns the causes that triggered this task.
 func (t *Task) GetCauses() []map[string]interface{} {
 	for _, a := range t.Raw.Actions {
 		if a.Causes != nil {
@@ -133,6 +144,7 @@ func (t *Task) GetCauses() []map[string]interface{} {
 	return nil
 }
 
+// Poll fetches the latest queue data from Jenkins.
 func (q *Queue) Poll(ctx context.Context) (int, error) {
 	response, err := q.Jenkins.Requester.GetJSON(ctx, q.Base, q.Raw, nil)
 	if err != nil {
@@ -141,6 +153,7 @@ func (q *Queue) Poll(ctx context.Context) (int, error) {
 	return response.StatusCode, nil
 }
 
+// Poll fetches the latest task data from Jenkins.
 func (t *Task) Poll(ctx context.Context) (int, error) {
 	response, err := t.Jenkins.Requester.GetJSON(ctx, t.Base, t.Raw, nil)
 	if err != nil {

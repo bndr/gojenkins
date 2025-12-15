@@ -19,8 +19,7 @@ import (
 	"errors"
 )
 
-// Nodes
-
+// Computers represents a collection of Jenkins nodes (agents).
 type Computers struct {
 	BusyExecutors  int             `json:"busyExecutors"`
 	Computers      []*NodeResponse `json:"computer"`
@@ -28,12 +27,14 @@ type Computers struct {
 	TotalExecutors int             `json:"totalExecutors"`
 }
 
+// Node represents a Jenkins agent (slave) node.
 type Node struct {
 	Raw     *NodeResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// NodeResponse represents the JSON response from the Jenkins API for a node.
 type NodeResponse struct {
 	Class       string        `json:"_class"`
 	Actions     []interface{} `json:"actions"`
@@ -83,6 +84,7 @@ type NodeResponse struct {
 	TemporarilyOffline bool          `json:"temporarilyOffline"`
 }
 
+// Info returns the node details after polling for the latest data.
 func (n *Node) Info(ctx context.Context) (*NodeResponse, error) {
 	_, err := n.Poll(ctx)
 	if err != nil {
@@ -91,10 +93,12 @@ func (n *Node) Info(ctx context.Context) (*NodeResponse, error) {
 	return n.Raw, nil
 }
 
+// GetName returns the display name of the node.
 func (n *Node) GetName() string {
 	return n.Raw.DisplayName
 }
 
+// Delete removes the node from Jenkins.
 func (n *Node) Delete(ctx context.Context) (bool, error) {
 	resp, err := n.Jenkins.Requester.Post(ctx, n.Base+"/doDelete", nil, nil, nil)
 	if err != nil {
@@ -103,6 +107,7 @@ func (n *Node) Delete(ctx context.Context) (bool, error) {
 	return resp.StatusCode == 200, nil
 }
 
+// IsOnline returns true if the node is online and available.
 func (n *Node) IsOnline(ctx context.Context) (bool, error) {
 	_, err := n.Poll(ctx)
 	if err != nil {
@@ -111,6 +116,7 @@ func (n *Node) IsOnline(ctx context.Context) (bool, error) {
 	return !n.Raw.Offline, nil
 }
 
+// IsTemporarilyOffline returns true if the node is temporarily marked offline.
 func (n *Node) IsTemporarilyOffline(ctx context.Context) (bool, error) {
 	_, err := n.Poll(ctx)
 	if err != nil {
@@ -119,6 +125,7 @@ func (n *Node) IsTemporarilyOffline(ctx context.Context) (bool, error) {
 	return n.Raw.TemporarilyOffline, nil
 }
 
+// IsIdle returns true if the node has no builds running.
 func (n *Node) IsIdle(ctx context.Context) (bool, error) {
 	_, err := n.Poll(ctx)
 	if err != nil {
@@ -127,6 +134,7 @@ func (n *Node) IsIdle(ctx context.Context) (bool, error) {
 	return n.Raw.Idle, nil
 }
 
+// IsJnlpAgent returns true if the node is a JNLP (Java Web Start) agent.
 func (n *Node) IsJnlpAgent(ctx context.Context) (bool, error) {
 	_, err := n.Poll(ctx)
 	if err != nil {
@@ -135,6 +143,7 @@ func (n *Node) IsJnlpAgent(ctx context.Context) (bool, error) {
 	return n.Raw.JnlpAgent, nil
 }
 
+// SetOnline brings a temporarily offline node back online.
 func (n *Node) SetOnline(ctx context.Context) (bool, error) {
 	_, err := n.Poll(ctx)
 
@@ -153,6 +162,7 @@ func (n *Node) SetOnline(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// SetOffline marks the node as temporarily offline with an optional message.
 func (n *Node) SetOffline(ctx context.Context, options ...interface{}) (bool, error) {
 	if !n.Raw.Offline {
 		return n.ToggleTemporarilyOffline(ctx, options...)
@@ -160,6 +170,7 @@ func (n *Node) SetOffline(ctx context.Context, options ...interface{}) (bool, er
 	return false, errors.New("Node already Offline")
 }
 
+// ToggleTemporarilyOffline toggles the temporarily offline status of the node.
 func (n *Node) ToggleTemporarilyOffline(ctx context.Context, options ...interface{}) (bool, error) {
 	state_before, err := n.IsTemporarilyOffline(ctx)
 	if err != nil {
@@ -183,6 +194,7 @@ func (n *Node) ToggleTemporarilyOffline(ctx context.Context, options ...interfac
 	return true, nil
 }
 
+// Poll fetches the latest node data from Jenkins.
 func (n *Node) Poll(ctx context.Context) (int, error) {
 	response, err := n.Jenkins.Requester.GetJSON(ctx, n.Base, n.Raw, nil)
 	if err != nil {
@@ -191,6 +203,7 @@ func (n *Node) Poll(ctx context.Context) (int, error) {
 	return response.StatusCode, nil
 }
 
+// LaunchNodeBySSH launches the node's agent via SSH.
 func (n *Node) LaunchNodeBySSH(ctx context.Context) (int, error) {
 	qr := map[string]string{
 		"json":   "",
@@ -203,6 +216,7 @@ func (n *Node) LaunchNodeBySSH(ctx context.Context) (int, error) {
 	return response.StatusCode, nil
 }
 
+// Disconnect disconnects the node from Jenkins.
 func (n *Node) Disconnect(ctx context.Context) (int, error) {
 	qr := map[string]string{
 		"offlineMessage": "",
@@ -216,6 +230,7 @@ func (n *Node) Disconnect(ctx context.Context) (int, error) {
 	return response.StatusCode, nil
 }
 
+// GetLogText returns the agent log text for the node.
 func (n *Node) GetLogText(ctx context.Context) (string, error) {
 	var log string
 

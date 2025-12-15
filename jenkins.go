@@ -62,7 +62,7 @@ func (j *Jenkins) Init(ctx context.Context) (*Jenkins, error) {
 
 	j.Version = rsp.Header.Get("X-Jenkins")
 	if j.Raw == nil || rsp.StatusCode != http.StatusOK {
-		return nil, errors.New("Connection Failed, Please verify that the host and credentials are correct.")
+		return nil, errors.New("connection Failed, Please verify that the host and credentials are correct")
 	}
 
 	return j, nil
@@ -300,6 +300,7 @@ func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int
 	return build, nil
 }
 
+// GetNode retrieves a node (agent) by its name.
 func (j *Jenkins) GetNode(ctx context.Context, name string) (*Node, error) {
 	node := Node{Jenkins: j, Raw: new(NodeResponse), Base: "/computer/" + name}
 	status, err := node.Poll(ctx)
@@ -312,6 +313,7 @@ func (j *Jenkins) GetNode(ctx context.Context, name string) (*Node, error) {
 	return nil, errors.New("No node found")
 }
 
+// GetLabel retrieves a label by its name.
 func (j *Jenkins) GetLabel(ctx context.Context, name string) (*Label, error) {
 	label := Label{Jenkins: j, Raw: new(LabelResponse), Base: "/label/" + name}
 	status, err := label.Poll(ctx)
@@ -324,6 +326,7 @@ func (j *Jenkins) GetLabel(ctx context.Context, name string) (*Label, error) {
 	return nil, errors.New("No label found")
 }
 
+// GetBuild retrieves a specific build by job name and build number.
 func (j *Jenkins) GetBuild(ctx context.Context, jobName string, number int64) (*Build, error) {
 	job, err := j.GetJob(ctx, jobName)
 	if err != nil {
@@ -337,6 +340,7 @@ func (j *Jenkins) GetBuild(ctx context.Context, jobName string, number int64) (*
 	return build, nil
 }
 
+// GetJob retrieves a job by its ID. Parent IDs can be provided for nested jobs.
 func (j *Jenkins) GetJob(ctx context.Context, id string, parentIDs ...string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, id), "/job/")}
 	status, err := job.Poll(ctx)
@@ -349,6 +353,7 @@ func (j *Jenkins) GetJob(ctx context.Context, id string, parentIDs ...string) (*
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetSubJob retrieves a nested job within a parent job or folder.
 func (j *Jenkins) GetSubJob(ctx context.Context, parentId string, childId string) (*Job, error) {
 	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + parentId + "/job/" + childId}
 	status, err := job.Poll(ctx)
@@ -361,6 +366,7 @@ func (j *Jenkins) GetSubJob(ctx context.Context, parentId string, childId string
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetFolder retrieves a folder by its ID. Parent folder IDs can be provided for nested folders.
 func (j *Jenkins) GetFolder(ctx context.Context, id string, parents ...string) (*Folder, error) {
 	folder := Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, id), "/job/")}
 	status, err := folder.Poll(ctx)
@@ -373,6 +379,7 @@ func (j *Jenkins) GetFolder(ctx context.Context, id string, parents ...string) (
 	return nil, errors.New(strconv.Itoa(status))
 }
 
+// GetAllNodes retrieves all nodes (agents) in Jenkins.
 func (j *Jenkins) GetAllNodes(ctx context.Context) ([]*Node, error) {
 	computers := new(Computers)
 
@@ -505,7 +512,7 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 	return p.Contains(name), nil
 }
 
-//InstallPlugin with given version and name
+// InstallPlugin with given version and name
 func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
 	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
@@ -529,6 +536,7 @@ func (j *Jenkins) ValidateFingerPrint(ctx context.Context, id string) (bool, err
 	return false, nil
 }
 
+// GetView retrieves a view by its name.
 func (j *Jenkins) GetView(ctx context.Context, name string) (*View, error) {
 	url := "/view/" + name
 	view := View{Jenkins: j, Raw: new(ViewResponse), Base: url}
@@ -539,6 +547,7 @@ func (j *Jenkins) GetView(ctx context.Context, name string) (*View, error) {
 	return &view, nil
 }
 
+// GetAllViews retrieves all views in Jenkins.
 func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	_, err := j.Poll(ctx)
 	if err != nil {
@@ -555,11 +564,13 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 // First Parameter - name of the View
 // Second parameter - Type
 // Possible Types:
-// 		gojenkins.LIST_VIEW
-// 		gojenkins.NESTED_VIEW
-// 		gojenkins.MY_VIEW
-// 		gojenkins.DASHBOARD_VIEW
-// 		gojenkins.PIPELINE_VIEW
+//
+//	gojenkins.LIST_VIEW
+//	gojenkins.NESTED_VIEW
+//	gojenkins.MY_VIEW
+//	gojenkins.DASHBOARD_VIEW
+//	gojenkins.PIPELINE_VIEW
+//
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
 	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
@@ -585,6 +596,7 @@ func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) 
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
+// Poll fetches the latest Jenkins data.
 func (j *Jenkins) Poll(ctx context.Context) (int, error) {
 	resp, err := j.Requester.GetJSON(ctx, "/", j.Raw, nil)
 	if err != nil {

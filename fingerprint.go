@@ -20,6 +20,7 @@ import (
 	"fmt"
 )
 
+// FingerPrint represents a Jenkins fingerprint used to track file usage across builds.
 type FingerPrint struct {
 	Jenkins *Jenkins
 	Base    string
@@ -27,6 +28,7 @@ type FingerPrint struct {
 	Raw     *FingerPrintResponse
 }
 
+// FingerPrintResponse represents the JSON response from the Jenkins API for a fingerprint.
 type FingerPrintResponse struct {
 	FileName string `json:"fileName"`
 	Hash     string `json:"hash"`
@@ -46,6 +48,7 @@ type FingerPrintResponse struct {
 	} `json:"usage"`
 }
 
+// Valid returns true if the fingerprint exists and matches the expected hash.
 func (f FingerPrint) Valid(ctx context.Context) (bool, error) {
 	status, err := f.Poll(ctx)
 
@@ -59,6 +62,7 @@ func (f FingerPrint) Valid(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// ValidateForBuild validates the fingerprint against a specific build and filename.
 func (f FingerPrint) ValidateForBuild(ctx context.Context, filename string, build *Build) (bool, error) {
 	valid, err := f.Valid(ctx)
 	if err != nil {
@@ -70,7 +74,7 @@ func (f FingerPrint) ValidateForBuild(ctx context.Context, filename string, buil
 	}
 
 	if f.Raw.FileName != filename {
-		return false, errors.New("Filename does not Match")
+		return false, errors.New("filename no not match")
 	}
 	if build != nil && f.Raw.Original.Name == build.Job.GetName() &&
 		f.Raw.Original.Number == build.GetBuildNumber() {
@@ -79,6 +83,7 @@ func (f FingerPrint) ValidateForBuild(ctx context.Context, filename string, buil
 	return false, nil
 }
 
+// GetInfo returns the fingerprint details.
 func (f FingerPrint) GetInfo(ctx context.Context) (*FingerPrintResponse, error) {
 	_, err := f.Poll(ctx)
 	if err != nil {
@@ -87,6 +92,7 @@ func (f FingerPrint) GetInfo(ctx context.Context) (*FingerPrintResponse, error) 
 	return f.Raw, nil
 }
 
+// Poll fetches the latest fingerprint data from Jenkins.
 func (f FingerPrint) Poll(ctx context.Context) (int, error) {
 	response, err := f.Jenkins.Requester.GetJSON(ctx, f.Base+f.Id, f.Raw, nil)
 	if err != nil {

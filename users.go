@@ -66,7 +66,7 @@ func (j *Jenkins) DeleteUser(ctx context.Context, userName string) error {
 	return nil
 }
 
-// Delete deletes a Jenkins account
+// Delete removes the user's Jenkins account.
 func (u *User) Delete() error {
 	return u.Jenkins.DeleteUser(context.Background(), u.UserName)
 }
