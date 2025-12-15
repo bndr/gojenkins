@@ -21,12 +21,14 @@ import (
 	"strings"
 )
 
+// Folder represents a Jenkins folder that can contain jobs and other folders.
 type Folder struct {
 	Raw     *FolderResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// FolderResponse represents the JSON response from the Jenkins API for a folder.
 type FolderResponse struct {
 	Actions     []generalObj
 	Description string     `json:"description"`
@@ -38,14 +40,17 @@ type FolderResponse struct {
 	Views       []ViewData `json:"views"`
 }
 
+// parentBase returns the base URL of the parent folder.
 func (f *Folder) parentBase() string {
 	return f.Base[:strings.LastIndex(f.Base, "/job")]
 }
 
+// GetName returns the name of the folder.
 func (f *Folder) GetName() string {
 	return f.Raw.Name
 }
 
+// Create creates a new folder with the given name.
 func (f *Folder) Create(ctx context.Context, name string) (*Folder, error) {
 	mode := "com.cloudbees.hudson.plugins.folder.Folder"
 	data := map[string]string{
@@ -62,12 +67,13 @@ func (f *Folder) Create(ctx context.Context, name string) (*Folder, error) {
 		return nil, err
 	}
 	if r.StatusCode == 200 {
-		f.Poll(ctx)
+		_, _ = f.Poll(ctx)
 		return f, nil
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
 
+// Poll fetches the latest folder data from Jenkins.
 func (f *Folder) Poll(ctx context.Context) (int, error) {
 	response, err := f.Jenkins.Requester.GetJSON(ctx, f.Base, f.Raw, nil)
 	if err != nil {

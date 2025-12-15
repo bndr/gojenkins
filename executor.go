@@ -14,14 +14,19 @@
 
 package gojenkins
 
+// Executor represents the Jenkins master executor information.
 type Executor struct {
 	Raw     *ExecutorResponse
 	Jenkins *Jenkins
 }
+
+// ViewData represents basic view information.
 type ViewData struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
+
+// ExecutorResponse represents the JSON response from the Jenkins API for the master executor.
 type ExecutorResponse struct {
 	AssignedLabels  []map[string]string `json:"assignedLabels"`
 	Description     interface{}         `json:"description"`

@@ -20,12 +20,14 @@ import (
 	"strconv"
 )
 
+// View represents a Jenkins view that organizes jobs.
 type View struct {
 	Raw     *ViewResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// ViewResponse represents the JSON response from the Jenkins API for a view.
 type ViewResponse struct {
 	Description string        `json:"description"`
 	Jobs        []InnerJob    `json:"jobs"`
@@ -34,6 +36,7 @@ type ViewResponse struct {
 	URL         string        `json:"url"`
 }
 
+// View type constants for creating different types of views.
 var (
 	LIST_VIEW      = "hudson.model.ListView"
 	NESTED_VIEW    = "hudson.plugins.nested_view.NestedView"
@@ -70,22 +73,27 @@ func (v *View) DeleteJob(ctx context.Context, name string) (bool, error) {
 	return false, errors.New(strconv.Itoa(resp.StatusCode))
 }
 
+// GetDescription returns the description of the view.
 func (v *View) GetDescription() string {
 	return v.Raw.Description
 }
 
+// GetJobs returns all jobs in the view.
 func (v *View) GetJobs() []InnerJob {
 	return v.Raw.Jobs
 }
 
+// GetName returns the name of the view.
 func (v *View) GetName() string {
 	return v.Raw.Name
 }
 
+// GetUrl returns the URL of the view.
 func (v *View) GetUrl() string {
 	return v.Raw.URL
 }
 
+// Poll fetches the latest view data from Jenkins.
 func (v *View) Poll(ctx context.Context) (int, error) {
 	response, err := v.Jenkins.Requester.GetJSON(ctx, v.Base, v.Raw, nil)
 	if err != nil {

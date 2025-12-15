@@ -16,19 +16,23 @@ package gojenkins
 
 import "context"
 
+// Label represents a Jenkins label used to group nodes.
 type Label struct {
 	Raw     *LabelResponse
 	Jenkins *Jenkins
 	Base    string
 }
 
+// MODE represents the usage mode for a node.
 type MODE string
 
+// Node usage mode constants.
 const (
 	NORMAL    MODE = "NORMAL"
-	EXCLUSIVE      = "EXCLUSIVE"
+	EXCLUSIVE MODE = "EXCLUSIVE"
 )
 
+// LabelNode represents a node associated with a label.
 type LabelNode struct {
 	NodeName        string `json:"nodeName"`
 	NodeDescription string `json:"nodeDescription"`
@@ -37,6 +41,7 @@ type LabelNode struct {
 	Class           string `json:"_class"`
 }
 
+// LabelResponse represents the JSON response from the Jenkins API for a label.
 type LabelResponse struct {
 	Name           string      `json:"name"`
 	Description    string      `json:"description"`
@@ -47,14 +52,17 @@ type LabelResponse struct {
 	TotalExecutors int64       `json:"totalExecutors"`
 }
 
+// GetName returns the name of the label.
 func (l *Label) GetName() string {
 	return l.Raw.Name
 }
 
+// GetNodes returns all nodes associated with the label.
 func (l *Label) GetNodes() []LabelNode {
 	return l.Raw.Nodes
 }
 
+// Poll fetches the latest label data from Jenkins.
 func (l *Label) Poll(ctx context.Context) (int, error) {
 	response, err := l.Jenkins.Requester.GetJSON(ctx, l.Base, l.Raw, nil)
 	if err != nil {
