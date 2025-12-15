@@ -69,17 +69,17 @@ type generalAction struct {
 // Tasks returns all tasks currently in the queue.
 func (q *Queue) Tasks() []*Task {
 	tasks := make([]*Task, len(q.Raw.Items))
-	for i, t := range q.Raw.Items {
-		tasks[i] = &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t}
+	for i := range q.Raw.Items {
+		tasks[i] = &Task{Jenkins: q.Jenkins, Queue: q, Raw: &q.Raw.Items[i]}
 	}
 	return tasks
 }
 
 // GetTaskById returns a task from the queue by its ID.
 func (q *Queue) GetTaskById(id int64) *Task {
-	for _, t := range q.Raw.Items {
-		if t.ID == id {
-			return &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t}
+	for i := range q.Raw.Items {
+		if q.Raw.Items[i].ID == id {
+			return &Task{Jenkins: q.Jenkins, Queue: q, Raw: &q.Raw.Items[i]}
 		}
 	}
 	return nil
@@ -88,9 +88,9 @@ func (q *Queue) GetTaskById(id int64) *Task {
 // GetTasksForJob returns all queued tasks for a specific job.
 func (q *Queue) GetTasksForJob(name string) []*Task {
 	tasks := make([]*Task, 0)
-	for _, t := range q.Raw.Items {
-		if t.Task.Name == name {
-			tasks = append(tasks, &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t})
+	for i := range q.Raw.Items {
+		if q.Raw.Items[i].Task.Name == name {
+			tasks = append(tasks, &Task{Jenkins: q.Jenkins, Queue: q, Raw: &q.Raw.Items[i]})
 		}
 	}
 	return tasks

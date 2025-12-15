@@ -37,7 +37,7 @@ type Jenkins struct {
 	Server    string
 	Version   string
 	Raw       *ExecutorResponse
-	Requester *Requester
+	Requester JenkinsRequester
 }
 
 // Loggers
@@ -614,12 +614,13 @@ func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenki
 		base = base[:len(base)-1]
 	}
 	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true, Client: client}
-	if j.Requester.Client == nil {
-		j.Requester.Client = http.DefaultClient
+	requester := &Requester{Base: base, SslVerify: true, Client: client}
+	if requester.Client == nil {
+		requester.Client = http.DefaultClient
 	}
 	if len(auth) == 2 {
-		j.Requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
+		requester.BasicAuth = &BasicAuth{Username: auth[0].(string), Password: auth[1].(string)}
 	}
+	j.Requester = requester
 	return j
 }
