@@ -180,7 +180,7 @@ func (cm CredentialsManager) handleResponse(resp *http.Response, err error) erro
 	}
 
 	if resp.StatusCode == 409 {
-		return fmt.Errorf("Resource already exists, conflict status returned")
+		return fmt.Errorf("resource already exists, conflict status returned")
 	}
 
 	if resp.StatusCode != 200 {
