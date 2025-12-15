@@ -2,6 +2,8 @@ package gojenkins
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -382,4 +384,81 @@ func getFileAsString(path string) string {
 	}
 
 	return string(buf)
+}
+
+
+func TestDeleteView(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+	tests := []struct {
+		name         string
+		statusCode   int
+		hasError     bool
+		expectError  bool
+		errorMessage string
+	}{
+		{
+			name:        "success - 200",
+			statusCode:  200,
+			expectError: false,
+		},
+		{
+			name:         "failure - 404",
+			statusCode:   404,
+			expectError:  true,
+			errorMessage: "404",
+		},
+		{
+			name:         "failure - network error",
+			hasError:     true,
+			expectError:  true,
+			errorMessage: "network error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// create mock HTTP server
+			var ts *httptest.Server
+			if tt.hasError {
+				// Simulated network error: server not started, or error returned
+				ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				}))
+				ts.Close() // close server
+			} else {
+				ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path != "/view/test-view/doDelete" {
+						t.Errorf("expected path /view/test-view/doDelete, got %s", r.URL.Path)
+						w.WriteHeader(500)
+						return
+					}
+					if r.Method != "POST" {
+						t.Errorf("expected POST, got %s", r.Method)
+						w.WriteHeader(500)
+						return
+					}
+					w.WriteHeader(tt.statusCode)
+				}))
+				defer ts.Close()
+			}
+
+			// Create a Jenkins instance using the URL of the mock server
+			ctx := context.Background()
+			err := jenkins.DeleteView(ctx, "test-view")
+
+			if tt.expectError {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.errorMessage != "" && err.Error() != tt.errorMessage {
+					t.Errorf("expected error %q, got %q", tt.errorMessage, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
 }
