@@ -2,8 +2,6 @@ package gojenkins
 
 import (
 	"context"
-	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -388,16 +386,6 @@ func getFileAsString(path string) string {
 	return string(buf)
 }
 
-type MockRequester struct {
-	PostFunc func(ctx context.Context, url string, data, v, headers interface{}) (*http.Response, error)
-}
-
-func (m *MockRequester) Post(ctx context.Context, url string, data, v, headers interface{}) (*http.Response, error) {
-	if m.PostFunc != nil {
-		return m.PostFunc(ctx, url, data, v, headers)
-	}
-	return nil, errors.New("no Post mock provided")
-}
 
 func TestDeleteView(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
