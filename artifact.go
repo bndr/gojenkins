@@ -19,8 +19,6 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -45,7 +43,7 @@ func (a Artifact) GetData(ctx context.Context) ([]byte, error) {
 	code := response.StatusCode
 	if code != 200 {
 		Error.Printf("Jenkins responded with StatusCode: %d", code)
-		return nil, errors.New("Could not get File Contents")
+		return nil, errors.New("could not get File Contents")
 	}
 	return []byte(data), nil
 }
@@ -55,16 +53,19 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 	data, err := a.GetData(ctx)
 
 	if err != nil {
-		return false, errors.New("No data received, not saving file")
+		return false, errors.New("no data received, not saving file")
 	}
 
 	if _, err = os.Stat(path); err == nil {
 		Warning.Println("Local Copy already exists, Overwriting...")
 	}
 
-	err = ioutil.WriteFile(path, data, 0644)
-	a.validateDownload(ctx, path)
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		return false, err
+	}
 
+	_, err = a.validateDownload(ctx, path)
 	if err != nil {
 		return false, err
 	}
@@ -96,7 +97,7 @@ func (a Artifact) validateDownload(ctx context.Context, path string) (bool, erro
 		return false, err
 	}
 	if !valid {
-		return false, errors.New("FingerPrint of the downloaded artifact could not be verified")
+		return false, errors.New("fingerprint of the downloaded artifact could not be verified")
 	}
 	return true, nil
 }
@@ -109,10 +110,10 @@ func (a Artifact) getMD5local(path string) string {
 		return ""
 	}
 	buffer := make([]byte, 1<<20)
+	defer func() { _ = localFile.Close() }()
 	n, err := localFile.Read(buffer)
-	defer localFile.Close()
 	for err == nil {
-		io.WriteString(h, string(buffer[0:n]))
+		h.Write(buffer[0:n])
 		n, err = localFile.Read(buffer)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))

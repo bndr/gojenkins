@@ -85,7 +85,7 @@ func (j *Jenkins) RevokeAllAPITokens(ctx context.Context) error {
 	return nil
 }
 
-// Revoke revokes an API token
+// Revoke revokes the API token.
 func (a *APIToken) Revoke() error {
 	return a.Jenkins.RevokeAPIToken(context.Background(), a.UUID)
 }

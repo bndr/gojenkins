@@ -19,6 +19,7 @@ import (
 	"strconv"
 )
 
+// Plugins represents the collection of installed Jenkins plugins.
 type Plugins struct {
 	Jenkins *Jenkins
 	Raw     *PluginResponse
@@ -26,10 +27,12 @@ type Plugins struct {
 	Depth   int
 }
 
+// PluginResponse represents the JSON response from the Jenkins API for plugins.
 type PluginResponse struct {
 	Plugins []Plugin `json:"plugins"`
 }
 
+// Plugin represents a single Jenkins plugin.
 type Plugin struct {
 	Active        bool        `json:"active"`
 	BackupVersion interface{} `json:"backupVersion"`
@@ -51,10 +54,13 @@ type Plugin struct {
 	Version             string `json:"version"`
 }
 
+// Count returns the total number of installed plugins.
 func (p *Plugins) Count() int {
 	return len(p.Raw.Plugins)
 }
 
+// Contains checks if a plugin with the given name is installed.
+// Returns the Plugin if found, nil otherwise.
 func (p *Plugins) Contains(name string) *Plugin {
 	for _, p := range p.Raw.Plugins {
 		if p.LongName == name || p.ShortName == name {
@@ -64,6 +70,7 @@ func (p *Plugins) Contains(name string) *Plugin {
 	return nil
 }
 
+// Poll fetches the latest plugin data from Jenkins.
 func (p *Plugins) Poll(ctx context.Context) (int, error) {
 	qr := map[string]string{
 		"depth": strconv.Itoa(p.Depth),

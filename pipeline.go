@@ -33,6 +33,7 @@ func init() {
 	}
 }
 
+// PipelineRun represents a single run of a Jenkins pipeline job.
 type PipelineRun struct {
 	Job       *Job
 	Base      string
@@ -46,6 +47,7 @@ type PipelineRun struct {
 	Stages    []PipelineNode
 }
 
+// PipelineNode represents a stage or step within a pipeline run.
 type PipelineNode struct {
 	Run            *PipelineRun
 	Base           string
@@ -59,6 +61,7 @@ type PipelineNode struct {
 	ParentNodes    []int64
 }
 
+// PipelineInputAction represents a pending input action that requires user interaction.
 type PipelineInputAction struct {
 	ID         string
 	Message    string
@@ -66,14 +69,16 @@ type PipelineInputAction struct {
 	AbortURL   string
 }
 
+// PipelineArtifact represents an artifact produced by a pipeline run.
 type PipelineArtifact struct {
 	ID   string
 	Name string
 	Path string
 	URL  string
-	size int
+	Size int `json:"size"`
 }
 
+// PipelineNodeLog represents the console log output for a pipeline node.
 type PipelineNodeLog struct {
 	NodeID     string
 	NodeStatus string
@@ -98,6 +103,7 @@ func (run *PipelineRun) update() {
 	}
 }
 
+// GetPipelineRuns returns all pipeline runs for a pipeline job.
 func (job *Job) GetPipelineRuns(ctx context.Context) (pr []PipelineRun, err error) {
 	_, err = job.Jenkins.Requester.GetJSON(ctx, job.Base+"/wfapi/runs", &pr, nil)
 	if err != nil {
@@ -111,6 +117,7 @@ func (job *Job) GetPipelineRuns(ctx context.Context) (pr []PipelineRun, err erro
 	return pr, nil
 }
 
+// GetPipelineRun returns a specific pipeline run by its ID.
 func (job *Job) GetPipelineRun(ctx context.Context, id string) (pr *PipelineRun, err error) {
 	pr = new(PipelineRun)
 	href := job.Base + "/" + id + "/wfapi/describe"
@@ -124,6 +131,7 @@ func (job *Job) GetPipelineRun(ctx context.Context, id string) (pr *PipelineRun,
 	return pr, nil
 }
 
+// GetPendingInputActions returns all pending input actions for a pipeline run.
 func (pr *PipelineRun) GetPendingInputActions(ctx context.Context) (PIAs []PipelineInputAction, err error) {
 	PIAs = make([]PipelineInputAction, 0, 1)
 	href := pr.Base + "/wfapi/pendingInputActions"
@@ -135,8 +143,9 @@ func (pr *PipelineRun) GetPendingInputActions(ctx context.Context) (PIAs []Pipel
 	return PIAs, nil
 }
 
+// GetArtifacts returns all artifacts produced by a pipeline run.
 func (pr *PipelineRun) GetArtifacts(ctx context.Context) (artifacts []PipelineArtifact, err error) {
-	artifacts = make([]PipelineArtifact, 0, 0)
+	artifacts = make([]PipelineArtifact, 0)
 	href := pr.Base + "/wfapi/artifacts"
 	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, artifacts, nil)
 	if err != nil {
@@ -146,6 +155,7 @@ func (pr *PipelineRun) GetArtifacts(ctx context.Context) (artifacts []PipelineAr
 	return artifacts, nil
 }
 
+// GetNode returns a specific pipeline node by its ID.
 func (pr *PipelineRun) GetNode(ctx context.Context, id string) (node *PipelineNode, err error) {
 	node = new(PipelineNode)
 	href := pr.Base + "/execution/node/" + id + "/wfapi/describe"
@@ -157,6 +167,7 @@ func (pr *PipelineRun) GetNode(ctx context.Context, id string) (node *PipelineNo
 	return node, nil
 }
 
+// GetLog returns the console log output for a pipeline node.
 func (node *PipelineNode) GetLog(ctx context.Context) (log *PipelineNodeLog, err error) {
 	log = new(PipelineNodeLog)
 	href := node.Base + "/wfapi/log"
