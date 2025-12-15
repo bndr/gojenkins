@@ -19,7 +19,6 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -61,9 +60,12 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 		Warning.Println("Local Copy already exists, Overwriting...")
 	}
 
-	err = ioutil.WriteFile(path, data, 0644)
-	a.validateDownload(ctx, path)
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		return false, err
+	}
 
+	_, err = a.validateDownload(ctx, path)
 	if err != nil {
 		return false, err
 	}
@@ -108,8 +110,8 @@ func (a Artifact) getMD5local(path string) string {
 		return ""
 	}
 	buffer := make([]byte, 1<<20)
+	defer func() { _ = localFile.Close() }()
 	n, err := localFile.Read(buffer)
-	defer localFile.Close()
 	for err == nil {
 		h.Write(buffer[0:n])
 		n, err = localFile.Read(buffer)

@@ -137,7 +137,7 @@ func (j *Job) GetBuild(ctx context.Context, id int64) (*Build, error) {
 	// i.e. Server : https://<domain>/jenkins/job/JOB1
 	// "https://<domain>/jenkins/" is the server URL,
 	// we are expecting jobURL = "job/JOB1"
-	jobURL := strings.Replace(j.Raw.URL, j.Jenkins.Server, "", -1)
+	jobURL := strings.ReplaceAll(j.Raw.URL, j.Jenkins.Server, "")
 	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: jobURL + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll(ctx)
 	if err != nil {
@@ -363,7 +363,7 @@ func (j *Job) Create(ctx context.Context, config string, qr ...interface{}) (*Jo
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		j.Poll(ctx)
+		_, _ = j.Poll(ctx)
 		return j, nil
 	}
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))
@@ -397,7 +397,7 @@ func (j *Job) UpdateConfig(ctx context.Context, config string) error {
 		return err
 	}
 	if resp.StatusCode == 200 {
-		j.Poll(ctx)
+		_, _ = j.Poll(ctx)
 		return nil
 	}
 	return errors.New(strconv.Itoa(resp.StatusCode))

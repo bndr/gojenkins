@@ -17,7 +17,6 @@ package gojenkins
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -95,7 +94,7 @@ func TestReadRawResponse_Success(t *testing.T) {
 
 	response := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("raw response content")),
+		Body:       io.NopCloser(bytes.NewBufferString("raw response content")),
 	}
 
 	var result string
@@ -111,7 +110,7 @@ func TestReadRawResponse_EmptyBody(t *testing.T) {
 
 	response := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+		Body:       io.NopCloser(bytes.NewBufferString("")),
 	}
 
 	var result string
@@ -127,7 +126,7 @@ func TestReadRawResponse_InvalidType(t *testing.T) {
 
 	response := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("content")),
+		Body:       io.NopCloser(bytes.NewBufferString("content")),
 	}
 
 	var result int // Wrong type
@@ -143,7 +142,7 @@ func TestReadJSONResponse_Success(t *testing.T) {
 	jsonBody := `{"name": "test-job", "color": "blue"}`
 	response := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(jsonBody)),
+		Body:       io.NopCloser(bytes.NewBufferString(jsonBody)),
 	}
 
 	var result struct {
@@ -163,7 +162,7 @@ func TestReadJSONResponse_EmptyBody(t *testing.T) {
 
 	response := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+		Body:       io.NopCloser(bytes.NewBufferString("")),
 	}
 
 	var result struct {
@@ -190,7 +189,7 @@ func TestReadJSONResponse_ComplexStructure(t *testing.T) {
 	}`
 	response := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(jsonBody)),
+		Body:       io.NopCloser(bytes.NewBufferString(jsonBody)),
 	}
 
 	var result struct {

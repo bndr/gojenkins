@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -149,14 +148,6 @@ func (r *Requester) SetClient(client *http.Client) *Requester {
 	return r
 }
 
-// Add auth on redirect if required.
-func (r *Requester) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
-	if r.BasicAuth != nil {
-		req.SetBasicAuth(r.BasicAuth.Username, r.BasicAuth.Password)
-	}
-	return nil
-}
-
 // Do executes the API request and returns the HTTP response.
 func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct interface{}, options ...interface{}) (*http.Response, error) {
 	if !strings.HasSuffix(ar.Endpoint, "/") && ar.Method != "POST" {
@@ -204,12 +195,18 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 				return nil, err
 			}
 			if _, err = io.Copy(part, fileData); err != nil {
+				_ = fileData.Close()
 				return nil, err
 			}
-			defer fileData.Close()
+			_ = fileData.Close()
 		}
 		var params map[string]string
-		json.NewDecoder(ar.Payload).Decode(&params)
+		if ar.Payload != nil {
+			if err := json.NewDecoder(ar.Payload).Decode(&params); err != nil {
+				// Ignore decode errors - payload may not be JSON
+				params = nil
+			}
+		}
 		for key, val := range params {
 			if err = writer.WriteField(key, val); err != nil {
 				return nil, err
@@ -266,9 +263,9 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 
 // ReadRawResponse reads the response body as a raw string.
 func (r *Requester) ReadRawResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
-	content, err := ioutil.ReadAll(response.Body)
+	content, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -283,8 +280,10 @@ func (r *Requester) ReadRawResponse(response *http.Response, responseStruct inte
 
 // ReadJSONResponse reads the response body as JSON and decodes it into responseStruct.
 func (r *Requester) ReadJSONResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
-	json.NewDecoder(response.Body).Decode(responseStruct)
+	if err := json.NewDecoder(response.Body).Decode(responseStruct); err != nil && err != io.EOF {
+		return response, err
+	}
 	return response, nil
 }

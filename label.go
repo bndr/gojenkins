@@ -29,7 +29,7 @@ type MODE string
 // Node usage mode constants.
 const (
 	NORMAL    MODE = "NORMAL"
-	EXCLUSIVE      = "EXCLUSIVE"
+	EXCLUSIVE MODE = "EXCLUSIVE"
 )
 
 // LabelNode represents a node associated with a label.

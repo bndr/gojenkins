@@ -75,7 +75,7 @@ type PipelineArtifact struct {
 	Name string
 	Path string
 	URL  string
-	size int
+	Size int `json:"size"`
 }
 
 // PipelineNodeLog represents the console log output for a pipeline node.
@@ -145,7 +145,7 @@ func (pr *PipelineRun) GetPendingInputActions(ctx context.Context) (PIAs []Pipel
 
 // GetArtifacts returns all artifacts produced by a pipeline run.
 func (pr *PipelineRun) GetArtifacts(ctx context.Context) (artifacts []PipelineArtifact, err error) {
-	artifacts = make([]PipelineArtifact, 0, 0)
+	artifacts = make([]PipelineArtifact, 0)
 	href := pr.Base + "/wfapi/artifacts"
 	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, artifacts, nil)
 	if err != nil {

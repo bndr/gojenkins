@@ -255,7 +255,7 @@ func (b *Build) Stop(ctx context.Context) (bool, error) {
 func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	url := b.Base + "/consoleText"
 	var content string
-	b.Jenkins.Requester.GetXML(ctx, url, &content, nil)
+	_, _ = b.Jenkins.Requester.GetXML(ctx, url, &content, nil)
 	return content
 }
 
@@ -369,7 +369,7 @@ func (b *Build) GetDownstreamJobNames(ctx context.Context) []string {
 
 // GetAllFingerPrints returns all fingerprints associated with this build.
 func (b *Build) GetAllFingerPrints(ctx context.Context) []*FingerPrint {
-	b.Poll(ctx)
+	_, _ = b.Poll(ctx)
 	result := make([]*FingerPrint, len(b.Raw.FingerPrint))
 	for i, f := range b.Raw.FingerPrint {
 		result[i] = &FingerPrint{Jenkins: b.Jenkins, Base: "/fingerprint/", Id: f.Hash, Raw: &f}
@@ -438,7 +438,7 @@ func (b *Build) GetMatrixRuns(ctx context.Context) ([]*Build, error) {
 
 	for i, run := range runs {
 		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
-		result[i].Poll(ctx)
+		_, _ = result[i].Poll(ctx)
 	}
 	return result, nil
 }

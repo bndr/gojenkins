@@ -2,7 +2,6 @@ package gojenkins
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -90,7 +89,7 @@ func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs(ctx)
 	for _, item := range jobs {
 		queueID, _ = item.InvokeSimple(ctx, map[string]string{"params1": "param1"})
-		item.Poll(ctx)
+		_, _ = item.Poll(ctx)
 		isQueued, _ := item.IsQueued(ctx)
 		assert.Equal(t, true, isQueued)
 		time.Sleep(10 * time.Second)
@@ -369,15 +368,15 @@ func TestConcurrentRequests(t *testing.T) {
 	ctx := context.Background()
 	for i := 0; i <= 16; i++ {
 		go func() {
-			jenkins.GetAllJobs(ctx)
-			jenkins.GetAllViews(ctx)
-			jenkins.GetAllNodes(ctx)
+			_, _ = jenkins.GetAllJobs(ctx)
+			_, _ = jenkins.GetAllViews(ctx)
+			_, _ = jenkins.GetAllNodes(ctx)
 		}()
 	}
 }
 
 func getFileAsString(path string) string {
-	buf, err := ioutil.ReadFile("_tests/" + path)
+	buf, err := os.ReadFile("_tests/" + path)
 	if err != nil {
 		panic(err)
 	}

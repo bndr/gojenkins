@@ -231,19 +231,19 @@ func (j *Jenkins) CreateJob(ctx context.Context, config string, options ...inter
 	return job, nil
 }
 
-// Update a job.
-// If a job is exist, update its config
+// UpdateJob updates an existing job's configuration.
+// If a job exists, update its config.
 func (j *Jenkins) UpdateJob(ctx context.Context, job string, config string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
-	jobObj.UpdateConfig(ctx, config)
+	_ = jobObj.UpdateConfig(ctx, config)
 	return &jobObj
 }
 
-// Rename a job.
-// First parameter job old name, Second parameter job new name.
+// RenameJob renames a job.
+// First parameter job old name, second parameter job new name.
 func (j *Jenkins) RenameJob(ctx context.Context, job string, name string) *Job {
 	jobObj := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + job}
-	jobObj.Rename(ctx, name)
+	_, _ = jobObj.Rename(ctx, name)
 	return &jobObj
 }
 

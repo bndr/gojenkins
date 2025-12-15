@@ -67,7 +67,7 @@ func (f *Folder) Create(ctx context.Context, name string) (*Folder, error) {
 		return nil, err
 	}
 	if r.StatusCode == 200 {
-		f.Poll(ctx)
+		_, _ = f.Poll(ctx)
 		return f, nil
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))

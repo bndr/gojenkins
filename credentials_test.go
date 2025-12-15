@@ -138,7 +138,7 @@ func TestMain(m *testing.M) {
 	//setup
 	ctx := context.Background()
 	jenkins := CreateJenkins(nil, "http://localhost:8080", "admin", "admin")
-	jenkins.Init(ctx)
+	_, _ = jenkins.Init(ctx)
 
 	cm = &CredentialsManager{J: jenkins}
 	fmt.Printf("Debug, from TestMain\n")
