@@ -157,6 +157,15 @@ func TestGetAllJobs(t *testing.T) {
 	assert.Equal(t, jobs[0].Raw.Color, "blue")
 }
 
+func TestGetAllJobNames(t *testing.T) {
+	if _, ok := os.LookupEnv(integration_test); !ok {
+		return
+	}
+	ctx := context.Background()
+	jobs, _ := jenkins.GetAllJobNames(ctx)
+	assert.Equal(t, 2, len(jobs))
+}
+
 func TestGetAllNodes(t *testing.T) {
 	if _, ok := os.LookupEnv(integration_test); !ok {
 		return
