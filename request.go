@@ -66,8 +66,10 @@ type Requester struct {
 // SetCrumb fetches and sets the CSRF crumb token on the request.
 func (r *Requester) SetCrumb(ctx context.Context, ar *APIRequest) error {
 	crumbData := map[string]string{}
-	response, _ := r.GetJSON(ctx, "/crumbIssuer/api/json", &crumbData, nil)
-
+	response, err := r.GetJSON(ctx, "/crumbIssuer/api/json", &crumbData, nil)
+	if err != nil {
+		return err
+	}
 	if response.StatusCode == 200 && crumbData["crumbRequestField"] != "" {
 		ar.SetHeader(crumbData["crumbRequestField"], crumbData["crumb"])
 		ar.SetHeader("Cookie", response.Header.Get("set-cookie"))
