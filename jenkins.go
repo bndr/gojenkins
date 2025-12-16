@@ -415,7 +415,7 @@ func (j *Jenkins) GetAllBuildIds(ctx context.Context, job string) ([]JobBuild, e
 // Get Only Array of Job Names, Color, URL
 // Does not query each single Job.
 func (j *Jenkins) GetAllJobNames(ctx context.Context) ([]InnerJob, error) {
-	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
+	exec := Executor{Raw: new(ExecutorResponse)}
 	_, err := j.Requester.GetJSON(ctx, "/", exec.Raw, nil)
 
 	if err != nil {
@@ -428,7 +428,7 @@ func (j *Jenkins) GetAllJobNames(ctx context.Context) ([]InnerJob, error) {
 // Get All Possible Job Objects.
 // Each job will be queried.
 func (j *Jenkins) GetAllJobs(ctx context.Context) ([]*Job, error) {
-	exec := Executor{Raw: new(ExecutorResponse), Jenkins: j}
+	exec := Executor{Raw: new(ExecutorResponse)}
 	_, err := j.Requester.GetJSON(ctx, "/", exec.Raw, nil)
 
 	if err != nil {
@@ -588,7 +588,7 @@ func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
 //
 // Example: jenkins.CreateView("newView",gojenkins.LIST_VIEW)
 func (j *Jenkins) CreateView(ctx context.Context, name string, viewType string) (*View, error) {
-	view := &View{Jenkins: j, Raw: new(ViewResponse), Base: "/view/" + name}
+	view := &View{Raw: new(ViewResponse)}
 	endpoint := "/createView"
 	data := map[string]string{
 		"name":   name,
