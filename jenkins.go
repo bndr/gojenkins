@@ -277,19 +277,26 @@ func (j *Jenkins) BuildJob(ctx context.Context, name string, params map[string]s
 	return job.InvokeSimple(ctx, params)
 }
 
-// A task in queue will be assigned a build number in a job after a few seconds.
-// this function will return the build object.
+// GetBuildFromQueueID polls until a task is assigned a build number or the context is cancelled.
 func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int64) (*Build, error) {
 	task, err := j.GetQueueItem(ctx, queueid)
 	if err != nil {
 		return nil, err
 	}
+
 	// Jenkins queue API has about 4.7second quiet period
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for task.Raw.Executable.Number == 0 {
-		time.Sleep(1000 * time.Millisecond)
-		_, err = task.Poll(ctx)
-		if err != nil {
-			return nil, err
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+			_, err = task.Poll(ctx)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
