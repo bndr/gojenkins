@@ -73,6 +73,16 @@ func parseBuildHistory(d io.Reader) []*History {
 						}
 					}
 				}
+				//adapte   Jenkins 2.289.1 ,fix cant't get the buildstauts
+				if string(tn) == "use" {
+					if href, found := a["href"]; found {
+						if strings.HasPrefix(href, "/static/") {
+							parts := strings.Split(href, "#")
+							curBuild.BuildStatus = parts[1]
+
+						}
+					}
+				}
 			}
 		case html.TextToken:
 			if isInsideDisplayName {
