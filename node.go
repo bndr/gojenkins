@@ -36,10 +36,14 @@ type Node struct {
 
 // NodeResponse represents the JSON response from the Jenkins API for a node.
 type NodeResponse struct {
-	Class       string        `json:"_class"`
-	Actions     []interface{} `json:"actions"`
-	DisplayName string        `json:"displayName"`
-	Executors   []struct {
+	Class          string        `json:"_class"`
+	Actions        []interface{} `json:"actions"`
+	DisplayName    string        `json:"displayName"`
+	Description    string        `json:"description"`
+	AssignedLabels []struct {
+		Name string `json:"name"`
+	} `json:"assignedLabels"`
+	Executors []struct {
 		CurrentExecutable struct {
 			Number    int    `json:"number"`
 			URL       string `json:"url"`
