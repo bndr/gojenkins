@@ -49,16 +49,17 @@ type PipelineRun struct {
 
 // PipelineNode represents a stage or step within a pipeline run.
 type PipelineNode struct {
-	Run            *PipelineRun
-	Base           string
-	URLs           map[string]map[string]string `json:"_links"`
-	ID             string
-	Name           string
-	Status         string
-	StartTime      int64 `json:"startTimeMillis"`
-	Duration       int64 `json:"durationMillis"`
-	StageFlowNodes []PipelineNode
-	ParentNodes    []int64
+	Run                  *PipelineRun
+	Base                 string
+	URLs                 map[string]map[string]string `json:"_links"`
+	ID                   string
+	Name                 string
+	ParameterDescription string
+	Status               string
+	StartTime            int64 `json:"startTimeMillis"`
+	Duration             int64 `json:"durationMillis"`
+	StageFlowNodes       []PipelineNode
+	ParentNodes          []int64
 }
 
 // PipelineInputAction represents a pending input action that requires user interaction.
