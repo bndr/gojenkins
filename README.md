@@ -105,6 +105,54 @@ jenkins, := gojenkins.CreateJenkins(client, "http://localhost:8080/").Init(ctx)
 By default, `gojenkins` will use the `http.DefaultClient` if none is passed into the `CreateJenkins()`
 function.
 
+You can also use the below way
+
+```go
+jenkinsClient,err := gojenkins.DefaultJenkins("http://localhost:8080/")
+
+if err!=nil{
+  panic("Unable to Create a GoJenkins client. Caught this error ",err.Error())
+}
+```
+
+or if you need Basic Authentication:
+
+```go
+jenkinsClient,err := gojenkins.DefaultJenkins("http://localhost:8080/",gojenkins.WithBasicAuth("admin","admin"))
+if err!=nil{
+  panic("Unable to Create a GoJenkins client. Caught this error ",err.Error())
+}
+```
+
+or if you need to use a Custom Http Client
+
+```go
+jenkinsClient,err := gojenkins.DefaultJenkins("http://localhost:8080/",gojenkins.WithClient(httpClient))
+
+if err!=nil{
+  panic("Unable to Create a GoJenkins client. Caught this error ",err.Error())
+}
+```
+
+or if you need to pass in your own Customization
+
+```go
+func myJenkinsClientCustomization() func(*Jenkins){
+  	return func(j *Jenkins) {
+      //Modfify "j" as per your requirements. 
+      // You may choose to pass in parameters as well 
+	}
+}
+
+jenkinsClient,err := gojenkins.DefaultJenkins("http://localhost:8080/",myJenkinsClientCustomization)
+
+if err!=nil{
+  panic("Unable to Create a GoJenkins client. Caught this error ",err.Error())
+}
+```
+
+
+
 ### Check Status of all nodes
 
 ```go
