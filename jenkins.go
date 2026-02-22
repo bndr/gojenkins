@@ -277,6 +277,14 @@ func (j *Jenkins) BuildJob(ctx context.Context, name string, params map[string]s
 	return job.InvokeSimple(ctx, params)
 }
 
+// Invoke a job in Folder
+// First parameter job name, second parameter is optional Build parameters and the last parameter is folder name.
+// Returns queue id
+func (j *Jenkins) BuildJobInFolder(ctx context.Context, name string, params map[string]string, parentIDs ...string) (int64, error) {
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + strings.Join(append(parentIDs, name), "/job/")}
+	return job.InvokeSimple(ctx, params)
+}
+
 // A task in queue will be assigned a build number in a job after a few seconds.
 // this function will return the build object.
 func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int64) (*Build, error) {
