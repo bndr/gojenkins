@@ -213,6 +213,21 @@ func TestReadJSONResponse_ComplexStructure(t *testing.T) {
 	assert.Equal(t, int64(2), result.LastBuild.Number)
 }
 
+func TestReadJSONResponse_NilResponseStruct(t *testing.T) {
+	requester := &Requester{}
+
+	htmlBody := `<!DOCTYPE html><html><body>Jenkins Build Page</body></html>`
+	response := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(htmlBody)),
+	}
+
+	resp, err := requester.ReadJSONResponse(response, nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+}
+
 func TestRequester_SetClient(t *testing.T) {
 	requester := &Requester{}
 	customClient := &http.Client{}
