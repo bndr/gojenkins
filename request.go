@@ -84,7 +84,7 @@ func (r *Requester) PostJSON(ctx context.Context, endpoint string, payload io.Re
 	}
 	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	ar.Suffix = "api/json"
-	return r.Do(ctx, ar, &responseStruct, querystring)
+	return r.Do(ctx, ar, jsonResponseTarget(responseStruct), querystring)
 }
 
 // Post sends a POST request with form-urlencoded content type.
@@ -95,7 +95,7 @@ func (r *Requester) Post(ctx context.Context, endpoint string, payload io.Reader
 	}
 	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	ar.Suffix = ""
-	return r.Do(ctx, ar, &responseStruct, querystring)
+	return r.Do(ctx, ar, jsonResponseTarget(responseStruct), querystring)
 }
 
 // PostFiles sends a POST request with file attachments.
@@ -104,7 +104,7 @@ func (r *Requester) PostFiles(ctx context.Context, endpoint string, payload io.R
 	if err := r.SetCrumb(ctx, ar); err != nil {
 		return nil, err
 	}
-	return r.Do(ctx, ar, &responseStruct, querystring, files)
+	return r.Do(ctx, ar, jsonResponseTarget(responseStruct), querystring, files)
 }
 
 // PostXML sends a POST request with XML content.
@@ -116,7 +116,7 @@ func (r *Requester) PostXML(ctx context.Context, endpoint string, xml string, re
 	}
 	ar.SetHeader("Content-Type", "application/xml;charset=utf-8")
 	ar.Suffix = ""
-	return r.Do(ctx, ar, &responseStruct, querystring)
+	return r.Do(ctx, ar, jsonResponseTarget(responseStruct), querystring)
 }
 
 // GetJSON sends a GET request and expects a JSON response.
@@ -124,7 +124,14 @@ func (r *Requester) GetJSON(ctx context.Context, endpoint string, responseStruct
 	ar := NewAPIRequest("GET", endpoint, nil)
 	ar.SetHeader("Content-Type", "application/json")
 	ar.Suffix = "api/json"
-	return r.Do(ctx, ar, &responseStruct, query)
+	return r.Do(ctx, ar, jsonResponseTarget(responseStruct), query)
+}
+
+func jsonResponseTarget(responseStruct interface{}) interface{} {
+	if responseStruct == nil {
+		return nil
+	}
+	return &responseStruct
 }
 
 // GetXML sends a GET request and expects an XML response.
@@ -282,6 +289,9 @@ func (r *Requester) ReadRawResponse(response *http.Response, responseStruct inte
 func (r *Requester) ReadJSONResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
 	defer func() { _ = response.Body.Close() }()
 
+	if responseStruct == nil {
+		return response, nil
+	}
 	if err := json.NewDecoder(response.Body).Decode(responseStruct); err != nil && err != io.EOF {
 		return response, err
 	}
