@@ -16,8 +16,10 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -174,6 +176,35 @@ func TestReadJSONResponse_EmptyBody(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, "", result.Name)
+}
+
+func TestPost_NilResponseSkipsJSONDecode(t *testing.T) {
+	var sawStop bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/job/test-job/1/stop":
+			sawStop = true
+			http.Redirect(w, r, "/job/test-job/1/", http.StatusFound)
+		case "/job/test-job/1/":
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte("<html><body>stopping</body></html>"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	requester := &Requester{
+		Base:   server.URL,
+		Client: server.Client(),
+	}
+
+	resp, err := requester.Post(context.Background(), "/job/test-job/1/stop", nil, nil, nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, sawStop)
 }
 
 func TestReadJSONResponse_ComplexStructure(t *testing.T) {
