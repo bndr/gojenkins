@@ -463,6 +463,42 @@ func TestJob_GetConfig_Error(t *testing.T) {
 	assert.Empty(t, config)
 }
 
+func TestJob_GetParameters_WithChoiceValues(t *testing.T) {
+	jenkins := newMockJenkins()
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		if jr, ok := response.(*JobResponse); ok {
+			jr.Property = []struct {
+				ParameterDefinitions []ParameterDefinition `json:"parameterDefinitions"`
+			}{
+				{
+					ParameterDefinitions: []ParameterDefinition{
+						{
+							Name:        "KIND",
+							Type:        "ChoiceParameterDefinition",
+							Description: "Kind",
+							Choices:     []string{"SBD", "Popcorn (dry)", "Wet", "Juicy"},
+						},
+					},
+				},
+			}
+		}
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	job := &Job{
+		Jenkins: jenkins,
+		Raw:     &JobResponse{},
+		Base:    "/job/test-job",
+	}
+
+	parameters, err := job.GetParameters(context.Background())
+
+	assert.NoError(t, err)
+	assert.Len(t, parameters, 1)
+	assert.Equal(t, "KIND", parameters[0].Name)
+	assert.Equal(t, []string{"SBD", "Popcorn (dry)", "Wet", "Juicy"}, parameters[0].Choices)
+}
+
 func TestJob_UpdateConfig_Success(t *testing.T) {
 	jenkins := newMockJenkins()
 	var capturedEndpoint string
