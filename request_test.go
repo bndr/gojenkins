@@ -16,6 +16,8 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -23,6 +25,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
 
 func TestNewAPIRequest_Basic(t *testing.T) {
 	ar := NewAPIRequest("GET", "/api/json", nil)
@@ -237,4 +245,87 @@ func TestRequester_Fields(t *testing.T) {
 	assert.Equal(t, "admin", requester.BasicAuth.Username)
 	assert.Equal(t, "password", requester.BasicAuth.Password)
 	assert.True(t, requester.SslVerify)
+}
+
+func TestRequester_SetCrumbReturnsGetJSONError(t *testing.T) {
+	expected := errors.New("crumb request failed")
+	requester := &Requester{
+		Base: "http://jenkins.example",
+		Client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, expected
+			}),
+		},
+	}
+	request := NewAPIRequest("POST", "/job/test/build", nil)
+
+	err := requester.SetCrumb(context.Background(), request)
+
+	assert.ErrorIs(t, err, expected)
+}
+
+func TestRequester_SetCrumbIgnoresNonOKResponse(t *testing.T) {
+	requester := &Requester{
+		Base: "http://jenkins.example",
+		Client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusNotFound,
+					Header:     http.Header{"Set-Cookie": []string{"crumb-cookie"}},
+					Body:       io.NopCloser(strings.NewReader("<html>not found</html>")),
+				}, nil
+			}),
+		},
+	}
+	request := NewAPIRequest("POST", "/job/test/build", nil)
+
+	err := requester.SetCrumb(context.Background(), request)
+
+	assert.NoError(t, err)
+	assert.Empty(t, request.Headers.Get("Jenkins-Crumb"))
+	assert.Empty(t, request.Headers.Get("Cookie"))
+}
+
+func TestRequester_SetCrumbReturnsOKDecodeError(t *testing.T) {
+	requester := &Requester{
+		Base: "http://jenkins.example",
+		Client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("<html>invalid crumb</html>")),
+				}, nil
+			}),
+		},
+	}
+	request := NewAPIRequest("POST", "/job/test/build", nil)
+
+	err := requester.SetCrumb(context.Background(), request)
+
+	assert.Error(t, err)
+	assert.Empty(t, request.Headers.Get("Jenkins-Crumb"))
+}
+
+func TestRequester_SetCrumbSetsHeadersOnOKResponse(t *testing.T) {
+	requester := &Requester{
+		Base: "http://jenkins.example",
+		Client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Set-Cookie": []string{"crumb-cookie"}},
+					Body: io.NopCloser(strings.NewReader(
+						`{"crumbRequestField":"Jenkins-Crumb","crumb":"abc123"}`,
+					)),
+				}, nil
+			}),
+		},
+	}
+	request := NewAPIRequest("POST", "/job/test/build", nil)
+
+	err := requester.SetCrumb(context.Background(), request)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "abc123", request.Headers.Get("Jenkins-Crumb"))
+	assert.Equal(t, "crumb-cookie", request.Headers.Get("Cookie"))
 }
