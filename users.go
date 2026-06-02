@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -17,6 +18,15 @@ type User struct {
 	UserName string
 	FullName string
 	Email    string
+}
+
+type userResponse struct {
+	ID       string `json:"id"`
+	FullName string `json:"fullName"`
+	Property []struct {
+		Class   string `json:"_class"`
+		Address string `json:"address"`
+	} `json:"property"`
 }
 
 // ErrUser occurs when there is error creating or revoking Jenkins users
@@ -48,6 +58,40 @@ func (j *Jenkins) CreateUser(ctx context.Context, userName, password, fullName, 
 		}
 	}
 	return user, nil
+}
+
+// GetUser fetches a Jenkins account by username.
+func (j *Jenkins) GetUser(ctx context.Context, userName string) (User, error) {
+	user := User{
+		Jenkins:  j,
+		UserName: userName,
+	}
+	raw := userResponse{}
+	response, err := j.Requester.GetJSON(ctx, "/user/"+url.PathEscape(userName), &raw, nil)
+	if err != nil {
+		return user, err
+	}
+	if response.StatusCode != http.StatusOK {
+		return user, &ErrUser{
+			Message: fmt.Sprintf("error getting user. Status is %d", response.StatusCode),
+		}
+	}
+
+	if raw.ID != "" {
+		user.UserName = raw.ID
+	}
+	user.FullName = raw.FullName
+	user.Email = raw.email()
+	return user, nil
+}
+
+func (r *userResponse) email() string {
+	for _, property := range r.Property {
+		if property.Class == "hudson.tasks.Mailer$UserProperty" {
+			return property.Address
+		}
+	}
+	return ""
 }
 
 // DeleteUser deletes a Jenkins account
