@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"testing"
 
@@ -172,6 +173,50 @@ func TestJenkins_GetJob_NestedJob(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, job)
 	assert.Equal(t, "/job/parent-folder/job/nested-job", job.Base)
+}
+
+func TestJenkins_CopyJob_WithFolderPaths(t *testing.T) {
+	getEndpoints := []string{}
+	var capturedEndpoint string
+	var capturedQuery map[string]string
+	mock := &MockRequester{
+		GetJSONFunc: func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+			getEndpoints = append(getEndpoints, endpoint)
+			if jr, ok := response.(*JobResponse); ok {
+				switch endpoint {
+				case "/job/source-folder/job/source-job":
+					jr.Name = "source-job"
+					jr.FullName = "source-folder/source-job"
+				case "/job/dest-folder/job/copied-job":
+					jr.Name = "copied-job"
+					jr.FullName = "dest-folder/copied-job"
+				}
+			}
+			return &http.Response{StatusCode: 200}, nil
+		},
+		PostFunc: func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+			capturedEndpoint = endpoint
+			capturedQuery = query
+			return &http.Response{StatusCode: 200}, nil
+		},
+	}
+
+	jenkins := &Jenkins{
+		Server:    "http://jenkins.local",
+		Requester: mock,
+	}
+
+	job, err := jenkins.CopyJob(context.Background(), "/source-folder/source-job", "/dest-folder/copied-job")
+	assert.NoError(t, err)
+	assert.NotNil(t, job)
+	assert.Equal(t, []string{"/job/source-folder/job/source-job", "/job/dest-folder/job/copied-job"}, getEndpoints)
+	assert.Equal(t, "/job/dest-folder/createItem", capturedEndpoint)
+	assert.Equal(t, map[string]string{
+		"name": "copied-job",
+		"from": "source-folder/source-job",
+		"mode": "copy",
+	}, capturedQuery)
+	assert.Equal(t, "/job/dest-folder/job/copied-job", job.Base)
 }
 
 func TestJenkins_GetBuild_Success(t *testing.T) {

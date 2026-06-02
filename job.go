@@ -107,6 +107,62 @@ func (j *Job) parentBase() string {
 	return j.Base[:strings.LastIndex(j.Base, "/job/")]
 }
 
+func normalizeJobFullName(name string) string {
+	name = strings.Trim(name, "/")
+	parts := strings.Split(name, "/")
+	cleaned := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			cleaned = append(cleaned, part)
+		}
+	}
+	return strings.Join(cleaned, "/")
+}
+
+func jobBaseFromFullName(name string) string {
+	name = normalizeJobFullName(name)
+	if name == "" {
+		return ""
+	}
+	return "/job/" + strings.Join(strings.Split(name, "/"), "/job/")
+}
+
+func jobFullNameFromBase(base string) string {
+	base = strings.Trim(base, "/")
+	if base == "" {
+		return ""
+	}
+
+	parts := strings.Split(base, "/")
+	names := make([]string, 0, len(parts)/2)
+	for i := 0; i < len(parts); i += 2 {
+		if parts[i] != "job" || i+1 >= len(parts) {
+			return ""
+		}
+		names = append(names, parts[i+1])
+	}
+	return strings.Join(names, "/")
+}
+
+func splitJobParentAndName(fullName string) (string, string) {
+	fullName = normalizeJobFullName(fullName)
+	idx := strings.LastIndex(fullName, "/")
+	if idx == -1 {
+		return "", fullName
+	}
+	return fullName[:idx], fullName[idx+1:]
+}
+
+func (j *Job) copySourceFullName() string {
+	if j.Raw != nil && j.Raw.FullName != "" {
+		return normalizeJobFullName(j.Raw.FullName)
+	}
+	if fullName := jobFullNameFromBase(j.Base); fullName != "" {
+		return fullName
+	}
+	return normalizeJobFullName(j.GetName())
+}
+
 // History represents a build history entry with status and timestamp information.
 type History struct {
 	BuildDisplayName string
@@ -371,13 +427,15 @@ func (j *Job) Create(ctx context.Context, config string, qr ...interface{}) (*Jo
 
 // Copy creates a copy of the job with the specified destination name.
 func (j *Job) Copy(ctx context.Context, destinationName string) (*Job, error) {
-	qr := map[string]string{"name": destinationName, "from": j.GetName(), "mode": "copy"}
-	resp, err := j.Jenkins.Requester.Post(ctx, j.parentBase()+"/createItem", nil, nil, qr)
+	destinationFullName := normalizeJobFullName(destinationName)
+	destinationParent, destinationLeaf := splitJobParentAndName(destinationFullName)
+	qr := map[string]string{"name": destinationLeaf, "from": j.copySourceFullName(), "mode": "copy"}
+	resp, err := j.Jenkins.Requester.Post(ctx, jobBaseFromFullName(destinationParent)+"/createItem", nil, nil, qr)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		newJob := &Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: "/job/" + destinationName}
+		newJob := &Job{Jenkins: j.Jenkins, Raw: new(JobResponse), Base: jobBaseFromFullName(destinationFullName)}
 		_, err := newJob.Poll(ctx)
 		if err != nil {
 			return nil, err

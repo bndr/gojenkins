@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"testing"
 
@@ -498,6 +499,73 @@ func TestJob_UpdateConfig_Error(t *testing.T) {
 
 	err := job.UpdateConfig(context.Background(), "<config/>")
 	assert.Error(t, err)
+}
+
+func TestJob_Copy_ToFolderDestination(t *testing.T) {
+	jenkins := newMockJenkins()
+	var capturedEndpoint string
+	var capturedQuery map[string]string
+	var pollEndpoint string
+	jenkins.Requester.(*MockRequester).PostFunc = func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+		capturedEndpoint = endpoint
+		capturedQuery = query
+		return &http.Response{StatusCode: 200}, nil
+	}
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		pollEndpoint = endpoint
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	job := &Job{
+		Jenkins: jenkins,
+		Raw: &JobResponse{
+			Name:     "source-job",
+			FullName: "source-folder/source-job",
+		},
+		Base: "/job/source-folder/job/source-job",
+	}
+
+	copied, err := job.Copy(context.Background(), "/dest-folder/copied-job")
+	assert.NoError(t, err)
+	assert.NotNil(t, copied)
+	assert.Equal(t, "/job/dest-folder/createItem", capturedEndpoint)
+	assert.Equal(t, map[string]string{
+		"name": "copied-job",
+		"from": "source-folder/source-job",
+		"mode": "copy",
+	}, capturedQuery)
+	assert.Equal(t, "/job/dest-folder/job/copied-job", copied.Base)
+	assert.Equal(t, "/job/dest-folder/job/copied-job", pollEndpoint)
+}
+
+func TestJob_Copy_UsesBaseForNestedSourceWithoutFullName(t *testing.T) {
+	jenkins := newMockJenkins()
+	var capturedEndpoint string
+	var capturedQuery map[string]string
+	jenkins.Requester.(*MockRequester).PostFunc = func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+		capturedEndpoint = endpoint
+		capturedQuery = query
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	job := &Job{
+		Jenkins: jenkins,
+		Raw: &JobResponse{
+			Name: "source-job",
+		},
+		Base: "/job/source-folder/job/source-job",
+	}
+
+	copied, err := job.Copy(context.Background(), "copied-job")
+	assert.NoError(t, err)
+	assert.NotNil(t, copied)
+	assert.Equal(t, "/createItem", capturedEndpoint)
+	assert.Equal(t, map[string]string{
+		"name": "copied-job",
+		"from": "source-folder/source-job",
+		"mode": "copy",
+	}, capturedQuery)
+	assert.Equal(t, "/job/copied-job", copied.Base)
 }
 
 func TestJob_InvokeSimple_Success(t *testing.T) {
