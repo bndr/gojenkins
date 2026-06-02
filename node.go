@@ -34,16 +34,26 @@ type Node struct {
 	Base    string
 }
 
+// NodeAssignedLabel represents a label assigned to a Jenkins node.
+type NodeAssignedLabel struct {
+	Name string `json:"name"`
+}
+
 // NodeResponse represents the JSON response from the Jenkins API for a node.
 type NodeResponse struct {
-	Class       string        `json:"_class"`
-	Actions     []interface{} `json:"actions"`
-	DisplayName string        `json:"displayName"`
-	Executors   []struct {
+	Class          string              `json:"_class"`
+	Actions        []interface{}       `json:"actions"`
+	AssignedLabels []NodeAssignedLabel `json:"assignedLabels"`
+	Description    string              `json:"description"`
+	DisplayName    string              `json:"displayName"`
+	Executors      []struct {
 		CurrentExecutable struct {
-			Number    int    `json:"number"`
-			URL       string `json:"url"`
-			SubBuilds []struct {
+			DisplayName     string `json:"displayName"`
+			FullDisplayName string `json:"fullDisplayName"`
+			Number          int    `json:"number"`
+			Timestamp       int64  `json:"timestamp"`
+			URL             string `json:"url"`
+			SubBuilds       []struct {
 				Abort             bool        `json:"abort"`
 				Build             interface{} `json:"build"`
 				BuildNumber       int         `json:"buildNumber"`
