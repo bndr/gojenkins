@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -23,6 +24,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
 
 func TestNewAPIRequest_Basic(t *testing.T) {
 	ar := NewAPIRequest("GET", "/api/json", nil)
@@ -211,6 +218,64 @@ func TestReadJSONResponse_ComplexStructure(t *testing.T) {
 	assert.Len(t, result.Builds, 2)
 	assert.Equal(t, int64(1), result.Builds[0].Number)
 	assert.Equal(t, int64(2), result.LastBuild.Number)
+}
+
+func TestRequester_GetXMLUsesUTF8ContentType(t *testing.T) {
+	var contentType string
+	requester := &Requester{
+		Base: "http://jenkins.example",
+		Client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				contentType = req.Header.Get("Content-Type")
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("<project/>")),
+				}, nil
+			}),
+		},
+	}
+	var result string
+
+	response, err := requester.GetXML(context.Background(), "/job/test/config.xml", &result, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "application/xml;charset=utf-8", contentType)
+	assert.Equal(t, "<project/>", result)
+}
+
+func TestRequester_PostXMLUsesUTF8ContentType(t *testing.T) {
+	var contentType string
+	var body string
+	requester := &Requester{
+		Base: "http://jenkins.example",
+		Client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if strings.Contains(req.URL.Path, "/crumbIssuer/") {
+					return &http.Response{
+						StatusCode: http.StatusNotFound,
+						Body:       io.NopCloser(strings.NewReader("")),
+					}, nil
+				}
+				contentType = req.Header.Get("Content-Type")
+				requestBody, err := io.ReadAll(req.Body)
+				assert.NoError(t, err)
+				body = string(requestBody)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			}),
+		},
+	}
+	xml := "<project><description>Olá</description></project>"
+
+	response, err := requester.PostXML(context.Background(), "/job/test/config.xml", xml, nil, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "application/xml;charset=utf-8", contentType)
+	assert.Equal(t, xml, body)
 }
 
 func TestRequester_SetClient(t *testing.T) {
