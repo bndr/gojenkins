@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -30,6 +31,49 @@ func TestNode_GetName(t *testing.T) {
 	}
 
 	assert.Equal(t, "test-agent", node.GetName())
+}
+
+func TestNodeResponse_UnmarshalAdditionalFields(t *testing.T) {
+	data := []byte(`{
+		"_class": "hudson.slaves.SlaveComputer",
+		"displayName": "agent-1",
+		"description": "macOS build agent",
+		"assignedLabels": [
+			{"name": "agent-1"},
+			{"name": "macos"},
+			{"name": "xcode"}
+		],
+		"executors": [
+			{
+				"currentExecutable": {
+					"displayName": "example-job #45",
+					"fullDisplayName": "folder/example-job #45",
+					"number": 45,
+					"timestamp": 1684304216307,
+					"url": "https://jenkins.example/job/folder/job/example-job/45/"
+				}
+			}
+		]
+	}`)
+	var response NodeResponse
+
+	err := json.Unmarshal(data, &response)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "agent-1", response.DisplayName)
+	assert.Equal(t, "macOS build agent", response.Description)
+	assert.Equal(t, []NodeAssignedLabel{
+		{Name: "agent-1"},
+		{Name: "macos"},
+		{Name: "xcode"},
+	}, response.AssignedLabels)
+	assert.Len(t, response.Executors, 1)
+	executable := response.Executors[0].CurrentExecutable
+	assert.Equal(t, "example-job #45", executable.DisplayName)
+	assert.Equal(t, "folder/example-job #45", executable.FullDisplayName)
+	assert.Equal(t, 45, executable.Number)
+	assert.Equal(t, int64(1684304216307), executable.Timestamp)
+	assert.Equal(t, "https://jenkins.example/job/folder/job/example-job/45/", executable.URL)
 }
 
 func TestNode_IsOnline_True(t *testing.T) {
