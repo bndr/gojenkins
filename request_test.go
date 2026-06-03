@@ -311,6 +311,7 @@ func TestRequester_SetCrumbSetsHeadersOnOKResponse(t *testing.T) {
 		Base: "http://jenkins.example",
 		Client: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				assert.Equal(t, "/crumbIssuer/api/json", req.URL.Path)
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header:     http.Header{"Set-Cookie": []string{"crumb-cookie"}},
