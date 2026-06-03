@@ -190,7 +190,12 @@ func (j *Jenkins) DeleteNode(ctx context.Context, name string) (bool, error) {
 // This folder can be nested in other parent folders
 // Example: jenkins.CreateFolder("newFolder", "grandparentFolder", "parentFolder")
 func (j *Jenkins) CreateFolder(ctx context.Context, name string, parents ...string) (*Folder, error) {
-	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: "/job/" + strings.Join(append(parents, name), "/job/")}
+	base := ""
+	if len(parents) > 0 {
+		base = "/job/" + strings.Join(parents, "/job/")
+	}
+
+	folderObj := &Folder{Jenkins: j, Raw: new(FolderResponse), Base: base}
 	folder, err := folderObj.Create(ctx, name)
 	if err != nil {
 		return nil, err
@@ -560,7 +565,7 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	return views, nil
 }
 
-func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
+func (j *Jenkins) DeleteView(ctx context.Context, name string) error {
 	endpoint := fmt.Sprintf("/view/%s/doDelete", name)
 	r, err := j.Requester.Post(ctx, endpoint, nil, nil, nil)
 
@@ -573,7 +578,6 @@ func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
 	}
 	return errors.New(strconv.Itoa(r.StatusCode))
 }
-
 
 // Create View
 // First Parameter - name of the View

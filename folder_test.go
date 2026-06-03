@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"testing"
 
@@ -40,39 +41,6 @@ func TestFolder_GetName_Empty(t *testing.T) {
 	}
 
 	assert.Equal(t, "", folder.GetName())
-}
-
-func TestFolder_parentBase(t *testing.T) {
-	tests := []struct {
-		name     string
-		base     string
-		expected string
-	}{
-		{
-			name:     "root folder",
-			base:     "/job/my-folder",
-			expected: "",
-		},
-		{
-			name:     "nested folder",
-			base:     "/job/parent/job/child",
-			expected: "/job/parent",
-		},
-		{
-			name:     "deeply nested folder",
-			base:     "/job/level1/job/level2/job/level3",
-			expected: "/job/level1/job/level2",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			folder := &Folder{
-				Base: tt.base,
-			}
-			assert.Equal(t, tt.expected, folder.parentBase())
-		})
-	}
 }
 
 func TestFolder_Poll_Success(t *testing.T) {
@@ -108,34 +76,108 @@ func TestFolder_Poll_Error(t *testing.T) {
 
 func TestFolder_Create_Success(t *testing.T) {
 	jenkins := newMockJenkins()
-	jenkins.Requester.(*MockRequester).response = &http.Response{
-		StatusCode: 200,
+	requester := jenkins.Requester.(*MockRequester)
+	var postEndpoint string
+	var pollEndpoint string
+	requester.PostFunc = func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+		postEndpoint = endpoint
+		assert.IsType(t, &FolderResponse{}, response)
+		assert.Equal(t, "child-folder", query["name"])
+		return &http.Response{StatusCode: 200}, nil
+	}
+	requester.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		pollEndpoint = endpoint
+		return &http.Response{StatusCode: 200}, nil
 	}
 
 	folder := &Folder{
 		Jenkins: jenkins,
 		Raw:     &FolderResponse{},
-		Base:    "/job/parent/job/new-folder",
+		Base:    "/job/parent/job/current-folder",
 	}
 
-	result, err := folder.Create(context.Background(), "new-folder")
+	result, err := folder.Create(context.Background(), "child-folder")
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
+	assert.Equal(t, "/job/parent/job/current-folder/job/child-folder", result.Base)
+	assert.Equal(t, "/job/parent/job/current-folder/createItem", postEndpoint)
+	assert.Equal(t, result.Base, pollEndpoint)
+}
+
+func TestFolder_Create_RootFolder(t *testing.T) {
+	jenkins := newMockJenkins()
+	requester := jenkins.Requester.(*MockRequester)
+	var postEndpoint string
+	var pollEndpoint string
+	requester.PostFunc = func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+		postEndpoint = endpoint
+		return &http.Response{StatusCode: 200}, nil
+	}
+	requester.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		pollEndpoint = endpoint
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	folder := &Folder{
+		Jenkins: jenkins,
+		Raw:     &FolderResponse{},
+		Base:    "",
+	}
+
+	result, err := folder.Create(context.Background(), "child-folder")
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "/job/child-folder", result.Base)
+	assert.Equal(t, "/createItem", postEndpoint)
+	assert.Equal(t, result.Base, pollEndpoint)
+}
+
+func TestJenkins_CreateFolder_NestedParents(t *testing.T) {
+	jenkins := newMockJenkins()
+	requester := jenkins.Requester.(*MockRequester)
+	var postEndpoint string
+	var pollEndpoint string
+	requester.PostFunc = func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+		postEndpoint = endpoint
+		assert.Equal(t, "child-folder", query["name"])
+		return &http.Response{StatusCode: 200}, nil
+	}
+	requester.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		pollEndpoint = endpoint
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	result, err := jenkins.CreateFolder(context.Background(), "child-folder", "parent", "current-folder")
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "/job/parent/job/current-folder/job/child-folder", result.Base)
+	assert.Equal(t, "/job/parent/job/current-folder/createItem", postEndpoint)
+	assert.Equal(t, result.Base, pollEndpoint)
 }
 
 func TestFolder_Create_Failure(t *testing.T) {
 	jenkins := newMockJenkins()
-	jenkins.Requester.(*MockRequester).response = &http.Response{
-		StatusCode: 400,
+	requester := jenkins.Requester.(*MockRequester)
+	var postEndpoint string
+	var pollEndpoint string
+	requester.PostFunc = func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+		postEndpoint = endpoint
+		return &http.Response{StatusCode: 400}, nil
+	}
+	requester.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		pollEndpoint = endpoint
+		return &http.Response{StatusCode: 200}, nil
 	}
 
 	folder := &Folder{
 		Jenkins: jenkins,
 		Raw:     &FolderResponse{},
-		Base:    "/job/parent/job/new-folder",
+		Base:    "/job/parent/job/current-folder",
 	}
 
-	result, err := folder.Create(context.Background(), "new-folder")
+	result, err := folder.Create(context.Background(), "child-folder")
 	assert.Error(t, err)
 	assert.Nil(t, result)
+	assert.Equal(t, "/job/parent/job/current-folder/createItem", postEndpoint)
+	assert.Equal(t, "", pollEndpoint)
 }
