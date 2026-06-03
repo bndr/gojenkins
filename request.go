@@ -95,6 +95,9 @@ func (r *Requester) Post(ctx context.Context, endpoint string, payload io.Reader
 	}
 	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	ar.Suffix = ""
+	if _, ok := responseStruct.(*string); ok {
+		return r.Do(ctx, ar, responseStruct, querystring)
+	}
 	return r.Do(ctx, ar, &responseStruct, querystring)
 }
 
