@@ -250,7 +250,7 @@ func (j *Jenkins) RenameJob(ctx context.Context, job string, name string) *Job {
 // Create a copy of a job.
 // First parameter Name of the job to copy from, Second parameter new job name.
 func (j *Jenkins) CopyJob(ctx context.Context, copyFrom string, newName string) (*Job, error) {
-	job := Job{Jenkins: j, Raw: new(JobResponse), Base: "/job/" + copyFrom}
+	job := Job{Jenkins: j, Raw: new(JobResponse), Base: jobBaseFromFullName(copyFrom)}
 	_, err := job.Poll(ctx)
 	if err != nil {
 		return nil, err
@@ -560,7 +560,7 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	return views, nil
 }
 
-func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
+func (j *Jenkins) DeleteView(ctx context.Context, name string) error {
 	endpoint := fmt.Sprintf("/view/%s/doDelete", name)
 	r, err := j.Requester.Post(ctx, endpoint, nil, nil, nil)
 
@@ -573,7 +573,6 @@ func (j *Jenkins) DeleteView(ctx context.Context, name string) (error) {
 	}
 	return errors.New(strconv.Itoa(r.StatusCode))
 }
-
 
 // Create View
 // First Parameter - name of the View
