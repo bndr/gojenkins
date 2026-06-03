@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"strings"
 )
 
 // Folder represents a Jenkins folder that can contain jobs and other folders.
@@ -40,9 +39,11 @@ type FolderResponse struct {
 	Views       []ViewData `json:"views"`
 }
 
-// parentBase returns the base URL of the parent folder.
-func (f *Folder) parentBase() string {
-	return f.Base[:strings.LastIndex(f.Base, "/job")]
+func (f *Folder) childBase(name string) string {
+	if f.Base == "" {
+		return "/job/" + name
+	}
+	return f.Base + "/job/" + name
 }
 
 // GetName returns the name of the folder.
@@ -62,13 +63,14 @@ func (f *Folder) Create(ctx context.Context, name string) (*Folder, error) {
 			"mode": mode,
 		}),
 	}
-	r, err := f.Jenkins.Requester.Post(ctx, f.parentBase()+"/createItem", nil, f.Raw, data)
+	folder := &Folder{Jenkins: f.Jenkins, Raw: new(FolderResponse), Base: f.childBase(name)}
+	r, err := f.Jenkins.Requester.Post(ctx, f.Base+"/createItem", nil, folder.Raw, data)
 	if err != nil {
 		return nil, err
 	}
 	if r.StatusCode == 200 {
-		_, _ = f.Poll(ctx)
-		return f, nil
+		_, _ = folder.Poll(ctx)
+		return folder, nil
 	}
 	return nil, errors.New(strconv.Itoa(r.StatusCode))
 }
