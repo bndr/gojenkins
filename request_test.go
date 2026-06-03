@@ -16,8 +16,11 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -211,6 +214,47 @@ func TestReadJSONResponse_ComplexStructure(t *testing.T) {
 	assert.Len(t, result.Builds, 2)
 	assert.Equal(t, int64(1), result.Builds[0].Number)
 	assert.Equal(t, int64(2), result.LastBuild.Number)
+}
+
+func TestRequesterPostReadsRawStringResponse(t *testing.T) {
+	var form url.Values
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/crumbIssuer") {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("{}"))
+			return
+		}
+
+		assert.Equal(t, "/scriptText", r.URL.Path)
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
+
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		form, err = url.ParseQuery(string(body))
+		assert.NoError(t, err)
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("plain output\n"))
+	}))
+	defer server.Close()
+
+	requester := &Requester{
+		Base:   server.URL,
+		Client: server.Client(),
+	}
+
+	values := url.Values{}
+	values.Set("script", `println("Hello World!")`)
+
+	var output string
+	_, err := requester.Post(context.Background(), "/scriptText", strings.NewReader(values.Encode()), &output, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "plain output\n", output)
+	assert.Equal(t, `println("Hello World!")`, form.Get("script"))
 }
 
 func TestRequester_SetClient(t *testing.T) {

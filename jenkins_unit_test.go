@@ -16,7 +16,9 @@ package gojenkins
 
 import (
 	"context"
+	"io"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -553,4 +555,48 @@ func TestJenkins_SafeRestart_Success(t *testing.T) {
 
 	err := jenkins.SafeRestart(context.Background())
 	assert.NoError(t, err)
+}
+
+func TestJenkins_ExecuteScript_Success(t *testing.T) {
+	mock := &MockRequester{
+		PostFunc: func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+			assert.Equal(t, "/scriptText", endpoint)
+			assert.Nil(t, query)
+
+			body, err := io.ReadAll(payload)
+			assert.NoError(t, err)
+
+			values, err := url.ParseQuery(string(body))
+			assert.NoError(t, err)
+			assert.Equal(t, `println("Hello World!")`, values.Get("script"))
+
+			output, ok := response.(*string)
+			if assert.True(t, ok) {
+				*output = "Hello World!\n"
+			}
+
+			return &http.Response{StatusCode: 200}, nil
+		},
+	}
+
+	jenkins := &Jenkins{
+		Server:    "http://jenkins.local",
+		Requester: mock,
+	}
+
+	output, err := jenkins.ExecuteScript(context.Background(), `println("Hello World!")`)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello World!\n", output)
+}
+
+func TestJenkins_ExecuteScript_Error(t *testing.T) {
+	mock := &MockRequester{err: assert.AnError}
+	jenkins := &Jenkins{
+		Server:    "http://jenkins.local",
+		Requester: mock,
+	}
+
+	output, err := jenkins.ExecuteScript(context.Background(), `println("Hello World!")`)
+	assert.Equal(t, assert.AnError, err)
+	assert.Empty(t, output)
 }
