@@ -580,7 +580,8 @@ func TestJob_InvokeSimple_AlreadyQueued(t *testing.T) {
 
 func TestJob_GetBuild_Success(t *testing.T) {
 	jenkins := newMockJenkins()
-	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+	mock := jenkins.Requester.(*MockRequester)
+	mock.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
 		if br, ok := response.(*BuildResponse); ok {
 			br.Number = 42
 			br.Result = "SUCCESS"
@@ -602,6 +603,63 @@ func TestJob_GetBuild_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, build)
 	assert.Equal(t, int64(42), build.GetBuildNumber())
+	assert.Equal(t, "/job/test-job/42", mock.lastEndpoint)
+}
+
+func TestJob_GetBuild_WithJenkinsContextPath(t *testing.T) {
+	jenkins := newMockJenkins()
+	mock := jenkins.Requester.(*MockRequester)
+	mock.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		if br, ok := response.(*BuildResponse); ok {
+			br.Number = 42
+			br.Result = "SUCCESS"
+			br.URL = "http://localhost:8080/jenkins/job/test-job/42/"
+		}
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	job := &Job{
+		Jenkins: jenkins,
+		Raw: &JobResponse{
+			URL: "http://localhost:8080/jenkins/job/test-job/",
+		},
+		Base: "/job/test-job",
+	}
+	jenkins.Server = "http://localhost:8080/jenkins"
+
+	build, err := job.GetBuild(context.Background(), 42)
+	assert.NoError(t, err)
+	assert.NotNil(t, build)
+	assert.Equal(t, int64(42), build.GetBuildNumber())
+	assert.Equal(t, "/job/test-job/42", mock.lastEndpoint)
+}
+
+func TestJob_GetBuild_FallsBackToJobBase(t *testing.T) {
+	jenkins := newMockJenkins()
+	mock := jenkins.Requester.(*MockRequester)
+	mock.GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		if br, ok := response.(*BuildResponse); ok {
+			br.Number = 42
+			br.Result = "SUCCESS"
+			br.URL = "http://jenkins.example.com/job/test-job/42/"
+		}
+		return &http.Response{StatusCode: 200}, nil
+	}
+
+	job := &Job{
+		Jenkins: jenkins,
+		Raw: &JobResponse{
+			URL: "http://jenkins.example.com/job/test-job/",
+		},
+		Base: "/job/test-job",
+	}
+	jenkins.Server = "http://localhost:8080/"
+
+	build, err := job.GetBuild(context.Background(), 42)
+	assert.NoError(t, err)
+	assert.NotNil(t, build)
+	assert.Equal(t, int64(42), build.GetBuildNumber())
+	assert.Equal(t, "/job/test-job/42", mock.lastEndpoint)
 }
 
 func TestJob_GetBuild_NotFound(t *testing.T) {
