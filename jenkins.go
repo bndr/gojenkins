@@ -555,7 +555,11 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	}
 	views := make([]*View, len(j.Raw.Views))
 	for i, v := range j.Raw.Views {
-		views[i], _ = j.GetView(ctx, v.Name)
+		view, err := j.GetView(ctx, v.Name)
+		if err != nil {
+			return nil, err
+		}
+		views[i] = view
 	}
 	return views, nil
 }
