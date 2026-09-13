@@ -16,13 +16,38 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestRequester_PostJSONUsesJSONContentType(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/crumbIssuer/api/json":
+			_, _ = w.Write([]byte(`{}`))
+		case "/endpoint/api/json":
+			assert.Equal(t, http.MethodPost, r.Method)
+			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+			body, err := io.ReadAll(r.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, `{"enabled":true}`, string(body))
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	requester := &Requester{Base: server.URL, Client: server.Client()}
+	_, err := requester.PostJSON(context.Background(), "/endpoint/", bytes.NewBufferString(`{"enabled":true}`), nil, nil)
+	assert.NoError(t, err)
+}
 
 func TestNewAPIRequest_Basic(t *testing.T) {
 	ar := NewAPIRequest("GET", "/api/json", nil)
