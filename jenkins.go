@@ -495,10 +495,13 @@ func (j *Jenkins) GetPlugins(ctx context.Context, depth int) (*Plugins, error) {
 func (j *Jenkins) UninstallPlugin(ctx context.Context, name string) error {
 	url := fmt.Sprintf("/pluginManager/plugin/%s/doUninstall", name)
 	resp, err := j.Requester.Post(ctx, url, strings.NewReader(""), struct{}{}, map[string]string{})
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("invalid status code returned: %d", resp.StatusCode)
 	}
-	return err
+	return nil
 }
 
 // Check if the plugin is installed on the server.
@@ -516,11 +519,14 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
 	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
+	if err != nil {
+		return err
+	}
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("invalid status code returned: %d", resp.StatusCode)
 	}
-	return err
+	return nil
 }
 
 // Verify FingerPrint
