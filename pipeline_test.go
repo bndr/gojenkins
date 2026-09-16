@@ -273,6 +273,9 @@ func TestPipelineRun_GetNode_Success(t *testing.T) {
 			node.Name = "Deploy"
 			node.Status = "IN_PROGRESS"
 			node.Duration = 5000
+			node.URLs = map[string]map[string]string{
+				"self": {"href": "/job/pipeline/1/execution/node/5/wfapi/describe"},
+			}
 		}
 		return &http.Response{StatusCode: 200}, nil
 	}
@@ -295,6 +298,8 @@ func TestPipelineRun_GetNode_Success(t *testing.T) {
 	assert.Equal(t, "5", node.ID)
 	assert.Equal(t, "Deploy", node.Name)
 	assert.Equal(t, "IN_PROGRESS", node.Status)
+	assert.Same(t, run, node.Run)
+	assert.Equal(t, "/job/pipeline/1/execution/node/5", node.Base)
 }
 
 func TestPipelineRun_GetNode_NotFound(t *testing.T) {
