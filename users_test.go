@@ -3,7 +3,9 @@ package gojenkins
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +39,37 @@ func TestCreateUserSuccess(t *testing.T) {
 	assert.Equal(t, "new@example.com", user.Email)
 	assert.Equal(t, jenkins, user.Jenkins)
 	assert.Contains(t, mock.lastEndpoint, "/securityRealm/createAccountByAdmin")
+}
+
+func TestCreateUserEncodesFormValues(t *testing.T) {
+	var form url.Values
+	mock := &MockRequester{
+		PostFunc: func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+			body, err := io.ReadAll(payload)
+			assert.NoError(t, err)
+			form, err = url.ParseQuery(string(body))
+			assert.NoError(t, err)
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		},
+	}
+	jenkins := &Jenkins{Requester: mock}
+
+	_, err := jenkins.CreateUser(
+		context.Background(),
+		"ops+bot",
+		"s3cur&e=now",
+		"Ops & QA",
+		"ops+qa@example.test",
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, url.Values{
+		"username":  {"ops+bot"},
+		"password1": {"s3cur&e=now"},
+		"password2": {"s3cur&e=now"},
+		"fullname":  {"Ops & QA"},
+		"email":     {"ops+qa@example.test"},
+	}, form)
 }
 
 // TestCreateUserError tests user creation with HTTP error

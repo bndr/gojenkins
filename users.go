@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -37,7 +38,13 @@ func (j *Jenkins) CreateUser(ctx context.Context, userName, password, fullName, 
 		FullName: fullName,
 		Email:    email,
 	}
-	payload := "username=" + userName + "&password1=" + password + "&password2=" + password + "&fullname=" + fullName + "&email=" + email
+	payload := url.Values{
+		"username":  {userName},
+		"password1": {password},
+		"password2": {password},
+		"fullname":  {fullName},
+		"email":     {email},
+	}.Encode()
 	response, err := j.Requester.Post(ctx, createUserContext, strings.NewReader(payload), nil, nil)
 	if err != nil {
 		return user, err
