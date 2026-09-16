@@ -89,6 +89,18 @@ func TestArtifactGetDataError(t *testing.T) {
 	assert.Nil(t, data)
 }
 
+func TestArtifactSaveToDirPropagatesSaveError(t *testing.T) {
+	artifact := Artifact{
+		Jenkins: &Jenkins{Requester: &MockRequester{err: assert.AnError}},
+		FileName: "app.jar",
+		Path:     "/job/TestJob/123/artifact/target/app.jar",
+	}
+
+	saved, err := artifact.SaveToDir(context.Background(), t.TempDir())
+	assert.False(t, saved)
+	assert.EqualError(t, err, "no data received, not saving file")
+}
+
 // TestArtifactGetMD5Local tests MD5 calculation for local files
 func TestArtifactGetMD5Local(t *testing.T) {
 	artifact := Artifact{

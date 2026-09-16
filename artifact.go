@@ -80,7 +80,7 @@ func (a Artifact) SaveToDir(ctx context.Context, dir string) (bool, error) {
 	}
 	saved, err := a.Save(ctx, path.Join(dir, a.FileName))
 	if err != nil {
-		return saved, nil
+		return saved, err
 	}
 	return saved, nil
 }
