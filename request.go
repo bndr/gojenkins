@@ -248,6 +248,7 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		}
 		errorText := response.Header.Get("X-Error")
 		if errorText != "" {
+			_ = response.Body.Close()
 			return nil, errors.New(errorText)
 		}
 		switch responseStruct.(type) {

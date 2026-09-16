@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -23,6 +24,39 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
+
+type trackedResponseBody struct {
+	io.Reader
+	closed bool
+}
+
+func (body *trackedResponseBody) Close() error {
+	body.closed = true
+	return nil
+}
+
+func TestRequester_GetClosesXErrorResponseBody(t *testing.T) {
+	body := &trackedResponseBody{Reader: strings.NewReader(`{"message":"unavailable"}`)}
+	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusServiceUnavailable,
+			Header:     http.Header{"X-Error": []string{"Jenkins is restarting"}},
+			Body:       body,
+		}, nil
+	})}
+	requester := &Requester{Base: "http://jenkins.test", Client: client}
+
+	_, err := requester.Get(context.Background(), "/status", nil, nil)
+
+	assert.EqualError(t, err, "Jenkins is restarting")
+	assert.True(t, body.closed)
+}
 
 func TestNewAPIRequest_Basic(t *testing.T) {
 	ar := NewAPIRequest("GET", "/api/json", nil)
