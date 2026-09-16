@@ -354,6 +354,15 @@ func TestBuild_GetRevision_Git(t *testing.T) {
 	assert.Equal(t, "abc123def456", build.GetRevision())
 }
 
+func TestBuild_GetRevision_SVNWithoutRevisions(t *testing.T) {
+	build := &Build{Raw: &BuildResponse{}}
+	build.Raw.ChangeSet.Kind = "svn"
+
+	assert.NotPanics(t, func() {
+		assert.Empty(t, build.GetRevision())
+	})
+}
+
 func TestBuild_Stop_AlreadyStopped(t *testing.T) {
 	jenkins := newMockJenkins()
 	jenkins.Requester.(*MockRequester).response = &http.Response{

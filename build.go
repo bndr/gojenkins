@@ -484,7 +484,9 @@ func (b *Build) GetRevision() string {
 			}
 		}
 	case "svn":
-		return strconv.Itoa(b.Raw.ChangeSet.Revisions[0].Revision)
+		if len(b.Raw.ChangeSet.Revisions) > 0 {
+			return strconv.Itoa(b.Raw.ChangeSet.Revisions[0].Revision)
+		}
 	}
 	return ""
 }
