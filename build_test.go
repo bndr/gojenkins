@@ -288,6 +288,39 @@ func TestBuild_Poll_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestBuild_GetUpstreamBuild_PropagatesBuildNumberError(t *testing.T) {
+	jenkins := newMockJenkins()
+	requestCount := 0
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		requestCount++
+		switch requestCount {
+		case 1:
+			buildResponse := response.(*BuildResponse)
+			buildResponse.Actions = []generalObj{{
+				Causes: []map[string]interface{}{{"upstreamProject": "parent-job"}},
+			}}
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		case 2:
+			jobResponse := response.(*JobResponse)
+			jobResponse.Name = "parent-job"
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		default:
+			return nil, assert.AnError
+		}
+	}
+	build := &Build{
+		Jenkins: jenkins,
+		Job:     &Job{Jenkins: jenkins, Raw: new(JobResponse), Base: "/job/child-job"},
+		Raw:     new(BuildResponse),
+		Base:    "/job/child-job/15",
+	}
+
+	upstream, err := build.GetUpstreamBuild(context.Background())
+
+	assert.Nil(t, upstream)
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
 func TestBuild_GetArtifacts(t *testing.T) {
 	jenkins := newMockJenkins()
 	build := &Build{
