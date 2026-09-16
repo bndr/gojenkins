@@ -16,11 +16,32 @@ package gojenkins
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestJenkins_GetAllViewsPropagatesViewError(t *testing.T) {
+	viewErr := errors.New("view is no longer accessible")
+	mock := &MockRequester{
+		GetJSONFunc: func(_ context.Context, endpoint string, _ interface{}, _ map[string]string) (*http.Response, error) {
+			if endpoint == "/view/hidden" {
+				return nil, viewErr
+			}
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		},
+	}
+	jenkins := &Jenkins{
+		Requester: mock,
+		Raw:       &ExecutorResponse{Views: []ViewData{{Name: "hidden"}}},
+	}
+
+	views, err := jenkins.GetAllViews(context.Background())
+	assert.ErrorIs(t, err, viewErr)
+	assert.Nil(t, views)
+}
 
 func TestCreateJenkins_ValidURL(t *testing.T) {
 	jenkins := CreateJenkins(nil, "http://jenkins.local")
