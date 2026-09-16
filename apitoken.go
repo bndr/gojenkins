@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -39,7 +40,7 @@ func (e *ErrAPIToken) Error() string {
 
 // GenerateAPIToken creates a new API token for the Jenkins client user
 func (j *Jenkins) GenerateAPIToken(ctx context.Context, tokenName string) (APIToken, error) {
-	payload := "newTokenName=" + tokenName
+	payload := url.Values{"newTokenName": {tokenName}}.Encode()
 	apiTokenResponse := &APITokenGenerateResponse{}
 	response, err := j.Requester.Post(ctx, generateAPITokenURL, strings.NewReader(payload), apiTokenResponse, nil)
 	if err != nil {
