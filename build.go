@@ -241,7 +241,10 @@ func (b *Build) GetCulprits() []Culprit {
 
 // Stop aborts a running build.
 func (b *Build) Stop(ctx context.Context) (bool, error) {
-	if b.IsRunning(ctx) {
+	if _, err := b.Poll(ctx); err != nil {
+		return false, err
+	}
+	if b.Raw.Building {
 		response, err := b.Jenkins.Requester.Post(ctx, b.Base+"/stop", nil, nil, nil)
 		if err != nil {
 			return false, err

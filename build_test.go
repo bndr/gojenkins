@@ -16,6 +16,8 @@ package gojenkins
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -394,6 +396,27 @@ func TestBuild_Stop_Running(t *testing.T) {
 	// Verify the correct endpoint was called
 	mock := jenkins.Requester.(*MockRequester)
 	assert.Equal(t, "/job/test-job/1/stop", mock.lastEndpoint)
+}
+
+func TestBuild_Stop_ReturnsPollError(t *testing.T) {
+	jenkins := newMockJenkins()
+	wantErr := errors.New("status request failed")
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(context.Context, string, interface{}, map[string]string) (*http.Response, error) {
+		return nil, wantErr
+	}
+	postCalled := false
+	jenkins.Requester.(*MockRequester).PostFunc = func(context.Context, string, io.Reader, interface{}, map[string]string) (*http.Response, error) {
+		postCalled = true
+		return nil, nil
+	}
+
+	build := &Build{Jenkins: jenkins, Raw: new(BuildResponse), Base: "/job/test-job/1"}
+
+	stopped, err := build.Stop(context.Background())
+
+	assert.False(t, stopped)
+	assert.ErrorIs(t, err, wantErr)
+	assert.False(t, postCalled)
 }
 
 func TestBuild_GetConsoleOutput_Success(t *testing.T) {
