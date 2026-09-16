@@ -147,7 +147,7 @@ func (pr *PipelineRun) GetPendingInputActions(ctx context.Context) (PIAs []Pipel
 func (pr *PipelineRun) GetArtifacts(ctx context.Context) (artifacts []PipelineArtifact, err error) {
 	artifacts = make([]PipelineArtifact, 0)
 	href := pr.Base + "/wfapi/artifacts"
-	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, artifacts, nil)
+	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, &artifacts, nil)
 	if err != nil {
 		return nil, err
 	}

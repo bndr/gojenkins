@@ -244,8 +244,15 @@ func TestPipelineRun_GetPendingInputActions_Error(t *testing.T) {
 
 func TestPipelineRun_GetArtifacts_Success(t *testing.T) {
 	jenkins := newMockJenkins()
-	jenkins.Requester.(*MockRequester).response = &http.Response{
-		StatusCode: 200,
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		if artifacts, ok := response.(*[]PipelineArtifact); ok {
+			*artifacts = append(*artifacts, PipelineArtifact{
+				ID:   "report-7",
+				Name: "report.html",
+				Path: "reports/report.html",
+			})
+		}
+		return &http.Response{StatusCode: http.StatusOK}, nil
 	}
 
 	job := &Job{
@@ -262,7 +269,11 @@ func TestPipelineRun_GetArtifacts_Success(t *testing.T) {
 
 	artifacts, err := run.GetArtifacts(context.Background())
 	assert.NoError(t, err)
-	assert.NotNil(t, artifacts)
+	assert.Equal(t, []PipelineArtifact{{
+		ID:   "report-7",
+		Name: "report.html",
+		Path: "reports/report.html",
+	}}, artifacts)
 }
 
 func TestPipelineRun_GetNode_Success(t *testing.T) {
