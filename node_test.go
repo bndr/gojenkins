@@ -513,3 +513,16 @@ func TestNode_GetLogText_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Empty(t, log)
 }
+
+func TestNode_GetLogText_ProgressiveLogError(t *testing.T) {
+	jenkins := newMockJenkins()
+	jenkins.Requester.(*MockRequester).response = &http.Response{StatusCode: http.StatusOK}
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(context.Context, string, interface{}, map[string]string) (*http.Response, error) {
+		return nil, assert.AnError
+	}
+	node := &Node{Jenkins: jenkins, Raw: &NodeResponse{}, Base: "/computer/test-agent"}
+
+	log, err := node.GetLogText(context.Background())
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Empty(t, log)
+}

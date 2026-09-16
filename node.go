@@ -242,7 +242,7 @@ func (n *Node) GetLogText(ctx context.Context) (string, error) {
 	qr := map[string]string{"start": "0"}
 	_, err = n.Jenkins.Requester.GetJSON(ctx, n.Base+"/logText/progressiveHtml/", &log, qr)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return log, nil
