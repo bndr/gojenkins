@@ -438,7 +438,9 @@ func (b *Build) GetMatrixRuns(ctx context.Context) ([]*Build, error) {
 
 	for i, run := range runs {
 		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.URL)}
-		_, _ = result[i].Poll(ctx)
+		if _, err := result[i].Poll(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return result, nil
 }

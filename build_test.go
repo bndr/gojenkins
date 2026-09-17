@@ -16,12 +16,41 @@ package gojenkins
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestBuild_GetMatrixRuns_ReturnsRunPollError(t *testing.T) {
+	jenkins := newMockJenkins()
+	wantErr := errors.New("matrix run is unavailable")
+	calls := 0
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(_ context.Context, _ string, response interface{}, _ map[string]string) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			response.(*BuildResponse).Runs = append(response.(*BuildResponse).Runs, struct {
+				Number int64
+				URL    string
+			}{URL: "http://jenkins/job/example/axis/42/"})
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		}
+		return nil, wantErr
+	}
+
+	build := &Build{
+		Jenkins: jenkins,
+		Raw:     new(BuildResponse),
+		Base:    "/job/example/42",
+	}
+
+	runs, err := build.GetMatrixRuns(context.Background())
+
+	assert.Nil(t, runs)
+	assert.ErrorIs(t, err, wantErr)
+}
 
 func TestBuild_Info(t *testing.T) {
 	rawResponse := &BuildResponse{
