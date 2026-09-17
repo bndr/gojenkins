@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 )
 
@@ -99,6 +100,9 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 // CancelTask cancels a queued task by its ID.
 func (q *Queue) CancelTask(ctx context.Context, id int64) (bool, error) {
 	task := q.GetTaskById(id)
+	if task == nil {
+		return false, fmt.Errorf("queue task %d not found", id)
+	}
 	return task.Cancel(ctx)
 }
 

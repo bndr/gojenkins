@@ -346,3 +346,16 @@ func TestQueue_CancelTask_Failure(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, success)
 }
+
+func TestQueue_CancelTask_NotFound(t *testing.T) {
+	queue := &Queue{
+		Jenkins: newMockJenkins(),
+		Raw: &queueResponse{
+			Items: []taskResponse{{ID: 2026090900}},
+		},
+	}
+
+	success, err := queue.CancelTask(context.Background(), 2026090901)
+	assert.EqualError(t, err, "queue task 2026090901 not found")
+	assert.False(t, success)
+}
