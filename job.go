@@ -363,7 +363,9 @@ func (j *Job) Create(ctx context.Context, config string, qr ...interface{}) (*Jo
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		_, _ = j.Poll(ctx)
+		if _, err := j.Poll(ctx); err != nil {
+			return nil, err
+		}
 		return j, nil
 	}
 	return nil, errors.New(strconv.Itoa(resp.StatusCode))

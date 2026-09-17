@@ -463,6 +463,26 @@ func TestJob_GetConfig_Error(t *testing.T) {
 	assert.Empty(t, config)
 }
 
+func TestJob_Create_ReturnsPollError(t *testing.T) {
+	jenkins := newMockJenkins()
+	jenkins.Requester.(*MockRequester).PostXMLFunc = func(ctx context.Context, endpoint string, xml string, response interface{}, query map[string]string) (*http.Response, error) {
+		return &http.Response{StatusCode: 200}, nil
+	}
+	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
+		return nil, assert.AnError
+	}
+
+	job := &Job{
+		Jenkins: jenkins,
+		Raw:     &JobResponse{},
+		Base:    "/job/report-7",
+	}
+
+	created, err := job.Create(context.Background(), "<project/>")
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Nil(t, created)
+}
+
 func TestJob_UpdateConfig_Success(t *testing.T) {
 	jenkins := newMockJenkins()
 	var capturedEndpoint string
