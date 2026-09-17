@@ -554,3 +554,21 @@ func TestJenkins_SafeRestart_Success(t *testing.T) {
 	err := jenkins.SafeRestart(context.Background())
 	assert.NoError(t, err)
 }
+
+func TestJenkins_UninstallPlugin_RequestError(t *testing.T) {
+	jenkins := newMockJenkins()
+	jenkins.Requester.(*MockRequester).err = assert.AnError
+
+	err := jenkins.UninstallPlugin(context.Background(), "git")
+
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestJenkins_InstallPlugin_RequestError(t *testing.T) {
+	jenkins := newMockJenkins()
+	jenkins.Requester.(*MockRequester).err = assert.AnError
+
+	err := jenkins.InstallPlugin(context.Background(), "git", "5.0")
+
+	assert.ErrorIs(t, err, assert.AnError)
+}
