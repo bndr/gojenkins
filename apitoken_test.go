@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,6 +50,25 @@ func TestGenerateAPITokenSuccess(t *testing.T) {
 	assert.Equal(t, "generated-uuid", token.UUID)
 	assert.Equal(t, "generated-value", token.Value)
 	assert.Equal(t, jenkins, token.Jenkins)
+}
+
+func TestGenerateAPITokenEncodesTokenName(t *testing.T) {
+	var form url.Values
+	mock := &MockRequester{
+		PostFunc: func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+			body, err := io.ReadAll(payload)
+			assert.NoError(t, err)
+			form, err = url.ParseQuery(string(body))
+			assert.NoError(t, err)
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		},
+	}
+	jenkins := &Jenkins{Requester: mock}
+
+	_, err := jenkins.GenerateAPIToken(context.Background(), "deploy & verify+1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, url.Values{"newTokenName": {"deploy & verify+1"}}, form)
 }
 
 // TestGenerateAPITokenError tests token generation with HTTP error
