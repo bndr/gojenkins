@@ -419,7 +419,10 @@ func (b *Build) GetUpstreamBuild(ctx context.Context) (*Build, error) {
 	}
 	if job != nil {
 		buildNumber, err := b.GetUpstreamBuildNumber(ctx)
-		if err == nil && buildNumber != 0 {
+		if err != nil {
+			return nil, err
+		}
+		if buildNumber != 0 {
 			return job.GetBuild(ctx, buildNumber)
 		}
 	}
