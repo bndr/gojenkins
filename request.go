@@ -82,7 +82,7 @@ func (r *Requester) PostJSON(ctx context.Context, endpoint string, payload io.Re
 	if err := r.SetCrumb(ctx, ar); err != nil {
 		return nil, err
 	}
-	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	ar.SetHeader("Content-Type", "application/json")
 	ar.Suffix = "api/json"
 	return r.Do(ctx, ar, &responseStruct, querystring)
 }
