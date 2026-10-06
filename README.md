@@ -266,13 +266,20 @@ user, err := jenkins.CreateUser(ctx, "username", "password", "fullname", "user@e
 if err != nil {
   log.Fatal(err)
 }
+
+// Get user details
+user, err = jenkins.GetUser(ctx, "username")
+if err != nil {
+  log.Fatal(err)
+}
+
 // Delete User
-err = user.Delete()
+err = user.Delete(ctx)
 if err != nil {
   log.Fatal(err)
 }
 // Delete user not created by gojenkins
-err = jenkins.DeleteUser("username")
+err = jenkins.DeleteUser(ctx, "username")
 ```
 
 ## Create and Revoke API Tokens
@@ -288,7 +295,10 @@ if err != nil {
 jenkins.Requester.BasicAuth.Password = token.Value
 
 // Revoke token that was just created
-token.Revoke()
+err = token.Revoke(ctx)
+if err != nil {
+  log.Fatal(err)
+}
 
 // Revoke all tokens for admin user
 err = jenkins.RevokeAllAPITokens(ctx)

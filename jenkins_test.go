@@ -2,7 +2,6 @@ package gojenkins
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -377,7 +376,7 @@ func TestConcurrentRequests(t *testing.T) {
 }
 
 func getFileAsString(path string) string {
-	buf, err := ioutil.ReadFile("_tests/" + path)
+	buf, err := os.ReadFile("_tests/" + path)
 	if err != nil {
 		panic(err)
 	}

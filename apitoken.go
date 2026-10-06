@@ -1,10 +1,25 @@
+// Copyright 2015 Vadim Kravcenko
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package gojenkins
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
 )
 
 const (
@@ -39,9 +54,10 @@ func (e *ErrAPIToken) Error() string {
 
 // GenerateAPIToken creates a new API token for the Jenkins client user
 func (j *Jenkins) GenerateAPIToken(ctx context.Context, tokenName string) (APIToken, error) {
-	payload := "newTokenName=" + tokenName
+	data := url.Values{}
+	data.Set("newTokenName", tokenName)
 	apiTokenResponse := &APITokenGenerateResponse{}
-	response, err := j.Requester.Post(ctx, generateAPITokenURL, strings.NewReader(payload), apiTokenResponse, nil)
+	response, err := j.Requester.Post(ctx, generateAPITokenURL, bytes.NewBufferString(data.Encode()), apiTokenResponse, nil)
 	if err != nil {
 		return apiTokenResponse.Data, err
 	}
@@ -58,8 +74,9 @@ func (j *Jenkins) GenerateAPIToken(ctx context.Context, tokenName string) (APITo
 
 // RevokeAPIToken revokes an API token
 func (j *Jenkins) RevokeAPIToken(ctx context.Context, tokenUuid string) error {
-	payload := "tokenUuid=" + tokenUuid
-	response, err := j.Requester.Post(ctx, revokeAPITokenURL, strings.NewReader(payload), nil, nil)
+	data := url.Values{}
+	data.Set("tokenUuid", tokenUuid)
+	response, err := j.Requester.Post(ctx, revokeAPITokenURL, bytes.NewBufferString(data.Encode()), nil, nil)
 	if err != nil {
 		return err
 	}
@@ -86,6 +103,6 @@ func (j *Jenkins) RevokeAllAPITokens(ctx context.Context) error {
 }
 
 // Revoke revokes an API token
-func (a *APIToken) Revoke() error {
-	return a.Jenkins.RevokeAPIToken(context.Background(), a.UUID)
+func (a *APIToken) Revoke(ctx context.Context) error {
+	return a.Jenkins.RevokeAPIToken(ctx, a.UUID)
 }
