@@ -98,7 +98,11 @@ type JobResponse struct {
 }
 
 func (j *Job) parentBase() string {
-	return j.Base[:strings.LastIndex(j.Base, "/job/")]
+	idx := strings.LastIndex(j.Base, "/job/")
+	if idx < 0 {
+		return ""
+	}
+	return j.Base[:idx]
 }
 
 type History struct {
@@ -147,12 +151,11 @@ func (j *Job) getBuildByType(ctx context.Context, buildType string) (*Build, err
 		"firstBuild":          j.Raw.FirstBuild,
 		"lastFailedBuild":     j.Raw.LastFailedBuild,
 	}
-	number := ""
-	if val, ok := allowed[buildType]; ok {
-		number = strconv.FormatInt(val.Number, 10)
-	} else {
-		panic("No Such Build")
+	val, ok := allowed[buildType]
+	if !ok {
+		return nil, fmt.Errorf("unknown build type: %s", buildType)
 	}
+	number := strconv.FormatInt(val.Number, 10)
 	build := Build{
 		Jenkins: j.Jenkins,
 		Depth:   1,
@@ -415,8 +418,8 @@ func (j *Job) IsEnabled(ctx context.Context) (bool, error) {
 	return j.Raw.Color != "disabled", nil
 }
 
-func (j *Job) HasQueuedBuild() {
-	panic("Not Implemented yet")
+func (j *Job) HasQueuedBuild() (bool, error) {
+	return false, errors.New("not implemented")
 }
 
 func (j *Job) InvokeSimple(ctx context.Context, params map[string]string) (int64, error) {
@@ -535,7 +538,13 @@ func (j *Job) History(ctx context.Context) ([]*History, error) {
 }
 
 func (pr *PipelineRun) ProceedInput(ctx context.Context) (bool, error) {
-	actions, _ := pr.GetPendingInputActions(ctx)
+	actions, err := pr.GetPendingInputActions(ctx)
+	if err != nil {
+		return false, err
+	}
+	if len(actions) == 0 {
+		return false, errors.New("no pending input actions")
+	}
 	data := url.Values{}
 	data.Set("inputId", actions[0].ID)
 	params := make(map[string]string)
@@ -554,7 +563,13 @@ func (pr *PipelineRun) ProceedInput(ctx context.Context) (bool, error) {
 }
 
 func (pr *PipelineRun) AbortInput(ctx context.Context) (bool, error) {
-	actions, _ := pr.GetPendingInputActions(ctx)
+	actions, err := pr.GetPendingInputActions(ctx)
+	if err != nil {
+		return false, err
+	}
+	if len(actions) == 0 {
+		return false, errors.New("no pending input actions")
+	}
 	data := url.Values{}
 	params := make(map[string]string)
 	data.Set("json", makeJson(params))

@@ -286,7 +286,11 @@ func (j *Jenkins) GetBuildFromQueueID(ctx context.Context, job *Job, queueid int
 	}
 	// Jenkins queue API has about 4.7second quiet period
 	for task.Raw.Executable.Number == 0 {
-		time.Sleep(1000 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(1000 * time.Millisecond):
+		}
 		_, err = task.Poll(ctx)
 		if err != nil {
 			return nil, err
@@ -512,11 +516,13 @@ func (j *Jenkins) HasPlugin(ctx context.Context, name string) (*Plugin, error) {
 func (j *Jenkins) InstallPlugin(ctx context.Context, name string, version string) error {
 	xml := fmt.Sprintf(`<jenkins><install plugin="%s@%s" /></jenkins>`, name, version)
 	resp, err := j.Requester.PostXML(ctx, "/pluginManager/installNecessaryPlugins", xml, j.Raw, map[string]string{})
-
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
 	}
-	return err
+	return nil
 }
 
 // Verify FingerPrint
@@ -549,7 +555,11 @@ func (j *Jenkins) GetAllViews(ctx context.Context) ([]*View, error) {
 	}
 	views := make([]*View, len(j.Raw.Views))
 	for i, v := range j.Raw.Views {
-		views[i], _ = j.GetView(ctx, v.Name)
+		view, err := j.GetView(ctx, v.Name)
+		if err != nil {
+			return nil, err
+		}
+		views[i] = view
 	}
 	return views, nil
 }

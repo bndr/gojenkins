@@ -62,9 +62,10 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 	}
 
 	err = os.WriteFile(path, data, 0644)
-	a.validateDownload(ctx, path)
-
 	if err != nil {
+		return false, err
+	}
+	if _, err = a.validateDownload(ctx, path); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -78,7 +79,7 @@ func (a Artifact) SaveToDir(ctx context.Context, dir string) (bool, error) {
 	}
 	saved, err := a.Save(ctx, path.Join(dir, a.FileName))
 	if err != nil {
-		return saved, nil
+		return false, err
 	}
 	return saved, nil
 }
@@ -102,17 +103,15 @@ func (a Artifact) validateDownload(ctx context.Context, path string) (bool, erro
 
 // Get Local MD5
 func (a Artifact) getMD5local(path string) string {
-	h := md5.New()
 	localFile, err := os.Open(path)
 	if err != nil {
 		return ""
 	}
-	buffer := make([]byte, 1<<20)
-	n, err := localFile.Read(buffer)
 	defer localFile.Close()
-	for err == nil {
-		io.WriteString(h, string(buffer[0:n]))
-		n, err = localFile.Read(buffer)
+
+	h := md5.New()
+	if _, err := io.Copy(h, localFile); err != nil {
+		return ""
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }

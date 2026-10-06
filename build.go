@@ -240,7 +240,11 @@ func (b *Build) Stop(ctx context.Context) (bool, error) {
 func (b *Build) GetConsoleOutput(ctx context.Context) string {
 	url := b.Base + "/consoleText"
 	var content string
-	b.Jenkins.Requester.GetXML(ctx, url, &content, nil)
+	_, err := b.Jenkins.Requester.GetXML(ctx, url, &content, nil)
+	if err != nil {
+		Error.Printf("Failed to get console output: %v", err)
+		return ""
+	}
 	return content
 }
 
@@ -452,7 +456,9 @@ func (b *Build) GetRevision() string {
 			}
 		}
 	} else if vcs == "svn" {
-		return strconv.Itoa(b.Raw.ChangeSet.Revisions[0].Revision)
+		if len(b.Raw.ChangeSet.Revisions) > 0 {
+			return strconv.Itoa(b.Raw.ChangeSet.Revisions[0].Revision)
+		}
 	}
 	return ""
 }
@@ -465,8 +471,6 @@ func (b *Build) GetRevisionBranch() string {
 				return a.LastBuiltRevision.Branch[0].SHA1
 			}
 		}
-	} else {
-		panic("Not implemented")
 	}
 	return ""
 }

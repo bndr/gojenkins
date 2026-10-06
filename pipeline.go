@@ -19,7 +19,6 @@ package gojenkins
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 )
 
@@ -71,7 +70,7 @@ type PipelineArtifact struct {
 	Name string
 	Path string
 	URL  string
-	size int
+	Size int `json:"size"`
 }
 
 type PipelineNodeLog struct {
@@ -136,9 +135,9 @@ func (pr *PipelineRun) GetPendingInputActions(ctx context.Context) (PIAs []Pipel
 }
 
 func (pr *PipelineRun) GetArtifacts(ctx context.Context) (artifacts []PipelineArtifact, err error) {
-	artifacts = make([]PipelineArtifact, 0, 0)
+	artifacts = make([]PipelineArtifact, 0)
 	href := pr.Base + "/wfapi/artifacts"
-	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, artifacts, nil)
+	_, err = pr.Job.Jenkins.Requester.GetJSON(ctx, href, &artifacts, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +159,6 @@ func (pr *PipelineRun) GetNode(ctx context.Context, id string) (node *PipelineNo
 func (node *PipelineNode) GetLog(ctx context.Context) (log *PipelineNodeLog, err error) {
 	log = new(PipelineNodeLog)
 	href := node.Base + "/wfapi/log"
-	fmt.Println(href)
 	_, err = node.Run.Job.Jenkins.Requester.GetJSON(ctx, href, log, nil)
 	if err != nil {
 		return nil, err

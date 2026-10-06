@@ -16,6 +16,7 @@ package gojenkins
 
 import (
 	"context"
+	"errors"
 	"strconv"
 )
 
@@ -66,16 +67,16 @@ type generalAction struct {
 
 func (q *Queue) Tasks() []*Task {
 	tasks := make([]*Task, len(q.Raw.Items))
-	for i, t := range q.Raw.Items {
-		tasks[i] = &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t}
+	for i := range q.Raw.Items {
+		tasks[i] = &Task{Jenkins: q.Jenkins, Queue: q, Raw: &q.Raw.Items[i]}
 	}
 	return tasks
 }
 
 func (q *Queue) GetTaskById(id int64) *Task {
-	for _, t := range q.Raw.Items {
-		if t.ID == id {
-			return &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t}
+	for i := range q.Raw.Items {
+		if q.Raw.Items[i].ID == id {
+			return &Task{Jenkins: q.Jenkins, Queue: q, Raw: &q.Raw.Items[i]}
 		}
 	}
 	return nil
@@ -83,9 +84,9 @@ func (q *Queue) GetTaskById(id int64) *Task {
 
 func (q *Queue) GetTasksForJob(name string) []*Task {
 	tasks := make([]*Task, 0)
-	for _, t := range q.Raw.Items {
-		if t.Task.Name == name {
-			tasks = append(tasks, &Task{Jenkins: q.Jenkins, Queue: q, Raw: &t})
+	for i := range q.Raw.Items {
+		if q.Raw.Items[i].Task.Name == name {
+			tasks = append(tasks, &Task{Jenkins: q.Jenkins, Queue: q, Raw: &q.Raw.Items[i]})
 		}
 	}
 	return tasks
@@ -93,6 +94,9 @@ func (q *Queue) GetTasksForJob(name string) []*Task {
 
 func (q *Queue) CancelTask(ctx context.Context, id int64) (bool, error) {
 	task := q.GetTaskById(id)
+	if task == nil {
+		return false, errors.New("queue task not found")
+	}
 	return task.Cancel(ctx)
 }
 

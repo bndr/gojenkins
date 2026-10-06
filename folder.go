@@ -39,7 +39,11 @@ type FolderResponse struct {
 }
 
 func (f *Folder) parentBase() string {
-	return f.Base[:strings.LastIndex(f.Base, "/job")]
+	idx := strings.LastIndex(f.Base, "/job")
+	if idx < 0 {
+		return ""
+	}
+	return f.Base[:idx]
 }
 
 func (f *Folder) GetName() string {
