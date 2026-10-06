@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -62,7 +61,7 @@ func (a Artifact) Save(ctx context.Context, path string) (bool, error) {
 		Warning.Println("Local Copy already exists, Overwriting...")
 	}
 
-	err = ioutil.WriteFile(path, data, 0644)
+	err = os.WriteFile(path, data, 0644)
 	a.validateDownload(ctx, path)
 
 	if err != nil {

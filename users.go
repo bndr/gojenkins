@@ -1,9 +1,27 @@
+// Copyright 2015 Vadim Kravcenko
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package gojenkins
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -11,15 +29,8 @@ const (
 	createUserContext = "/securityRealm/createAccountByAdmin"
 )
 
+// User represents a Jenkins user account.
 type User struct {
-	Jenkins  *Jenkins
-	UserName string
-	FullName string
-	Email    string
-	Raw      *UserResponse
-}
-
-type Users struct {
 	Jenkins  *Jenkins
 	UserName string
 	FullName string
@@ -29,6 +40,11 @@ type Users struct {
 	Raw      *UserResponse
 }
 
+// Users is an alias for User kept for backward compatibility.
+// Deprecated: use User instead.
+type Users = User
+
+// UserResponse is the JSON payload returned by the Jenkins user API.
 type UserResponse struct {
 	Class       string `json:"_class"`
 	AbsoluteURL string `json:"absoluteUrl"`
@@ -37,34 +53,55 @@ type UserResponse struct {
 	ID          string `json:"id"`
 }
 
-type AllUserResponse struct {
-	Class string `json:"_class"`
-	Users []struct {
-		LastChange int64 `json:"lastChange"`
-		Project    struct {
-			Class string `json:"_class"`
-			Name  string `json:"name"`
-			URL   string `json:"url"`
-		} `json:"project"`
-		User struct {
-			AbsoluteURL string `json:"absoluteUrl"`
-			FullName    string `json:"fullName"`
-		} `json:"user"`
-	} `json:"users"`
+// PeopleUser is a single entry from the Jenkins people/asynchPeople API.
+type PeopleUser struct {
+	AbsoluteURL string `json:"absoluteUrl"`
+	FullName    string `json:"fullName"`
+	ID          string `json:"id"`
 }
 
+// PeopleProject is the project associated with a people API entry.
+type PeopleProject struct {
+	Class string `json:"_class"`
+	Name  string `json:"name"`
+	URL   string `json:"url"`
+}
+
+// PeopleEntry is one row in the Jenkins people/asynchPeople listing.
+type PeopleEntry struct {
+	LastChange int64         `json:"lastChange"`
+	Project    PeopleProject `json:"project"`
+	User       PeopleUser    `json:"user"`
+}
+
+// AllUserResponse is the JSON payload returned by /asynchPeople/.
+type AllUserResponse struct {
+	Class string        `json:"_class"`
+	Users []PeopleEntry `json:"users"`
+}
+
+// AllUsers is a collection of Jenkins users returned by GetAllUsers.
 type AllUsers struct {
 	Jenkins *Jenkins
 	Base    string
 	Raw     *AllUserResponse
 }
 
+// ErrUser is returned when a user API operation fails.
 type ErrUser struct {
 	Message string
 }
 
 func (e *ErrUser) Error() string {
 	return e.Message
+}
+
+func userAPIPath(userName string) string {
+	return "/user/" + url.PathEscape(userName)
+}
+
+func deleteUserPath(userName string) string {
+	return "/securityRealm/user/" + url.PathEscape(userName) + "/doDelete"
 }
 
 // CreateUser creates a new Jenkins account.
@@ -74,13 +111,18 @@ func (j *Jenkins) CreateUser(ctx context.Context, userName, password, fullName, 
 		UserName: userName,
 		FullName: fullName,
 		Email:    email,
+		Base:     userAPIPath(userName),
+		Raw:      new(UserResponse),
 	}
 
-	// Create the payload string
-	payload := fmt.Sprintf("username=%s&password1=%s&password2=%s&fullname=%s&email=%s", userName, password, password, fullName, email)
+	data := url.Values{}
+	data.Set("username", userName)
+	data.Set("password1", password)
+	data.Set("password2", password)
+	data.Set("fullname", fullName)
+	data.Set("email", email)
 
-	// Send the POST request to create the user
-	response, err := j.Requester.Post(ctx, createUserContext, strings.NewReader(payload), nil, nil)
+	response, err := j.Requester.Post(ctx, createUserContext, bytes.NewBufferString(data.Encode()), nil, nil)
 	if err != nil {
 		return user, err
 	}
@@ -94,11 +136,10 @@ func (j *Jenkins) CreateUser(ctx context.Context, userName, password, fullName, 
 
 // DeleteUser deletes a Jenkins account.
 func (j *Jenkins) DeleteUser(ctx context.Context, userName string) error {
-	deleteContext := "/securityRealm/user/" + userName + "/doDelete"
-	payload := "Submit=Yes"
+	data := url.Values{}
+	data.Set("Submit", "Yes")
 
-	// Send the POST request to delete the user
-	response, err := j.Requester.Post(ctx, deleteContext, strings.NewReader(payload), nil, nil)
+	response, err := j.Requester.Post(ctx, deleteUserPath(userName), bytes.NewBufferString(data.Encode()), nil, nil)
 	if err != nil {
 		return err
 	}
@@ -111,40 +152,58 @@ func (j *Jenkins) DeleteUser(ctx context.Context, userName string) error {
 }
 
 // Delete deletes a Jenkins account.
-func (u *User) Delete() error {
-	return u.Jenkins.DeleteUser(context.Background(), u.UserName)
+func (u *User) Delete(ctx context.Context) error {
+	return u.Jenkins.DeleteUser(ctx, u.UserName)
 }
 
 // GetUser retrieves information about a Jenkins user.
-func (j *Jenkins) GetUser(ctx context.Context, userName string) (*Users, error) {
-	userInfo := Users{Jenkins: j, Raw: new(UserResponse), Base: "/user/" + userName}
+func (j *Jenkins) GetUser(ctx context.Context, userName string) (*User, error) {
+	user := &User{
+		Jenkins:  j,
+		UserName: userName,
+		Raw:      new(UserResponse),
+		Base:     userAPIPath(userName),
+	}
 
-	// Poll for user information
-	_, err := userInfo.Poll(ctx)
+	status, err := user.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &userInfo, nil
+	if status != http.StatusOK {
+		return nil, &ErrUser{
+			Message: fmt.Sprintf("user not found. Status is %d", status),
+		}
+	}
+	return user, nil
 }
 
 // GetAllUsers retrieves information about all Jenkins users.
-// This operation may take a lot of time.
+// This operation may take a long time on large Jenkins instances.
 func (j *Jenkins) GetAllUsers(ctx context.Context) (*AllUsers, error) {
-	allUsers := AllUsers{Jenkins: j, Raw: new(AllUserResponse), Base: "/asynchPeople/"}
+	allUsers := &AllUsers{Jenkins: j, Raw: new(AllUserResponse), Base: "/asynchPeople/"}
 
-	// Poll for all user information
-	_, err := allUsers.Poll(ctx)
+	status, err := allUsers.Poll(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &allUsers, nil
+	if status != http.StatusOK {
+		return nil, errors.New(strconv.Itoa(status))
+	}
+	return allUsers, nil
 }
 
-// Poll retrieves user information.
-func (u *Users) Poll(ctx context.Context) (int, error) {
+// Poll retrieves user information and updates exported fields from the response.
+func (u *User) Poll(ctx context.Context) (int, error) {
 	response, err := u.Jenkins.Requester.GetJSON(ctx, u.Base, u.Raw, nil)
 	if err != nil {
 		return 0, err
+	}
+	if u.Raw != nil {
+		u.ID = u.Raw.ID
+		u.FullName = u.Raw.FullName
+		if u.UserName == "" {
+			u.UserName = u.Raw.ID
+		}
 	}
 	return response.StatusCode, nil
 }
@@ -155,5 +214,22 @@ func (u *AllUsers) Poll(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if u.Raw != nil {
+		for i := range u.Raw.Users {
+			entry := &u.Raw.Users[i]
+			if entry.User.ID == "" {
+				entry.User.ID = userIDFromAbsoluteURL(entry.User.AbsoluteURL)
+			}
+		}
+	}
 	return response.StatusCode, nil
+}
+
+func userIDFromAbsoluteURL(absoluteURL string) string {
+	absoluteURL = strings.TrimSuffix(absoluteURL, "/")
+	if absoluteURL == "" {
+		return ""
+	}
+	parts := strings.Split(absoluteURL, "/")
+	return parts[len(parts)-1]
 }

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -64,7 +63,12 @@ type Requester struct {
 
 func (r *Requester) SetCrumb(ctx context.Context, ar *APIRequest) error {
 	crumbData := map[string]string{}
-	response, _ := r.GetJSON(ctx, "/crumbIssuer/api/json", &crumbData, nil)
+	// GetJSON appends the "api/json" suffix, so the endpoint must not include it.
+	response, err := r.GetJSON(ctx, "/crumbIssuer/", &crumbData, nil)
+	// Crumb issuer may be disabled or unreachable; treat that as optional.
+	if err != nil || response == nil {
+		return nil
+	}
 
 	if response.StatusCode == 200 && crumbData["crumbRequestField"] != "" {
 		ar.SetHeader(crumbData["crumbRequestField"], crumbData["crumb"])
@@ -81,7 +85,7 @@ func (r *Requester) PostJSON(ctx context.Context, endpoint string, payload io.Re
 	}
 	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	ar.Suffix = "api/json"
-	return r.Do(ctx, ar, &responseStruct, querystring)
+	return r.Do(ctx, ar, responseStruct, querystring)
 }
 
 func (r *Requester) Post(ctx context.Context, endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
@@ -91,7 +95,7 @@ func (r *Requester) Post(ctx context.Context, endpoint string, payload io.Reader
 	}
 	ar.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	ar.Suffix = ""
-	return r.Do(ctx, ar, &responseStruct, querystring)
+	return r.Do(ctx, ar, responseStruct, querystring)
 }
 
 func (r *Requester) PostFiles(ctx context.Context, endpoint string, payload io.Reader, responseStruct interface{}, querystring map[string]string, files []string) (*http.Response, error) {
@@ -99,7 +103,7 @@ func (r *Requester) PostFiles(ctx context.Context, endpoint string, payload io.R
 	if err := r.SetCrumb(ctx, ar); err != nil {
 		return nil, err
 	}
-	return r.Do(ctx, ar, &responseStruct, querystring, files)
+	return r.Do(ctx, ar, responseStruct, querystring, files)
 }
 
 func (r *Requester) PostXML(ctx context.Context, endpoint string, xml string, responseStruct interface{}, querystring map[string]string) (*http.Response, error) {
@@ -110,14 +114,14 @@ func (r *Requester) PostXML(ctx context.Context, endpoint string, xml string, re
 	}
 	ar.SetHeader("Content-Type", "application/xml;charset=utf-8")
 	ar.Suffix = ""
-	return r.Do(ctx, ar, &responseStruct, querystring)
+	return r.Do(ctx, ar, responseStruct, querystring)
 }
 
 func (r *Requester) GetJSON(ctx context.Context, endpoint string, responseStruct interface{}, query map[string]string) (*http.Response, error) {
 	ar := NewAPIRequest("GET", endpoint, nil)
 	ar.SetHeader("Content-Type", "application/json")
 	ar.Suffix = "api/json"
-	return r.Do(ctx, ar, &responseStruct, query)
+	return r.Do(ctx, ar, responseStruct, query)
 }
 
 func (r *Requester) GetXML(ctx context.Context, endpoint string, responseStruct interface{}, query map[string]string) (*http.Response, error) {
@@ -188,16 +192,22 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 
 			part, err := writer.CreateFormFile("file", filepath.Base(file))
 			if err != nil {
+				fileData.Close()
 				Error.Println(err.Error())
 				return nil, err
 			}
 			if _, err = io.Copy(part, fileData); err != nil {
+				fileData.Close()
 				return nil, err
 			}
-			defer fileData.Close()
+			fileData.Close()
 		}
 		var params map[string]string
-		json.NewDecoder(ar.Payload).Decode(&params)
+		if ar.Payload != nil {
+			if err := json.NewDecoder(ar.Payload).Decode(&params); err != nil && !errors.Is(err, io.EOF) {
+				return nil, err
+			}
+		}
 		for key, val := range params {
 			if err = writer.WriteField(key, val); err != nil {
 				return nil, err
@@ -212,7 +222,6 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		}
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 	} else {
-
 		req, err = http.NewRequestWithContext(ctx, ar.Method, URL.String(), ar.Payload)
 		if err != nil {
 			return nil, err
@@ -227,35 +236,36 @@ func (r *Requester) Do(ctx context.Context, ar *APIRequest, responseStruct inter
 		req.Header.Add(k, ar.Headers.Get(k))
 	}
 
-	if response, err := r.Client.Do(req); err != nil {
+	response, err := r.Client.Do(req)
+	if err != nil {
 		return nil, err
-	} else {
-		if v := ctx.Value("debug"); v != nil {
-			dump, err := httputil.DumpResponse(response, true)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("DEBUG %q\n", dump)
-		}
-		errorText := response.Header.Get("X-Error")
-		if errorText != "" {
-			return nil, errors.New(errorText)
-		}
-		switch responseStruct.(type) {
-		case *string:
-			return r.ReadRawResponse(response, responseStruct)
-		default:
-			return r.ReadJSONResponse(response, responseStruct)
-		}
-
 	}
 
+	if v := ctx.Value("debug"); v != nil {
+		dump, dumpErr := httputil.DumpResponse(response, true)
+		if dumpErr != nil {
+			log.Printf("DEBUG: failed to dump response: %v\n", dumpErr)
+		} else {
+			log.Printf("DEBUG %q\n", dump)
+		}
+	}
+	errorText := response.Header.Get("X-Error")
+	if errorText != "" {
+		response.Body.Close()
+		return nil, errors.New(errorText)
+	}
+	switch responseStruct.(type) {
+	case *string:
+		return r.ReadRawResponse(response, responseStruct)
+	default:
+		return r.ReadJSONResponse(response, responseStruct)
+	}
 }
 
 func (r *Requester) ReadRawResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
 	defer response.Body.Close()
 
-	content, err := ioutil.ReadAll(response.Body)
+	content, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +281,20 @@ func (r *Requester) ReadRawResponse(response *http.Response, responseStruct inte
 func (r *Requester) ReadJSONResponse(response *http.Response, responseStruct interface{}) (*http.Response, error) {
 	defer response.Body.Close()
 
-	json.NewDecoder(response.Body).Decode(responseStruct)
+	if responseStruct == nil {
+		_, err := io.Copy(io.Discard, response.Body)
+		return response, err
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	if len(bytes.TrimSpace(body)) == 0 {
+		return response, nil
+	}
+	if err := json.Unmarshal(body, responseStruct); err != nil {
+		return nil, err
+	}
 	return response, nil
 }

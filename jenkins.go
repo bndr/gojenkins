@@ -97,7 +97,7 @@ func (j *Jenkins) Info(ctx context.Context) (*ExecutorResponse, error) {
 
 // SafeRestart jenkins, restart will be done when there are no jobs running
 func (j *Jenkins) SafeRestart(ctx context.Context) error {
-	_, err := j.Requester.Post(ctx, "/safeRestart", strings.NewReader(""), struct{}{}, map[string]string{})
+	_, err := j.Requester.Post(ctx, "/safeRestart", strings.NewReader(""), nil, map[string]string{})
 	return err
 }
 
@@ -487,11 +487,14 @@ func (j *Jenkins) GetPlugins(ctx context.Context, depth int) (*Plugins, error) {
 // UninstallPlugin plugin otherwise returns error
 func (j *Jenkins) UninstallPlugin(ctx context.Context, name string) error {
 	url := fmt.Sprintf("/pluginManager/plugin/%s/doUninstall", name)
-	resp, err := j.Requester.Post(ctx, url, strings.NewReader(""), struct{}{}, map[string]string{})
+	resp, err := j.Requester.Post(ctx, url, strings.NewReader(""), nil, map[string]string{})
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Invalid status code returned: %d", resp.StatusCode)
 	}
-	return err
+	return nil
 }
 
 // Check if the plugin is installed on the server.
