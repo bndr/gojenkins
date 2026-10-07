@@ -24,23 +24,24 @@ import (
 
 func TestJob_GetPipelineRuns_Success(t *testing.T) {
 	jenkins := newMockJenkins()
+	jenkins.Server = "https://jenkins.example.com/jenkins"
 	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
 		if runs, ok := response.(*[]PipelineRun); ok {
 			*runs = []PipelineRun{
 				{
-					ID:     "1",
+					ID:     "2025-12-23_10-00-01",
 					Name:   "#1",
 					Status: "SUCCESS",
 					URLs: map[string]map[string]string{
-						"self": {"href": "/job/test-pipeline/1/wfapi/describe"},
+						"self": {"href": "https://jenkins.example.com/jenkins/job/test-pipeline/1/wfapi/describe"},
 					},
 				},
 				{
-					ID:     "2",
+					ID:     "2025-12-23_10-00-02",
 					Name:   "#2",
 					Status: "FAILED",
 					URLs: map[string]map[string]string{
-						"self": {"href": "/job/test-pipeline/2/wfapi/describe"},
+						"self": {"href": "https://jenkins.example.com/jenkins/job/test-pipeline/2/wfapi/describe"},
 					},
 				},
 			}
@@ -57,10 +58,12 @@ func TestJob_GetPipelineRuns_Success(t *testing.T) {
 	runs, err := job.GetPipelineRuns(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(runs))
-	assert.Equal(t, "1", runs[0].ID)
+	assert.Equal(t, "2025-12-23_10-00-01", runs[0].ID)
 	assert.Equal(t, "SUCCESS", runs[0].Status)
-	assert.Equal(t, "2", runs[1].ID)
+	assert.Equal(t, "/job/test-pipeline/1", runs[0].Base)
+	assert.Equal(t, "2025-12-23_10-00-02", runs[1].ID)
 	assert.Equal(t, "FAILED", runs[1].Status)
+	assert.Equal(t, "/job/test-pipeline/2", runs[1].Base)
 }
 
 func TestJob_GetPipelineRuns_Empty(t *testing.T) {
@@ -98,14 +101,15 @@ func TestJob_GetPipelineRuns_Error(t *testing.T) {
 
 func TestJob_GetPipelineRun_Success(t *testing.T) {
 	jenkins := newMockJenkins()
+	jenkins.Server = "https://jenkins.example.com/jenkins"
 	jenkins.Requester.(*MockRequester).GetJSONFunc = func(ctx context.Context, endpoint string, response interface{}, query map[string]string) (*http.Response, error) {
 		if run, ok := response.(*PipelineRun); ok {
-			run.ID = "42"
+			run.ID = "2025-12-23_10-00-42"
 			run.Name = "#42"
 			run.Status = "SUCCESS"
 			run.Duration = 12345
 			run.URLs = map[string]map[string]string{
-				"self": {"href": "/job/test-pipeline/42/wfapi/describe"},
+				"self": {"href": "https://jenkins.example.com/jenkins/job/test-pipeline/42/wfapi/describe"},
 			}
 			run.Stages = []PipelineNode{
 				{
@@ -113,7 +117,7 @@ func TestJob_GetPipelineRun_Success(t *testing.T) {
 					Name:   "Build",
 					Status: "SUCCESS",
 					URLs: map[string]map[string]string{
-						"self": {"href": "/job/test-pipeline/42/execution/node/1/wfapi/describe"},
+						"self": {"href": "https://jenkins.example.com/jenkins/job/test-pipeline/42/execution/node/1/wfapi/describe"},
 					},
 				},
 				{
@@ -121,7 +125,7 @@ func TestJob_GetPipelineRun_Success(t *testing.T) {
 					Name:   "Test",
 					Status: "SUCCESS",
 					URLs: map[string]map[string]string{
-						"self": {"href": "/job/test-pipeline/42/execution/node/2/wfapi/describe"},
+						"self": {"href": "https://jenkins.example.com/jenkins/job/test-pipeline/42/execution/node/2/wfapi/describe"},
 					},
 				},
 			}
@@ -138,13 +142,16 @@ func TestJob_GetPipelineRun_Success(t *testing.T) {
 	run, err := job.GetPipelineRun(context.Background(), "42")
 	assert.NoError(t, err)
 	assert.NotNil(t, run)
-	assert.Equal(t, "42", run.ID)
+	assert.Equal(t, "2025-12-23_10-00-42", run.ID)
 	assert.Equal(t, "#42", run.Name)
 	assert.Equal(t, "SUCCESS", run.Status)
 	assert.Equal(t, int64(12345), run.Duration)
 	assert.Equal(t, 2, len(run.Stages))
+	assert.Equal(t, "/job/test-pipeline/42", run.Base)
 	assert.Equal(t, "Build", run.Stages[0].Name)
+	assert.Equal(t, "/job/test-pipeline/42/execution/node/1", run.Stages[0].Base)
 	assert.Equal(t, "Test", run.Stages[1].Name)
+	assert.Equal(t, "/job/test-pipeline/42/execution/node/2", run.Stages[1].Base)
 }
 
 func TestJob_GetPipelineRun_NotFound(t *testing.T) {
@@ -343,4 +350,42 @@ func TestPipelineRun_Update(t *testing.T) {
 	assert.Equal(t, "/job/test-pipeline/1", run.Base)
 	assert.Equal(t, run, run.Stages[0].Run)
 	assert.Equal(t, "/job/test-pipeline/1/execution/node/10", run.Stages[0].Base)
+}
+
+func TestBaseFromWFAPIHref_StripsServerContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		server   string
+		href     string
+		expected string
+	}{
+		{
+			name:     "absolute href includes server context",
+			server:   "https://jenkins.example.com/jenkins",
+			href:     "https://jenkins.example.com/jenkins/job/test-pipeline/1/wfapi/describe",
+			expected: "/job/test-pipeline/1",
+		},
+		{
+			name:     "relative href includes server context",
+			server:   "https://jenkins.example.com/jenkins",
+			href:     "/jenkins/job/test-pipeline/1/wfapi/describe",
+			expected: "/job/test-pipeline/1",
+		},
+		{
+			name:     "server context overlaps Jenkins job path",
+			server:   "https://ci.example.com/job",
+			href:     "https://ci.example.com/job/job/test-pipeline/1/wfapi/describe",
+			expected: "/job/test-pipeline/1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			job := &Job{
+				Jenkins: &Jenkins{Server: tt.server},
+			}
+
+			assert.Equal(t, tt.expected, baseFromWFAPIHref(tt.href, job))
+		})
+	}
 }

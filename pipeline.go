@@ -20,7 +20,9 @@ package gojenkins
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"regexp"
+	"strings"
 )
 
 var baseURLRegex *regexp.Regexp
@@ -90,17 +92,35 @@ type PipelineNodeLog struct {
 
 // utility function to fill in the Base fields under PipelineRun
 func (run *PipelineRun) update() {
-	href := run.URLs["self"]["href"]
-	if matches := baseURLRegex.FindStringSubmatch(href); len(matches) > 1 {
-		run.Base = matches[1]
-	}
+	run.Base = baseFromWFAPIHref(run.URLs["self"]["href"], run.Job)
 	for i := range run.Stages {
 		run.Stages[i].Run = run
-		href := run.Stages[i].URLs["self"]["href"]
-		if matches := baseURLRegex.FindStringSubmatch(href); len(matches) > 1 {
-			run.Stages[i].Base = matches[1]
+		run.Stages[i].Base = baseFromWFAPIHref(run.Stages[i].URLs["self"]["href"], run.Job)
+	}
+}
+
+func baseFromWFAPIHref(href string, job *Job) string {
+	matches := baseURLRegex.FindStringSubmatch(href)
+	if len(matches) <= 1 {
+		return ""
+	}
+
+	base := matches[1]
+	if job != nil && job.Jenkins != nil {
+		server := strings.TrimRight(job.Jenkins.Server, "/")
+		strippedServer := strings.HasPrefix(base, server)
+		base = strings.TrimPrefix(base, server)
+		if !strippedServer {
+			if serverURL, err := url.Parse(server); err == nil {
+				serverPath := strings.TrimRight(serverURL.Path, "/")
+				base = strings.TrimPrefix(base, serverPath)
+			}
 		}
 	}
+	if base != "" && !strings.HasPrefix(base, "/") {
+		base = "/" + base
+	}
+	return base
 }
 
 // GetPipelineRuns returns all pipeline runs for a pipeline job.
@@ -110,8 +130,8 @@ func (job *Job) GetPipelineRuns(ctx context.Context) (pr []PipelineRun, err erro
 		return nil, err
 	}
 	for i := range pr {
-		pr[i].update()
 		pr[i].Job = job
+		pr[i].update()
 	}
 
 	return pr, nil
@@ -125,8 +145,8 @@ func (job *Job) GetPipelineRun(ctx context.Context, id string) (pr *PipelineRun,
 	if err != nil {
 		return nil, err
 	}
-	pr.update()
 	pr.Job = job
+	pr.update()
 
 	return pr, nil
 }
