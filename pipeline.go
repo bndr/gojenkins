@@ -163,6 +163,11 @@ func (pr *PipelineRun) GetNode(ctx context.Context, id string) (node *PipelineNo
 	if err != nil {
 		return nil, err
 	}
+	node.Run = pr
+	href = node.URLs["self"]["href"]
+	if matches := baseURLRegex.FindStringSubmatch(href); len(matches) > 1 {
+		node.Base = matches[1]
+	}
 
 	return node, nil
 }
