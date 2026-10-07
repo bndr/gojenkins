@@ -133,12 +133,15 @@ func (j *Job) GetDetails() *JobResponse {
 // GetBuild retrieves a specific build by its build number.
 func (j *Job) GetBuild(ctx context.Context, id int64) (*Build, error) {
 
-	// Support customized server URL,
-	// i.e. Server : https://<domain>/jenkins/job/JOB1
-	// "https://<domain>/jenkins/" is the server URL,
-	// we are expecting jobURL = "job/JOB1"
-	jobURL := strings.ReplaceAll(j.Raw.URL, j.Jenkins.Server, "")
-	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: jobURL + "/" + strconv.FormatInt(id, 10)}
+	// Support Jenkins instances served from a context path.
+	jobURL := strings.TrimPrefix(j.Raw.URL, strings.TrimRight(j.Jenkins.Server, "/"))
+	if jobURL == j.Raw.URL {
+		jobURL = j.Base
+	}
+	jobURL = "/" + strings.Trim(jobURL, "/")
+	buildBase := strings.TrimRight(jobURL, "/") + "/" + strconv.FormatInt(id, 10)
+
+	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: buildBase}
 	status, err := build.Poll(ctx)
 	if err != nil {
 		return nil, err
