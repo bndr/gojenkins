@@ -16,6 +16,8 @@ package gojenkins
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -553,4 +555,40 @@ func TestJenkins_SafeRestart_Success(t *testing.T) {
 
 	err := jenkins.SafeRestart(context.Background())
 	assert.NoError(t, err)
+}
+
+func createNodeMode(t *testing.T, options ...interface{}) (string, error) {
+	t.Helper()
+	var sent map[string]interface{}
+	mock := &MockRequester{
+		PostFunc: func(ctx context.Context, endpoint string, payload io.Reader, response interface{}, query map[string]string) (*http.Response, error) {
+			assert.Equal(t, "/computer/doCreateItem", endpoint)
+			assert.NoError(t, json.Unmarshal([]byte(query["json"]), &sent))
+			return &http.Response{StatusCode: 200}, nil
+		},
+	}
+	j := &Jenkins{Requester: mock}
+	_, err := j.CreateNode(context.Background(), "node", 1, "desc", "/var/lib/jenkins", "label", options...)
+	if err != nil {
+		return "", err
+	}
+	mode, _ := sent["mode"].(string)
+	return mode, nil
+}
+
+func TestJenkins_CreateNode_DefaultMode(t *testing.T) {
+	mode, err := createNodeMode(t)
+	assert.NoError(t, err)
+	assert.Equal(t, string(NORMAL), mode)
+}
+
+func TestJenkins_CreateNode_ExclusiveMode(t *testing.T) {
+	mode, err := createNodeMode(t, map[string]string{"method": "JNLPLauncher", "mode": string(EXCLUSIVE)})
+	assert.NoError(t, err)
+	assert.Equal(t, string(EXCLUSIVE), mode)
+}
+
+func TestJenkins_CreateNode_InvalidMode(t *testing.T) {
+	_, err := createNodeMode(t, map[string]string{"mode": "SOMETIMES"})
+	assert.EqualError(t, err, "node mode not supported: SOMETIMES")
 }
